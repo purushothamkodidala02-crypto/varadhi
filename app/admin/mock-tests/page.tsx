@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import type { MockTest } from "@/types/mock-test";
 import { CreateMockTestForm } from "./CreateMockTestForm";
@@ -174,6 +175,9 @@ export default async function AdminMockTestsPage() {
                     <th className="px-4 py-3 text-sm font-semibold">
                       Version
                     </th>
+                    <th className="px-4 py-3 text-sm font-semibold">
+                      Actions
+                    </th>
                   </tr>
                 </thead>
 
@@ -233,6 +237,16 @@ export default async function AdminMockTestsPage() {
                         <td className="px-4 py-3 text-sm">
                           v{mockTest.version}
                         </td>
+                        <td className="px-4 py-3">
+                            
+                            <Link
+                                href={`/admin/mock-tests/${mockTest.id}/edit`}
+                                className="text-blue-600 hover:text-blue-800"
+                            >
+                                Edit
+                            </Link>
+                        </td>
+
                       </tr>
                     );
                   })}
