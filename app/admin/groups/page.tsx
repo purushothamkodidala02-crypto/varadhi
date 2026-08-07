@@ -1,0 +1,158 @@
+import Link from "next/link";
+import { createClient } from "@/lib/supabase/server";
+import type { ExamGroupWithExam } from "@/types/group";
+import { CreateGroupForm } from "./CreateGroupForm";
+
+export default async function AdminGroupsPage() {
+  const supabase = await createClient();
+
+  const [groupsResult, examsResult] = await Promise.all([
+    supabase
+      .from("exam_groups")
+      .select(
+        `
+          id,
+          exam_id,
+          name,
+          slug,
+          description,
+          is_active,
+          display_order,
+          created_at,
+          updated_at,
+          exams (
+            name
+          )
+        `
+      )
+      .order("display_order", { ascending: true })
+      .order("created_at", { ascending: true }),
+
+    supabase
+      .from("exams")
+      .select("id, name")
+      .order("display_order", { ascending: true }),
+  ]);
+
+  const groups = (groupsResult.data ??
+    []) as unknown as ExamGroupWithExam[];
+
+  const exams = examsResult.data ?? [];
+
+  return (
+    <main>
+      <div>
+        <h1 className="text-3xl font-bold">Groups</h1>
+
+        <p className="mt-2 text-gray-600">
+          Create and manage groups under each exam.
+        </p>
+      </div>
+
+      <CreateGroupForm exams={exams} />
+
+      {groupsResult.error && (
+        <div className="mt-6 rounded-lg border border-red-200 bg-red-50 p-4">
+          <p className="font-medium text-red-700">
+            Unable to load groups
+          </p>
+
+          <p className="mt-1 text-sm text-red-600">
+            {groupsResult.error.message}
+          </p>
+        </div>
+      )}
+
+      {!groupsResult.error && groups.length === 0 && (
+        <div className="mt-8 rounded-xl border border-dashed p-8 text-center">
+          <h2 className="text-lg font-semibold">
+            No groups added yet
+          </h2>
+        </div>
+      )}
+
+      {!groupsResult.error && groups.length > 0 && (
+        <section className="mt-8">
+          <h2 className="text-xl font-semibold">
+            Existing Groups
+          </h2>
+
+          <div className="mt-4 overflow-x-auto rounded-xl border">
+            <table className="w-full text-left">
+              <thead className="border-b bg-gray-50">
+                <tr>
+                  <th className="px-4 py-3 text-sm font-semibold">
+                    Exam
+                  </th>
+                  <th className="px-4 py-3 text-sm font-semibold">
+                    Group
+                  </th>
+                  <th className="px-4 py-3 text-sm font-semibold">
+                    Slug
+                  </th>
+                  <th className="px-4 py-3 text-sm font-semibold">
+                    Status
+                  </th>
+                  <th className="px-4 py-3 text-sm font-semibold">
+                    Order
+                  </th>
+                  <th className="px-4 py-3 text-sm font-semibold">
+                    Actions
+                  </th>
+                </tr>
+              </thead>
+
+              <tbody>
+                {groups.map((group) => (
+                  <tr
+                    key={group.id}
+                    className="border-b last:border-b-0"
+                  >
+                    <td className="px-4 py-3 text-sm">
+                      {group.exams?.name ?? "Unknown exam"}
+                    </td>
+
+                    <td className="px-4 py-3 font-medium">
+                      {group.name}
+                    </td>
+
+                    <td className="px-4 py-3 text-sm text-gray-600">
+                      {group.slug}
+                    </td>
+
+                    <td className="px-4 py-3">
+                      <span
+                        className={
+                          group.is_active
+                            ? "rounded-full bg-green-100 px-3 py-1 text-xs font-medium text-green-700"
+                            : "rounded-full bg-gray-100 px-3 py-1 text-xs font-medium text-gray-600"
+                        }
+                      >
+                        {group.is_active
+                          ? "Active"
+                          : "Inactive"}
+                      </span>
+                    </td>
+
+                    <td className="px-4 py-3 text-sm">
+                      {group.display_order}
+                    </td>
+
+                    <td className="px-4 py-3">
+                      <Link
+                        href={`/admin/groups/${group.id}/edit`}
+                        className="text-sm font-medium text-blue-600 hover:underline"
+                      >
+                        Edit
+                      </Link>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </section>
+      )}
+    </main>
+  );
+}
