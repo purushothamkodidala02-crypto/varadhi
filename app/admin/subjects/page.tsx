@@ -1,6 +1,8 @@
+import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import type { Subject } from "@/types/subject";
 import { CreateSubjectForm } from "./CreateSubjectForm";
+import { DeleteSubjectButton } from "./DeleteSubjectButton";
 
 type GroupRecord = {
   id: string;
@@ -49,14 +51,10 @@ export default async function AdminSubjectsPage() {
     exams.map((exam) => [exam.id, exam])
   );
 
-  const groupOptions = groups.map((group) => {
-    const exam = examMap.get(group.exam_id);
-
-    return {
-      id: group.id,
-      label: `${exam?.name ?? "Unknown exam"} — ${group.name}`,
-    };
-  });
+  const groupOptions = groups.map((group) => ({
+    id: group.id,
+    label: `${examMap.get(group.exam_id)?.name ?? "Unknown exam"} — ${group.name}`,
+  }));
 
   return (
     <main>
@@ -87,10 +85,6 @@ export default async function AdminSubjectsPage() {
           <h2 className="text-lg font-semibold">
             No Subjects added yet
           </h2>
-
-          <p className="mt-2 text-sm text-gray-600">
-            Start by adding Current Affairs under TGPSC Group I.
-          </p>
         </div>
       )}
 
@@ -107,20 +101,29 @@ export default async function AdminSubjectsPage() {
                   <th className="px-4 py-3 text-sm font-semibold">
                     Exam
                   </th>
+
                   <th className="px-4 py-3 text-sm font-semibold">
                     Group
                   </th>
+
                   <th className="px-4 py-3 text-sm font-semibold">
                     Subject
                   </th>
+
                   <th className="px-4 py-3 text-sm font-semibold">
                     Slug
                   </th>
+
                   <th className="px-4 py-3 text-sm font-semibold">
                     Status
                   </th>
+
                   <th className="px-4 py-3 text-sm font-semibold">
                     Order
+                  </th>
+
+                  <th className="px-4 py-3 text-sm font-semibold">
+                    Actions
                   </th>
                 </tr>
               </thead>
@@ -172,6 +175,22 @@ export default async function AdminSubjectsPage() {
 
                       <td className="px-4 py-3 text-sm">
                         {subject.display_order}
+                      </td>
+
+                      <td className="px-4 py-3">
+                        <div className="flex items-center gap-4">
+                          <Link
+                            href={`/admin/subjects/${subject.id}/edit`}
+                            className="inline-flex h-6 items-center text-sm font-medium leading-none text-blue-600 hover:underline"
+                          >
+                            Edit
+                          </Link>
+
+                          <DeleteSubjectButton
+                            subjectId={subject.id}
+                            subjectName={subject.name}
+                          />
+                        </div>
                       </td>
                     </tr>
                   );
