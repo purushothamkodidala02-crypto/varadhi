@@ -50,6 +50,26 @@ export default async function AdminSubjectsPage() {
   const examMap = new Map(
     exams.map((exam) => [exam.id, exam])
   );
+  const sortedSubjects = [...subjects].sort((a, b) => {
+  const firstGroup = groupMap.get(a.exam_group_id);
+  const secondGroup = groupMap.get(b.exam_group_id);
+
+  const firstExamName = firstGroup
+    ? examMap.get(firstGroup.exam_id)?.name ?? ""
+    : "";
+
+  const secondExamName = secondGroup
+    ? examMap.get(secondGroup.exam_id)?.name ?? ""
+    : "";
+
+  return (
+    firstExamName.localeCompare(secondExamName) ||
+    (firstGroup?.display_order ?? 999) -
+      (secondGroup?.display_order ?? 999) ||
+    a.display_order - b.display_order ||
+    a.name.localeCompare(b.name)
+  );
+});
 
   const groupOptions = groups.map((group) => ({
     id: group.id,
@@ -129,7 +149,7 @@ export default async function AdminSubjectsPage() {
               </thead>
 
               <tbody>
-                {subjects.map((subject) => {
+                {sortedSubjects.map((subject) => {
                   const group = groupMap.get(
                     subject.exam_group_id
                   );
@@ -147,7 +167,7 @@ export default async function AdminSubjectsPage() {
                         {exam?.name ?? "Unknown exam"}
                       </td>
 
-                      <td className="px-4 py-3 text-sm">
+                      <td className="whitespace-nowrap px-4 py-3 text-sm">
                         {group?.name ?? "Unknown group"}
                       </td>
 

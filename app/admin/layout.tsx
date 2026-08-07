@@ -29,9 +29,9 @@ export default async function AdminLayout({
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gray-50 text-gray-900">
       <div className="flex min-h-screen">
-        <aside className="w-64 border-r bg-white p-6">
+        <aside className="w-64 shrink-0 border-r bg-white p-6">
           <Link href="/admin" className="text-xl font-bold">
             Varadhi Admin
           </Link>
@@ -59,7 +59,7 @@ export default async function AdminLayout({
               href="/admin/groups"
               className="block rounded-lg px-3 py-2 hover:bg-gray-100"
             >
-              Groups
+              Exam Entries
             </Link>
 
             <Link
@@ -103,15 +103,19 @@ export default async function AdminLayout({
           </nav>
         </aside>
 
-        <div className="flex-1">
+        <div className="min-w-0 flex-1">
           <header className="flex h-16 items-center justify-between border-b bg-white px-8">
-            <p className="text-sm text-gray-500">Admin Panel</p>
-          <div className="flex items-center gap-4">          
-            <p className="text-sm font-medium">
-              {user.email}
+            <p className="text-sm text-gray-500">
+              Admin Panel
             </p>
-            <LogoutButton />
-          </div>
+
+            <div className="flex items-center gap-4">
+              <p className="text-sm font-medium">
+                {user.email}
+              </p>
+
+              <LogoutButton />
+            </div>
           </header>
 
           <main className="p-8">{children}</main>
