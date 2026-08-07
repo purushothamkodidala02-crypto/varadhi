@@ -2,6 +2,7 @@ import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import type { Exam } from "@/types/exam";
 import { CreateExamForm } from "./CreateExamForm";
+import { DeleteExamButton } from "./DeleteExamButton";
 
 export default async function AdminExamsPage() {
   const supabase = await createClient();
@@ -117,12 +118,19 @@ export default async function AdminExamsPage() {
                     </td>
 
                     <td className="px-4 py-3">
-                      <Link
-                        href={`/admin/exams/${exam.id}/edit`}
-                        className="text-sm font-medium text-blue-600 hover:underline"
-                      >
-                        Edit
-                      </Link>
+                      <div className="flex items-center gap-4">
+                        <Link
+                          href={`/admin/exams/${exam.id}/edit`}
+                          className="inline-flex h-6 items-center text-sm font-medium leading-none text-blue-600 hover:underline"
+                        >
+                          Edit
+                        </Link>
+
+                        <DeleteExamButton
+                          examId={exam.id}
+                          examName={exam.name}
+                        />
+                      </div>
                     </td>
                   </tr>
                 ))}
