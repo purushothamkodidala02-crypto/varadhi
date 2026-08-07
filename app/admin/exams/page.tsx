@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import type { Exam } from "@/types/exam";
 import { CreateExamForm } from "./CreateExamForm";
@@ -76,6 +77,10 @@ export default async function AdminExamsPage() {
                   <th className="px-4 py-3 text-sm font-semibold">
                     Order
                   </th>
+
+                  <th className="px-4 py-3 text-sm font-semibold">
+                    Actions
+                  </th>
                 </tr>
               </thead>
 
@@ -109,6 +114,15 @@ export default async function AdminExamsPage() {
 
                     <td className="px-4 py-3 text-sm">
                       {exam.display_order}
+                    </td>
+
+                    <td className="px-4 py-3">
+                      <Link
+                        href={`/admin/exams/${exam.id}/edit`}
+                        className="text-sm font-medium text-blue-600 hover:underline"
+                      >
+                        Edit
+                      </Link>
                     </td>
                   </tr>
                 ))}
