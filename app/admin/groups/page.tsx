@@ -2,6 +2,7 @@ import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import type { ExamGroupWithExam } from "@/types/group";
 import { CreateGroupForm } from "./CreateGroupForm";
+import { DeleteGroupButton } from "./DeleteGroupButton";
 
 export default async function AdminGroupsPage() {
   const supabase = await createClient();
@@ -84,18 +85,23 @@ export default async function AdminGroupsPage() {
                   <th className="px-4 py-3 text-sm font-semibold">
                     Exam
                   </th>
+
                   <th className="px-4 py-3 text-sm font-semibold">
                     Group
                   </th>
+
                   <th className="px-4 py-3 text-sm font-semibold">
                     Slug
                   </th>
+
                   <th className="px-4 py-3 text-sm font-semibold">
                     Status
                   </th>
+
                   <th className="px-4 py-3 text-sm font-semibold">
                     Order
                   </th>
+
                   <th className="px-4 py-3 text-sm font-semibold">
                     Actions
                   </th>
@@ -139,12 +145,19 @@ export default async function AdminGroupsPage() {
                     </td>
 
                     <td className="px-4 py-3">
-                      <Link
-                        href={`/admin/groups/${group.id}/edit`}
-                        className="text-sm font-medium text-blue-600 hover:underline"
-                      >
-                        Edit
-                      </Link>
+                      <div className="flex items-center gap-4">
+                        <Link
+                          href={`/admin/groups/${group.id}/edit`}
+                          className="inline-flex h-6 items-center text-sm font-medium leading-none text-blue-600 hover:underline"
+                        >
+                          Edit
+                        </Link>
+
+                        <DeleteGroupButton
+                          groupId={group.id}
+                          groupName={group.name}
+                        />
+                      </div>
                     </td>
                   </tr>
                 ))}
