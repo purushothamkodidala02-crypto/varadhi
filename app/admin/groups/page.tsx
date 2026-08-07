@@ -1,8 +1,25 @@
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
-import type { ExamGroupWithExam } from "@/types/group";
+import type {
+  ExamGroupWithExam,
+  ExamType,
+} from "@/types/group";
 import { CreateGroupForm } from "./CreateGroupForm";
 import { DeleteGroupButton } from "./DeleteGroupButton";
+
+const examTypeLabels: Record<ExamType, string> = {
+  group: "Group Exam",
+  gazetted: "Gazetted",
+  non_gazetted: "Non-Gazetted",
+  other: "Other",
+};
+
+const examTypeOrder: Record<ExamType, number> = {
+  group: 1,
+  gazetted: 2,
+  non_gazetted: 3,
+  other: 4,
+};
 
 export default async function AdminGroupsPage() {
   const supabase = await createClient();
@@ -14,6 +31,7 @@ export default async function AdminGroupsPage() {
         `
           id,
           exam_id,
+          exam_type,
           name,
           slug,
           description,
@@ -38,15 +56,27 @@ export default async function AdminGroupsPage() {
   const groups = (groupsResult.data ??
     []) as unknown as ExamGroupWithExam[];
 
+  const sortedGroups = [...groups].sort((a, b) => {
+    return (
+      examTypeOrder[a.exam_type] -
+        examTypeOrder[b.exam_type] ||
+      a.display_order - b.display_order ||
+      a.name.localeCompare(b.name)
+    );
+  });
+
   const exams = examsResult.data ?? [];
 
   return (
     <main>
       <div>
-        <h1 className="text-3xl font-bold">Groups</h1>
+        <h1 className="text-3xl font-bold">
+          Exam Entries
+        </h1>
 
         <p className="mt-2 text-gray-600">
-          Create and manage groups under each exam.
+          Manage Group, Gazetted, Non-Gazetted and other
+          TGPSC exams.
         </p>
       </div>
 
@@ -55,7 +85,7 @@ export default async function AdminGroupsPage() {
       {groupsResult.error && (
         <div className="mt-6 rounded-lg border border-red-200 bg-red-50 p-4">
           <p className="font-medium text-red-700">
-            Unable to load groups
+            Unable to load Exam Entries
           </p>
 
           <p className="mt-1 text-sm text-red-600">
@@ -64,18 +94,18 @@ export default async function AdminGroupsPage() {
         </div>
       )}
 
-      {!groupsResult.error && groups.length === 0 && (
+      {!groupsResult.error && sortedGroups.length === 0 && (
         <div className="mt-8 rounded-xl border border-dashed p-8 text-center">
           <h2 className="text-lg font-semibold">
-            No groups added yet
+            No Exam Entries added yet
           </h2>
         </div>
       )}
 
-      {!groupsResult.error && groups.length > 0 && (
+      {!groupsResult.error && sortedGroups.length > 0 && (
         <section className="mt-8">
           <h2 className="text-xl font-semibold">
-            Existing Groups
+            Existing Exam Entries
           </h2>
 
           <div className="mt-4 overflow-x-auto rounded-xl border">
@@ -87,7 +117,11 @@ export default async function AdminGroupsPage() {
                   </th>
 
                   <th className="px-4 py-3 text-sm font-semibold">
-                    Group
+                    Type
+                  </th>
+
+                  <th className="px-4 py-3 text-sm font-semibold">
+                    Entry
                   </th>
 
                   <th className="px-4 py-3 text-sm font-semibold">
@@ -109,16 +143,22 @@ export default async function AdminGroupsPage() {
               </thead>
 
               <tbody>
-                {groups.map((group) => (
+                {sortedGroups.map((group) => (
                   <tr
                     key={group.id}
                     className="border-b last:border-b-0"
                   >
-                    <td className="px-4 py-3 text-sm">
+                    <td className="whitespace-nowrap px-4 py-3 text-sm">
                       {group.exams?.name ?? "Unknown exam"}
                     </td>
 
-                    <td className="px-4 py-3 font-medium">
+                    <td className="whitespace-nowrap px-4 py-3">
+                      <span className="rounded-full bg-blue-50 px-3 py-1 text-xs font-medium text-blue-700">
+                        {examTypeLabels[group.exam_type]}
+                      </span>
+                    </td>
+
+                    <td className="whitespace-nowrap px-4 py-3 font-medium">
                       {group.name}
                     </td>
 

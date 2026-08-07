@@ -2,11 +2,19 @@
 
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
+import type { ExamType } from "@/types/group";
 
 export type UpdateGroupState = {
   success: boolean;
   message: string;
 };
+
+const validExamTypes: ExamType[] = [
+  "group",
+  "gazetted",
+  "non_gazetted",
+  "other",
+];
 
 export async function updateGroup(
   groupId: string,
@@ -36,11 +44,16 @@ export async function updateGroup(
   if (profileError || profile?.role !== "admin") {
     return {
       success: false,
-      message: "You are not authorized to update groups.",
+      message: "You are not authorized to update exam entries.",
     };
   }
 
   const examId = String(formData.get("exam_id") ?? "").trim();
+
+  const examType = String(
+    formData.get("exam_type") ?? ""
+  ).trim() as ExamType;
+
   const name = String(formData.get("name") ?? "").trim();
 
   const slug = String(formData.get("slug") ?? "")
@@ -64,10 +77,17 @@ export async function updateGroup(
     };
   }
 
+  if (!validExamTypes.includes(examType)) {
+    return {
+      success: false,
+      message: "Please select a valid Exam Type.",
+    };
+  }
+
   if (!name) {
     return {
       success: false,
-      message: "Group name is required.",
+      message: "Name is required.",
     };
   }
 
@@ -103,6 +123,7 @@ export async function updateGroup(
     .from("exam_groups")
     .update({
       exam_id: examId,
+      exam_type: examType,
       name,
       slug,
       description: description || null,
@@ -116,7 +137,7 @@ export async function updateGroup(
   if (updateError?.code === "23505") {
     return {
       success: false,
-      message: `A group with the slug "${slug}" already exists under this exam.`,
+      message: `An entry with the slug "${slug}" already exists under this exam.`,
     };
   }
 
@@ -128,10 +149,11 @@ export async function updateGroup(
   }
 
   revalidatePath("/admin/groups");
+  revalidatePath("/admin/subjects");
   revalidatePath(`/admin/groups/${groupId}/edit`);
 
   return {
     success: true,
-    message: "Group updated successfully.",
+    message: "Exam entry updated successfully.",
   };
 }

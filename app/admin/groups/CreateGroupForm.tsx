@@ -30,7 +30,9 @@ export function CreateGroupForm({
 
   return (
     <section className="mt-8 rounded-xl border p-6">
-      <h2 className="text-xl font-semibold">Add Group</h2>
+      <h2 className="text-xl font-semibold">
+        Add Exam Entry
+      </h2>
 
       <form action={formAction} className="mt-6 space-y-5">
         <div>
@@ -58,10 +60,34 @@ export function CreateGroupForm({
 
         <div>
           <label
+            htmlFor="exam_type"
+            className="mb-2 block text-sm font-medium"
+          >
+            Exam Type
+          </label>
+
+          <select
+            id="exam_type"
+            name="exam_type"
+            required
+            defaultValue="group"
+            className="w-full rounded-lg border px-4 py-3"
+          >
+            <option value="group">Group Exam</option>
+            <option value="gazetted">Gazetted Exam</option>
+            <option value="non_gazetted">
+              Non-Gazetted Exam
+            </option>
+            <option value="other">Other Exam</option>
+          </select>
+        </div>
+
+        <div>
+          <label
             htmlFor="name"
             className="mb-2 block text-sm font-medium"
           >
-            Group name
+            Entry name
           </label>
 
           <input
@@ -146,7 +172,7 @@ export function CreateGroupForm({
           disabled={pending || exams.length === 0}
           className="rounded-lg bg-black px-5 py-3 font-medium text-white disabled:cursor-not-allowed disabled:opacity-50"
         >
-          {pending ? "Adding..." : "Add Group"}
+          {pending ? "Adding..." : "Add Exam Entry"}
         </button>
 
         {state.message && (

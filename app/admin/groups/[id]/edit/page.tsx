@@ -20,7 +20,7 @@ export default async function EditGroupPage({
     supabase
       .from("exam_groups")
       .select(
-        "id, exam_id, name, slug, description, is_active, display_order, created_at, updated_at"
+        "id, exam_id, exam_type, name, slug, description, is_active, display_order, created_at, updated_at"
       )
       .eq("id", id)
       .single(),
@@ -44,14 +44,16 @@ export default async function EditGroupPage({
         href="/admin/groups"
         className="text-sm font-medium text-gray-600 hover:text-black"
       >
-        ← Back to Groups
+        ← Back to Exam Entries
       </Link>
 
       <div className="mt-6">
-        <h1 className="text-3xl font-bold">Edit Group</h1>
+        <h1 className="text-3xl font-bold">
+          Edit Exam Entry
+        </h1>
 
         <p className="mt-2 text-gray-600">
-          Update the selected group’s details and status.
+          Update its classification, details and status.
         </p>
       </div>
 

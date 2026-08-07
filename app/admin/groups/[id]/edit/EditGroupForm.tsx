@@ -61,10 +61,34 @@ export function EditGroupForm({
 
         <div>
           <label
+            htmlFor="exam_type"
+            className="mb-2 block text-sm font-medium"
+          >
+            Exam Type
+          </label>
+
+          <select
+            id="exam_type"
+            name="exam_type"
+            required
+            defaultValue={group.exam_type}
+            className="w-full rounded-lg border px-4 py-3"
+          >
+            <option value="group">Group Exam</option>
+            <option value="gazetted">Gazetted Exam</option>
+            <option value="non_gazetted">
+              Non-Gazetted Exam
+            </option>
+            <option value="other">Other Exam</option>
+          </select>
+        </div>
+
+        <div>
+          <label
             htmlFor="name"
             className="mb-2 block text-sm font-medium"
           >
-            Group name
+            Entry name
           </label>
 
           <input

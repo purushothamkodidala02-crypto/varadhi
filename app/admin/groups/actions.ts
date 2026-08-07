@@ -2,11 +2,19 @@
 
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
+import type { ExamType } from "@/types/group";
 
 export type CreateGroupState = {
   success: boolean;
   message: string;
 };
+
+const validExamTypes: ExamType[] = [
+  "group",
+  "gazetted",
+  "non_gazetted",
+  "other",
+];
 
 export async function createGroup(
   _previousState: CreateGroupState,
@@ -35,11 +43,16 @@ export async function createGroup(
   if (profileError || profile?.role !== "admin") {
     return {
       success: false,
-      message: "You are not authorized to create groups.",
+      message: "You are not authorized to create exam entries.",
     };
   }
 
   const examId = String(formData.get("exam_id") ?? "").trim();
+
+  const examType = String(
+    formData.get("exam_type") ?? ""
+  ).trim() as ExamType;
+
   const name = String(formData.get("name") ?? "").trim();
 
   const slug = String(formData.get("slug") ?? "")
@@ -63,10 +76,17 @@ export async function createGroup(
     };
   }
 
+  if (!validExamTypes.includes(examType)) {
+    return {
+      success: false,
+      message: "Please select a valid Exam Type.",
+    };
+  }
+
   if (!name) {
     return {
       success: false,
-      message: "Group name is required.",
+      message: "Name is required.",
     };
   }
 
@@ -102,6 +122,7 @@ export async function createGroup(
     .from("exam_groups")
     .insert({
       exam_id: examId,
+      exam_type: examType,
       name,
       slug,
       description: description || null,
@@ -112,7 +133,7 @@ export async function createGroup(
   if (insertError?.code === "23505") {
     return {
       success: false,
-      message: `A group with the slug "${slug}" already exists under this exam.`,
+      message: `An entry with the slug "${slug}" already exists under this exam.`,
     };
   }
 
@@ -124,9 +145,10 @@ export async function createGroup(
   }
 
   revalidatePath("/admin/groups");
+  revalidatePath("/admin/subjects");
 
   return {
     success: true,
-    message: "Group created successfully.",
+    message: "Exam entry created successfully.",
   };
 }
