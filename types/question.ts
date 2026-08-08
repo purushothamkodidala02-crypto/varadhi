@@ -3,7 +3,7 @@ export type QuestionLifecycle = "permanent" | "review" | "expires";
 
 export interface Question {
   id: string;
-  subject_id: string | null;
+  subject_id: string;
   question_text: string;
   question_type: "mcq";
   option_a: string;

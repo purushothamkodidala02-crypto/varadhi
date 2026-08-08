@@ -76,6 +76,19 @@ export async function deleteSubject(
     };
   }
 
+  const { count: questionCount, error: questionCountError } = await supabase
+    .from("questions")
+    .select("id", { count: "exact", head: true })
+    .eq("subject_id", subjectId);
+
+  if (questionCountError) {
+    return { success: false, message: "Unable to check the Subject’s Questions." };
+  }
+
+  if ((questionCount ?? 0) > 0) {
+    return { success: false, message: `Cannot delete "${subject.name}" because it contains ${questionCount} Question(s). Deactivate it instead.` };
+  }
+
   const { error: deleteError } = await supabase
     .from("subjects")
     .delete()

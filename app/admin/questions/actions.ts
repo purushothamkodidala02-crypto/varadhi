@@ -4,252 +4,28 @@ import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import type { CorrectAnswer, QuestionLifecycle } from "@/types/question";
 
-export type CreateQuestionState = {
-  success: boolean;
-  message: string;
-};
+export type CreateQuestionState = { success: boolean; message: string };
+const answers: CorrectAnswer[] = ["A", "B", "C", "D"]; const lifecycles: QuestionLifecycle[] = ["permanent", "review", "expires"];
+const validDate = (value: string) => /^\d{4}-\d{2}-\d{2}$/.test(value) && !Number.isNaN(Date.parse(`${value}T00:00:00Z`));
 
-const validAnswers: CorrectAnswer[] = [
-  "A",
-  "B",
-  "C",
-  "D",
-];
-const validLifecycles: QuestionLifecycle[] = ["permanent", "review", "expires"];
-
-function validDate(value: string) {
-  return /^\d{4}-\d{2}-\d{2}$/.test(value) && !Number.isNaN(Date.parse(`${value}T00:00:00Z`));
-}
-
-export async function createQuestion(
-  _previousState: CreateQuestionState,
-  formData: FormData
-): Promise<CreateQuestionState> {
-  const supabase = await createClient();
-
-  const {
-    data: { user },
-    error: userError,
-  } = await supabase.auth.getUser();
-
-  if (userError || !user) {
-    return {
-      success: false,
-      message: "You must be logged in.",
-    };
-  }
-
-  const { data: profile, error: profileError } = await supabase
-    .from("profiles")
-    .select("role")
-    .eq("id", user.id)
-    .single();
-
-  if (profileError || profile?.role !== "admin") {
-    return {
-      success: false,
-      message: "You are not authorized to create Questions.",
-    };
-  }
-
-  const subjectId = String(
-    formData.get("subject_id") ?? ""
-  ).trim();
-
-  const questionText = String(
-    formData.get("question_text") ?? ""
-  ).trim();
-
-  const optionA = String(
-    formData.get("option_a") ?? ""
-  ).trim();
-
-  const optionB = String(
-    formData.get("option_b") ?? ""
-  ).trim();
-
-  const optionC = String(
-    formData.get("option_c") ?? ""
-  ).trim();
-
-  const optionD = String(
-    formData.get("option_d") ?? ""
-  ).trim();
-
-  const correctAnswer = String(
-    formData.get("correct_answer") ?? ""
-  ) as CorrectAnswer;
-
-  const explanation = String(
-    formData.get("explanation") ?? ""
-  ).trim();
-
-  const sourceReference = String(
-    formData.get("source_reference") ?? ""
-  ).trim();
-
-  const imageUrl = String(
-    formData.get("image_url") ?? ""
-  ).trim();
-
-  const isActive = formData.get("is_active") === "on";
-  const lifecycle = String(formData.get("content_lifecycle") ?? "permanent") as QuestionLifecycle;
-  const reviewOn = String(formData.get("review_on") ?? "").trim();
-  const expiresOn = String(formData.get("expires_on") ?? "").trim();
-  const selectedExamIds = Array.from(new Set(formData.getAll("exam_ids").map((value) => String(value).trim()).filter(Boolean)));
-  const availabilityScope = String(formData.get("availability_scope") ?? "all_exam_entries");
-
-  if (!subjectId) {
-    return {
-      success: false,
-      message: "Please select a Subject.",
-    };
-  }
-
-  if (!questionText) {
-    return {
-      success: false,
-      message: "Question text is required.",
-    };
-  }
-
-  if (!optionA || !optionB || !optionC || !optionD) {
-    return {
-      success: false,
-      message: "All four answer options are required.",
-    };
-  }
-
-  const normalizedOptions = [
-    optionA,
-    optionB,
-    optionC,
-    optionD,
-  ].map((option) => option.toLowerCase());
-
-  if (new Set(normalizedOptions).size !== 4) {
-    return {
-      success: false,
-      message: "All four answer options must be different.",
-    };
-  }
-
-  if (!validAnswers.includes(correctAnswer)) {
-    return {
-      success: false,
-      message: "Please select the correct answer.",
-    };
-  }
-
-  if (selectedExamIds.length === 0) {
-    return { success: false, message: "Tick at least one exam category before choosing an Exam." };
-  }
-
-  if (availabilityScope !== "all_exam_entries" && availabilityScope !== "selected_entry") {
-    return { success: false, message: "Choose where this Question can be used." };
-  }
-
-  if (!validLifecycles.includes(lifecycle)) {
-    return { success: false, message: "Choose a valid Question lifetime." };
-  }
-
-  if (lifecycle === "review" && !validDate(reviewOn)) {
-    return { success: false, message: "Choose a valid review date." };
-  }
-
-  if (lifecycle === "expires" && !validDate(expiresOn)) {
-    return { success: false, message: "Choose a valid expiry date." };
-  }
-
-  const { data: subject, error: subjectError } =
-    await supabase
-      .from("subjects")
-      .select("id, exam_group_id")
-      .eq("id", subjectId)
-      .single();
-
-  if (subjectError || !subject) {
-    return {
-      success: false,
-      message: "The selected Subject could not be found.",
-    };
-  }
-
-  const { data: validGroups, error: groupError } = await supabase
-    .from("exam_groups")
-    .select("id, exam_id")
-    .in("exam_id", selectedExamIds);
-
-  if (groupError || !validGroups?.length) {
-    return { success: false, message: "The selected exam category does not have any Exams yet." };
-  }
-
-  const selectedExamGroupIds = validGroups.map((group) => group.id);
-  if (!selectedExamGroupIds.includes(subject.exam_group_id)) {
-    return { success: false, message: "Choose a Subject that belongs to one of the checked exam categories." };
-  }
-  const suitableGroupIds = availabilityScope === "all_exam_entries" ? selectedExamGroupIds : [subject.exam_group_id];
-
-  const { data: existingQuestion } = await supabase
-    .from("questions")
-    .select("id")
-    .eq("subject_id", subjectId)
-    .eq("question_text", questionText)
-    .limit(1)
-    .maybeSingle();
-
-  if (existingQuestion) {
-    return {
-      success: false,
-      message:
-        "This Question already exists under the selected Subject.",
-    };
-  }
-
-  const { data: createdQuestion, error: insertError } = await supabase
-    .from("questions")
-    .insert({
-      subject_id: subjectId,
-      question_text: questionText,
-      question_type: "mcq",
-      option_a: optionA,
-      option_b: optionB,
-      option_c: optionC,
-      option_d: optionD,
-      correct_answer: correctAnswer,
-      explanation: explanation || null,
-      difficulty: "medium",
-      image_url: imageUrl || null,
-      source_reference: sourceReference || null,
-      is_active: isActive,
-      content_lifecycle: lifecycle,
-      review_on: lifecycle === "review" ? reviewOn : null,
-      expires_on: lifecycle === "expires" ? expiresOn : null,
-    })
-    .select("id")
-    .single();
-
-  if (insertError || !createdQuestion) {
-    return {
-      success: false,
-      message: insertError?.message ?? "Unable to create the Question.",
-    };
-  }
-
-  const { error: suitabilityError } = await supabase
-    .from("question_exam_groups")
-    .insert(suitableGroupIds.map((examGroupId) => ({ question_id: createdQuestion.id, exam_group_id: examGroupId })));
-
-  if (suitabilityError) {
-    await supabase.from("questions").delete().eq("id", createdQuestion.id);
-    return { success: false, message: suitabilityError.message };
-  }
-
-  revalidatePath("/admin");
-  revalidatePath("/admin/questions");
-
-  return {
-    success: true,
-    message: "Question created successfully.",
-  };
+export async function createQuestion(_previous: CreateQuestionState, formData: FormData): Promise<CreateQuestionState> {
+  const supabase = await createClient(); const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return { success: false, message: "You must be logged in." };
+  const { data: profile } = await supabase.from("profiles").select("role").eq("id", user.id).single();
+  if (profile?.role !== "admin") return { success: false, message: "You are not authorized to create Questions." };
+  const categoryId = String(formData.get("exam_id") ?? "").trim(); const examId = String(formData.get("exam_group_id") ?? "").trim(); const paperId = String(formData.get("paper_id") ?? "").trim(); const subjectId = String(formData.get("subject_id") ?? "").trim();
+  const questionText = String(formData.get("question_text") ?? "").trim(); const options = ["a", "b", "c", "d"].map((letter) => String(formData.get(`option_${letter}`) ?? "").trim()); const correctAnswer = String(formData.get("correct_answer") ?? "") as CorrectAnswer; const lifecycle = String(formData.get("content_lifecycle") ?? "permanent") as QuestionLifecycle; const reviewOn = String(formData.get("review_on") ?? "").trim(); const expiresOn = String(formData.get("expires_on") ?? "").trim();
+  if (!categoryId || !examId || !paperId || !subjectId) return { success: false, message: "Choose an Exam Category, Exam, Paper, and Subject." };
+  if (!questionText || options.some((option) => !option)) return { success: false, message: "Enter the Question and all four answer options." };
+  if (new Set(options.map((option) => option.toLowerCase())).size !== 4) return { success: false, message: "All four answer options must be different." };
+  if (!answers.includes(correctAnswer)) return { success: false, message: "Choose the correct option." };
+  if (!lifecycles.includes(lifecycle) || (lifecycle === "review" && !validDate(reviewOn)) || (lifecycle === "expires" && !validDate(expiresOn))) return { success: false, message: "Choose a valid question lifetime and date." };
+  const { data: subject } = await supabase.from("subjects").select("id, paper_id").eq("id", subjectId).maybeSingle(); const { data: paper } = await supabase.from("papers").select("id, exam_group_id").eq("id", paperId).maybeSingle(); const { data: group } = await supabase.from("exam_groups").select("id, exam_id").eq("id", examId).maybeSingle();
+  if (!subject || !paper || !group || subject.paper_id !== paper.id || paper.exam_group_id !== group.id || group.exam_id !== categoryId) return { success: false, message: "The selected category, Exam, Paper, and Subject do not belong together." };
+  const { data: duplicate } = await supabase.from("questions").select("id").eq("subject_id", subjectId).eq("question_text", questionText).maybeSingle();
+  if (duplicate) return { success: false, message: "This Question already exists under the selected Subject." };
+  const { error } = await supabase.from("questions").insert({ subject_id: subjectId, question_text: questionText, question_type: "mcq", option_a: options[0], option_b: options[1], option_c: options[2], option_d: options[3], correct_answer: correctAnswer, explanation: String(formData.get("explanation") ?? "").trim() || null, source_reference: String(formData.get("source_reference") ?? "").trim() || null, image_url: String(formData.get("image_url") ?? "").trim() || null, difficulty: "medium", is_active: formData.get("is_active") === "on", content_lifecycle: lifecycle, review_on: lifecycle === "review" ? reviewOn : null, expires_on: lifecycle === "expires" ? expiresOn : null });
+  if (error) return { success: false, message: error.message };
+  revalidatePath("/admin/questions"); revalidatePath("/admin/mock-tests");
+  return { success: true, message: "Question added to the Question Bank." };
 }

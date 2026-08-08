@@ -55,7 +55,7 @@ export async function deleteGroup(
     count: subjectCount,
     error: subjectCountError,
   } = await supabase
-    .from("subjects")
+    .from("papers")
     .select("id", {
       count: "exact",
       head: true,

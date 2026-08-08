@@ -1,6 +1,6 @@
 export interface Subject {
   id: string;
-  exam_group_id: string;
+  paper_id: string;
   name: string;
   slug: string;
   description: string | null;
@@ -11,7 +11,7 @@ export interface Subject {
 }
 
 export interface CreateSubjectInput {
-  exam_group_id: string;
+  paper_id: string;
   name: string;
   slug: string;
   description?: string;

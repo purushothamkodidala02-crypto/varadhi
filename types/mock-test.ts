@@ -10,11 +10,13 @@ export type MockTestStatus =
   | "archived";
 
 export type MockTestAccessType = "free" | "paid";
+export type MockTestScope = "paper" | "subject";
 
 export interface MockTest {
   id: string;
-  exam_group_id: string;
+  paper_id: string;
   subject_id: string | null;
+  test_scope: MockTestScope;
   title: string;
   slug: string;
   description: string | null;
@@ -32,8 +34,9 @@ export interface MockTest {
 }
 
 export interface CreateMockTestInput {
-  exam_group_id: string;
+  paper_id: string;
   subject_id?: string | null;
+  test_scope: MockTestScope;
   title: string;
   slug: string;
   description?: string;

@@ -19,7 +19,7 @@ export default async function AdminDashboard() {
       <section className="rounded-3xl bg-slate-950 px-6 py-8 text-white shadow-xl shadow-slate-950/10 sm:px-8">
         <p className="text-sm font-bold uppercase tracking-[0.16em] text-teal-200">Welcome to Varadhi</p>
         <h1 className="mt-3 text-3xl font-black tracking-tight sm:text-4xl">Build a better mock-test experience.</h1>
-        <p className="mt-3 max-w-2xl leading-7 text-slate-300">Start with the question bank, connect questions to a mock test, then publish when it is ready for students.</p>
+        <p className="mt-3 max-w-2xl leading-7 text-slate-300">Create the exam structure first: category, exam, paper, and subjects. Then add questions and publish mock tests.</p>
         <div className="mt-6 flex flex-wrap gap-3">
           <Link href="/admin/questions" className="rounded-xl bg-teal-300 px-4 py-3 text-sm font-bold text-slate-950 hover:bg-teal-200">Add a question</Link>
           <Link href="/admin/mock-tests" className="rounded-xl border border-slate-700 px-4 py-3 text-sm font-bold text-white hover:bg-slate-900">Manage mock tests</Link>
