@@ -142,7 +142,7 @@ export async function createQuestion(
   }
 
   if (selectedExamIds.length === 0) {
-    return { success: false, message: "Tick at least one Exam before choosing an exam entry." };
+    return { success: false, message: "Tick at least one exam category before choosing an Exam." };
   }
 
   if (availabilityScope !== "all_exam_entries" && availabilityScope !== "selected_entry") {
@@ -181,12 +181,12 @@ export async function createQuestion(
     .in("exam_id", selectedExamIds);
 
   if (groupError || !validGroups?.length) {
-    return { success: false, message: "The selected Exam does not have any exam entries yet." };
+    return { success: false, message: "The selected exam category does not have any Exams yet." };
   }
 
   const selectedExamGroupIds = validGroups.map((group) => group.id);
   if (!selectedExamGroupIds.includes(subject.exam_group_id)) {
-    return { success: false, message: "Choose a Subject that belongs to one of the checked Exams." };
+    return { success: false, message: "Choose a Subject that belongs to one of the checked exam categories." };
   }
   const suitableGroupIds = availabilityScope === "all_exam_entries" ? selectedExamGroupIds : [subject.exam_group_id];
 

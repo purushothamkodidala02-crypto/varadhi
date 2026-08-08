@@ -95,7 +95,7 @@ export function EditQuestionForm({ question, subjects, groups, selectedGroupIds 
         </section>
 
         <fieldset className="rounded-xl border border-slate-200 p-5">
-          <legend className="px-1 text-sm font-bold text-slate-900">Suitable for exam entries</legend>
+          <legend className="px-1 text-sm font-bold text-slate-900">Suitable for Exams</legend>
           <p className="mt-1 text-xs leading-5 text-slate-600">This lets one question appear in relevant Group 1, Group 2, EO, or other TGPSC mocks without making duplicate questions.</p>
           <div className="mt-4 grid gap-3 sm:grid-cols-2">
             {groups.map((group) => <label key={group.id} className="flex items-start gap-2 text-sm"><input name="exam_group_ids" type="checkbox" value={group.id} defaultChecked={selectedGroupIds.includes(group.id)} className="mt-1 h-4 w-4 accent-teal-700" /><span>{group.label}</span></label>)}

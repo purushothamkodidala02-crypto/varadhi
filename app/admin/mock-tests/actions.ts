@@ -85,7 +85,7 @@ export async function createMockTest(
   if (!examGroupId) {
     return {
       success: false,
-      message: "Please select an Exam Entry.",
+      message: "Please select an Exam.",
     };
   }
 
@@ -145,7 +145,7 @@ export async function createMockTest(
   if (groupError || !group) {
     return {
       success: false,
-      message: "The selected Exam Entry could not be found.",
+      message: "The selected Exam could not be found.",
     };
   }
 
@@ -165,7 +165,7 @@ export async function createMockTest(
       return {
         success: false,
         message:
-          "The selected Subject does not belong to this Exam Entry.",
+          "The selected Subject does not belong to this Exam.",
       };
     }
   }
@@ -195,7 +195,7 @@ export async function createMockTest(
   if (insertError?.code === "23505") {
     return {
       success: false,
-      message: `A Mock Test with the slug "${slug}" already exists under this Exam Entry.`,
+      message: `A Mock Test with the slug "${slug}" already exists under this Exam.`,
     };
   }
 

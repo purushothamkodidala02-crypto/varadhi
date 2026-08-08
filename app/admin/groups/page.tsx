@@ -71,12 +71,11 @@ export default async function AdminGroupsPage() {
     <main>
       <div>
         <h1 className="text-3xl font-bold">
-          Exam Entries
+          Exams
         </h1>
 
         <p className="mt-2 text-gray-600">
-          Manage Group, Gazetted, Non-Gazetted and other
-          TGPSC exams.
+          Manage Group, Gazetted, Non-Gazetted and other exams under each exam category.
         </p>
       </div>
 
@@ -85,7 +84,7 @@ export default async function AdminGroupsPage() {
       {groupsResult.error && (
         <div className="mt-6 rounded-lg border border-red-200 bg-red-50 p-4">
           <p className="font-medium text-red-700">
-            Unable to load Exam Entries
+            Unable to load Exams
           </p>
 
           <p className="mt-1 text-sm text-red-600">
@@ -97,7 +96,7 @@ export default async function AdminGroupsPage() {
       {!groupsResult.error && sortedGroups.length === 0 && (
         <div className="mt-8 rounded-xl border border-dashed p-8 text-center">
           <h2 className="text-lg font-semibold">
-            No Exam Entries added yet
+            No Exams added yet
           </h2>
         </div>
       )}
@@ -105,7 +104,7 @@ export default async function AdminGroupsPage() {
       {!groupsResult.error && sortedGroups.length > 0 && (
         <section className="mt-8">
           <h2 className="text-xl font-semibold">
-            Existing Exam Entries
+            Existing Exams
           </h2>
 
           <div className="mt-4 overflow-x-auto rounded-xl border">
@@ -113,7 +112,7 @@ export default async function AdminGroupsPage() {
               <thead className="border-b bg-gray-50">
                 <tr>
                   <th className="px-4 py-3 text-sm font-semibold">
-                    Exam
+                    Exam category
                   </th>
 
                   <th className="px-4 py-3 text-sm font-semibold">
@@ -121,7 +120,7 @@ export default async function AdminGroupsPage() {
                   </th>
 
                   <th className="px-4 py-3 text-sm font-semibold">
-                    Entry
+                    Exam
                   </th>
 
                   <th className="px-4 py-3 text-sm font-semibold">
@@ -149,7 +148,7 @@ export default async function AdminGroupsPage() {
                     className="border-b last:border-b-0"
                   >
                     <td className="whitespace-nowrap px-4 py-3 text-sm">
-                      {group.exams?.name ?? "Unknown exam"}
+                      {group.exams?.name ?? "Unknown category"}
                     </td>
 
                     <td className="whitespace-nowrap px-4 py-3">

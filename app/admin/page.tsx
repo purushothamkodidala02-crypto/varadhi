@@ -9,7 +9,7 @@ export default async function AdminDashboard() {
     supabase.from("questions").select("id", { count: "exact", head: true }),
   ]);
   const metrics: Array<{ label: string; value: number; href: string; detail: string }> = [
-    { label: "Exams", value: examsResult.count ?? 0, href: "/admin/exams", detail: "Set up the main exam board" },
+    { label: "Exam categories", value: examsResult.count ?? 0, href: "/admin/exams", detail: "Set up categories such as TGPSC" },
     { label: "Mock tests", value: mockTestsResult.count ?? 0, href: "/admin/mock-tests", detail: "Create and publish practice tests" },
     { label: "Questions", value: questionsResult.count ?? 0, href: "/admin/questions", detail: "Grow your reusable question bank" },
   ];
@@ -40,7 +40,7 @@ export default async function AdminDashboard() {
         <h2 className="text-xl font-black text-slate-950">Fast content workflow</h2>
         <div className="mt-5 grid gap-4 md:grid-cols-3">
           {[
-            ["1", "Add exam structure", "Create an exam, then its exam entries and subjects."],
+            ["1", "Add exam structure", "Create an exam category, then its exams and subjects."],
             ["2", "Write questions", "Choose the subject, enter four options, and mark the right answer."],
             ["3", "Publish a mock test", "Assign questions to a mock test and change its status when ready."],
           ].map(([step, title, description]) => <div key={step} className="rounded-xl bg-slate-50 p-5"><span className="text-sm font-black text-teal-700">STEP {step}</span><h3 className="mt-2 font-bold text-slate-950">{title}</h3><p className="mt-2 text-sm leading-6 text-slate-600">{description}</p></div>)}

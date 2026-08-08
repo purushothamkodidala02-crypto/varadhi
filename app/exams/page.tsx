@@ -44,19 +44,19 @@ export default async function ExamsPage() {
             ← Back to home
           </Link>
           <p className="mt-7 text-sm font-bold uppercase tracking-[0.15em] text-teal-700">
-            Find your exam
+            Find your exam category
           </p>
           <h1 className="mt-3 text-4xl font-black tracking-tight text-slate-950">
-            Choose an exam. Start practising.
+            Choose an exam category. Start practising.
           </h1>
           <p className="mt-4 text-base leading-7 text-slate-600">
-            Open an exam entry to see only the mock tests prepared for it.
+            Choose an exam to see the mock tests prepared for it.
           </p>
         </div>
 
         {exams.length === 0 ? (
           <div className="mt-10 rounded-2xl border border-dashed bg-white p-10 text-center text-slate-600">
-            No exams are available yet.
+            No exam categories are available yet.
           </div>
         ) : (
           <div className="mt-10 space-y-8">
@@ -68,12 +68,12 @@ export default async function ExamsPage() {
                   <div className="flex flex-wrap items-end justify-between gap-3 border-b border-slate-100 pb-5">
                     <div>
                       <p className="text-xs font-bold uppercase tracking-[0.14em] text-teal-700">
-                        Exam board
+                        Exam category
                       </p>
                       <h2 className="mt-2 text-2xl font-black text-slate-950">{exam.name}</h2>
                     </div>
                     <span className="rounded-full bg-teal-50 px-3 py-1 text-xs font-bold text-teal-800">
-                      {entries.length} exam {entries.length === 1 ? "entry" : "entries"}
+                      {entries.length} {entries.length === 1 ? "exam" : "exams"}
                     </span>
                   </div>
                   {exam.description && <p className="mt-4 text-slate-600">{exam.description}</p>}
@@ -85,7 +85,7 @@ export default async function ExamsPage() {
                         </p>
                         <h3 className="mt-3 text-xl font-bold text-slate-950">{entry.name}</h3>
                         <p className="mt-2 min-h-10 text-sm leading-6 text-slate-600">
-                          {entry.description ?? "Browse published mock tests for this exam entry."}
+                          {entry.description ?? "Browse published mock tests for this exam."}
                         </p>
                         <Link
                           href={`/mock-tests?group=${entry.id}`}

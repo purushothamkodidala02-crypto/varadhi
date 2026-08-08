@@ -102,7 +102,7 @@ export default async function AdminMockTestsPage() {
         </h1>
 
         <p className="mt-2 text-gray-600">
-          Create and manage mock tests for every exam and
+          Create and manage mock tests for every Exam category and
           Subject.
         </p>
       </div>
@@ -150,11 +150,11 @@ export default async function AdminMockTestsPage() {
                 <thead className="border-b bg-gray-50">
                   <tr>
                     <th className="px-4 py-3 text-sm font-semibold">
-                      Exam
+                      Exam category
                     </th>
 
                     <th className="px-4 py-3 text-sm font-semibold">
-                      Entry
+                      Exam
                     </th>
 
                     <th className="px-4 py-3 text-sm font-semibold">
@@ -204,11 +204,11 @@ export default async function AdminMockTestsPage() {
                         className="border-b last:border-b-0"
                       >
                         <td className="whitespace-nowrap px-4 py-3 text-sm">
-                          {exam?.name ?? "Unknown exam"}
+                          {exam?.name ?? "Unknown category"}
                         </td>
 
                         <td className="whitespace-nowrap px-4 py-3 text-sm">
-                          {group?.name ?? "Unknown entry"}
+                          {group?.name ?? "Unknown Exam"}
                         </td>
 
                         <td className="px-4 py-3 text-sm">

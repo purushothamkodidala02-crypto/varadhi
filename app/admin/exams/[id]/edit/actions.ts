@@ -36,7 +36,7 @@ export async function updateExam(
   if (profileError || profile?.role !== "admin") {
     return {
       success: false,
-      message: "You are not authorized to update exams.",
+      message: "You are not authorized to update exam categories.",
     };
   }
 
@@ -59,7 +59,7 @@ export async function updateExam(
   if (!name) {
     return {
       success: false,
-      message: "Exam name is required.",
+      message: "Exam category name is required.",
     };
   }
 
@@ -94,7 +94,7 @@ export async function updateExam(
   if (updateError?.code === "23505") {
     return {
       success: false,
-      message: `An exam with the slug "${slug}" already exists.`,
+      message: `An exam category with the slug "${slug}" already exists.`,
     };
   }
 
@@ -111,6 +111,6 @@ export async function updateExam(
 
   return {
     success: true,
-    message: "Exam updated successfully.",
+    message: "Exam category updated successfully.",
   };
 }

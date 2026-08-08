@@ -44,7 +44,7 @@ export async function updateGroup(
   if (profileError || profile?.role !== "admin") {
     return {
       success: false,
-      message: "You are not authorized to update exam entries.",
+      message: "You are not authorized to update Exams.",
     };
   }
 
@@ -73,7 +73,7 @@ export async function updateGroup(
   if (!examId) {
     return {
       success: false,
-      message: "Please select an exam.",
+      message: "Please select an exam category.",
     };
   }
 
@@ -115,7 +115,7 @@ export async function updateGroup(
   if (examError || !exam) {
     return {
       success: false,
-      message: "The selected exam could not be found.",
+      message: "The selected exam category could not be found.",
     };
   }
 
@@ -137,7 +137,7 @@ export async function updateGroup(
   if (updateError?.code === "23505") {
     return {
       success: false,
-      message: `An entry with the slug "${slug}" already exists under this exam.`,
+      message: `An Exam with the slug "${slug}" already exists under this exam category.`,
     };
   }
 
@@ -154,6 +154,6 @@ export async function updateGroup(
 
   return {
     success: true,
-    message: "Exam entry updated successfully.",
+    message: "Exam updated successfully.",
   };
 }

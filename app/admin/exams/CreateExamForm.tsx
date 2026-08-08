@@ -19,7 +19,7 @@ export function CreateExamForm() {
 
   return (
     <section className="mt-8 rounded-xl border p-6">
-      <h2 className="text-xl font-semibold">Add Exam</h2>
+      <h2 className="text-xl font-semibold">Add Exam Category</h2>
 
       <form action={formAction} className="mt-6 space-y-5">
         <div>
@@ -27,7 +27,7 @@ export function CreateExamForm() {
             htmlFor="name"
             className="mb-2 block text-sm font-medium"
           >
-            Exam name
+            Exam category name
           </label>
 
           <input
@@ -114,7 +114,7 @@ export function CreateExamForm() {
           disabled={pending}
           className="rounded-lg bg-black px-5 py-3 font-medium text-white disabled:cursor-not-allowed disabled:opacity-50"
         >
-          {pending ? "Adding..." : "Add Exam"}
+          {pending ? "Adding..." : "Add Exam Category"}
         </button>
 
         {state.message && (

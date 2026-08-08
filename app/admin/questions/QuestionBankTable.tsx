@@ -54,7 +54,7 @@ export function QuestionBankTable({ questions }: QuestionBankTableProps) {
   return (
     <section className="mt-10">
       <div className="flex flex-wrap items-end justify-between gap-3">
-        <div><h2 className="text-2xl font-black text-slate-950">Existing questions</h2><p className="mt-1 text-sm text-slate-600">One question can serve several TGPSC exam entries. Expired questions stay here safely but cannot be added to new mock tests.</p></div>
+        <div><h2 className="text-2xl font-black text-slate-950">Existing questions</h2><p className="mt-1 text-sm text-slate-600">One question can serve several TGPSC Exams. Expired questions stay here safely but cannot be added to new mock tests.</p></div>
         <span className="rounded-full bg-slate-200 px-3 py-1 text-xs font-bold text-slate-600">{filteredQuestions.length} of {questions.length}</span>
       </div>
 

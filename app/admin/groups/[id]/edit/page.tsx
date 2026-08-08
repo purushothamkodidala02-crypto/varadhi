@@ -44,12 +44,12 @@ export default async function EditGroupPage({
         href="/admin/groups"
         className="text-sm font-medium text-gray-600 hover:text-black"
       >
-        ← Back to Exam Entries
+        ← Back to Exams
       </Link>
 
       <div className="mt-6">
         <h1 className="text-3xl font-bold">
-          Edit Exam Entry
+          Edit Exam
         </h1>
 
         <p className="mt-2 text-gray-600">

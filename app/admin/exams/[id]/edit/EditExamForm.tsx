@@ -34,7 +34,7 @@ export function EditExamForm({
             htmlFor="name"
             className="mb-2 block text-sm font-medium"
           >
-            Exam name
+            Exam category name
           </label>
 
           <input

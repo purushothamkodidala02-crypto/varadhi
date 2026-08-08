@@ -28,7 +28,7 @@ export function PublicHeader({ compact = false }: PublicHeaderProps) {
 
         <nav className="hidden items-center gap-6 text-sm font-semibold text-slate-600 sm:flex">
           <Link href="/exams" className="transition hover:text-slate-950">
-            Exams
+            Exam categories
           </Link>
           <Link href="/mock-tests" className="transition hover:text-slate-950">
             Mock tests

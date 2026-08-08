@@ -88,7 +88,7 @@ export async function assignQuestion(
     .maybeSingle();
 
   if (suitabilityError || !suitability) {
-    return { success: false, message: "Choose a Question marked as suitable for this Mock Test's exam entry." };
+    return { success: false, message: "Choose a Question marked as suitable for this Mock Test's Exam." };
   }
 
   if (result.mockTest.subject_id) {

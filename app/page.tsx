@@ -36,7 +36,7 @@ export default function Home() {
                 href="/exams"
                 className="rounded-xl border border-slate-700 px-5 py-3 font-bold text-white transition hover:border-slate-500 hover:bg-slate-900"
               >
-                Browse exams
+                Browse exam categories
               </Link>
             </div>
           </div>

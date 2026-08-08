@@ -109,7 +109,7 @@ export async function updateMockTest(
   if (!examGroupId || !title) {
     return {
       success: false,
-      message: "Exam Entry and title are required.",
+      message: "Exam and title are required.",
     };
   }
 
@@ -183,7 +183,7 @@ export async function updateMockTest(
   if (groupError || !group) {
     return {
       success: false,
-      message: "The selected Exam Entry could not be found.",
+      message: "The selected Exam could not be found.",
     };
   }
 
@@ -203,7 +203,7 @@ export async function updateMockTest(
       return {
         success: false,
         message:
-          "The selected Subject does not belong to this Exam Entry.",
+          "The selected Subject does not belong to this Exam.",
       };
     }
   }
@@ -235,7 +235,7 @@ export async function updateMockTest(
   if (updateError?.code === "23505") {
     return {
       success: false,
-      message: `A Mock Test with the slug "${slug}" already exists under this Exam Entry.`,
+      message: `A Mock Test with the slug "${slug}" already exists under this Exam.`,
     };
   }
 

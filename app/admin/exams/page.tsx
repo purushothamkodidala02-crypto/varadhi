@@ -20,10 +20,10 @@ export default async function AdminExamsPage() {
   return (
     <main>
       <div>
-        <h1 className="text-3xl font-bold">Exams</h1>
+        <h1 className="text-3xl font-bold">Exam Categories</h1>
 
         <p className="mt-2 text-gray-600">
-          Create and manage exams available on Varadhi.
+          Create and manage categories such as TGPSC, TET, or DSC.
         </p>
       </div>
 
@@ -32,7 +32,7 @@ export default async function AdminExamsPage() {
       {error && (
         <div className="mt-6 rounded-lg border border-red-200 bg-red-50 p-4">
           <p className="font-medium text-red-700">
-            Unable to load exams
+            Unable to load exam categories
           </p>
 
           <p className="mt-1 text-sm text-red-600">
@@ -44,11 +44,11 @@ export default async function AdminExamsPage() {
       {!error && exams.length === 0 && (
         <div className="mt-8 rounded-xl border border-dashed p-8 text-center">
           <h2 className="text-lg font-semibold">
-            No exams added yet
+            No exam categories added yet
           </h2>
 
           <p className="mt-2 text-sm text-gray-600">
-            Your first exam will be TGPSC.
+            Your first exam category can be TGPSC.
           </p>
         </div>
       )}
@@ -56,7 +56,7 @@ export default async function AdminExamsPage() {
       {!error && exams.length > 0 && (
         <section className="mt-8">
           <h2 className="text-xl font-semibold">
-            Existing Exams
+            Existing Exam Categories
           </h2>
 
           <div className="mt-4 overflow-x-auto rounded-xl border">

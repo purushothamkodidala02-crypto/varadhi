@@ -34,7 +34,7 @@ export async function deleteExam(
   if (profileError || profile?.role !== "admin") {
     return {
       success: false,
-      message: "You are not authorized to delete exams.",
+      message: "You are not authorized to delete exam categories.",
     };
   }
 
@@ -47,7 +47,7 @@ export async function deleteExam(
   if (examError || !exam) {
     return {
       success: false,
-      message: "Exam not found.",
+      message: "Exam category not found.",
     };
   }
 
@@ -72,7 +72,7 @@ export async function deleteExam(
   if ((groupCount ?? 0) > 0) {
     return {
       success: false,
-      message: `Cannot delete "${exam.name}" because it contains ${groupCount} group(s). Deactivate it instead.`,
+      message: `Cannot delete "${exam.name}" because it contains ${groupCount} exam(s). Deactivate it instead.`,
     };
   }
 

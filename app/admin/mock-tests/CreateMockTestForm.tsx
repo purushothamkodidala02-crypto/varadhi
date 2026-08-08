@@ -83,7 +83,7 @@ export function CreateMockTestForm({
             htmlFor="exam_group_id"
             className="mb-2 block text-sm font-medium"
           >
-            Exam Entry
+            Exam
           </label>
 
           <select

@@ -43,7 +43,7 @@ export async function createGroup(
   if (profileError || profile?.role !== "admin") {
     return {
       success: false,
-      message: "You are not authorized to create exam entries.",
+      message: "You are not authorized to create Exams.",
     };
   }
 
@@ -72,7 +72,7 @@ export async function createGroup(
   if (!examId) {
     return {
       success: false,
-      message: "Please select an exam.",
+      message: "Please select an exam category.",
     };
   }
 
@@ -114,7 +114,7 @@ export async function createGroup(
   if (examError || !exam) {
     return {
       success: false,
-      message: "The selected exam could not be found.",
+      message: "The selected exam category could not be found.",
     };
   }
 
@@ -133,7 +133,7 @@ export async function createGroup(
   if (insertError?.code === "23505") {
     return {
       success: false,
-      message: `An entry with the slug "${slug}" already exists under this exam.`,
+      message: `An Exam with the slug "${slug}" already exists under this exam category.`,
     };
   }
 
@@ -149,6 +149,6 @@ export async function createGroup(
 
   return {
     success: true,
-    message: "Exam entry created successfully.",
+    message: "Exam created successfully.",
   };
 }

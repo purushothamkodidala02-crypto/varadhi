@@ -129,7 +129,7 @@ export async function updateQuestion(
     .in("id", suitableGroupIds);
 
   if (groupError || (validGroups?.length ?? 0) !== suitableGroupIds.length) {
-    return { success: false, message: "One or more selected exam entries could not be found." };
+    return { success: false, message: "One or more selected Exams could not be found." };
   }
 
   const { data: duplicate } = await supabase

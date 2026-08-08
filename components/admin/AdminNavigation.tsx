@@ -5,8 +5,8 @@ import { usePathname } from "next/navigation";
 
 const primaryLinks = [
   { href: "/admin", label: "Overview" },
-  { href: "/admin/exams", label: "Exams" },
-  { href: "/admin/groups", label: "Exam entries" },
+  { href: "/admin/exams", label: "Exam categories" },
+  { href: "/admin/groups", label: "Exams" },
 ];
 
 const moreLinks = [

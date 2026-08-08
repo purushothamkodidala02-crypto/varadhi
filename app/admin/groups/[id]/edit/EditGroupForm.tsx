@@ -41,7 +41,7 @@ export function EditGroupForm({
             htmlFor="exam_id"
             className="mb-2 block text-sm font-medium"
           >
-            Exam
+            Exam category
           </label>
 
           <select
@@ -88,7 +88,7 @@ export function EditGroupForm({
             htmlFor="name"
             className="mb-2 block text-sm font-medium"
           >
-            Entry name
+            Exam name
           </label>
 
           <input

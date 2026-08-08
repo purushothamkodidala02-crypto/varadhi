@@ -31,7 +31,7 @@ export function CreateGroupForm({
   return (
     <section className="mt-8 rounded-xl border p-6">
       <h2 className="text-xl font-semibold">
-        Add Exam Entry
+        Add Exam
       </h2>
 
       <form action={formAction} className="mt-6 space-y-5">
@@ -40,7 +40,7 @@ export function CreateGroupForm({
             htmlFor="exam_id"
             className="mb-2 block text-sm font-medium"
           >
-            Exam
+            Exam category
           </label>
 
           <select
@@ -87,7 +87,7 @@ export function CreateGroupForm({
             htmlFor="name"
             className="mb-2 block text-sm font-medium"
           >
-            Entry name
+            Exam name
           </label>
 
           <input
@@ -172,7 +172,7 @@ export function CreateGroupForm({
           disabled={pending || exams.length === 0}
           className="rounded-lg bg-black px-5 py-3 font-medium text-white disabled:cursor-not-allowed disabled:opacity-50"
         >
-          {pending ? "Adding..." : "Add Exam Entry"}
+          {pending ? "Adding..." : "Add Exam"}
         </button>
 
         {state.message && (

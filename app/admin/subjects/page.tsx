@@ -119,11 +119,11 @@ export default async function AdminSubjectsPage() {
               <thead className="border-b bg-gray-50">
                 <tr>
                   <th className="px-4 py-3 text-sm font-semibold">
-                    Exam
+                    Exam category
                   </th>
 
                   <th className="px-4 py-3 text-sm font-semibold">
-                    Group
+                    Exam
                   </th>
 
                   <th className="px-4 py-3 text-sm font-semibold">
@@ -164,11 +164,11 @@ export default async function AdminSubjectsPage() {
                       className="border-b last:border-b-0"
                     >
                       <td className="px-4 py-3 text-sm">
-                        {exam?.name ?? "Unknown exam"}
+                        {exam?.name ?? "Unknown category"}
                       </td>
 
                       <td className="whitespace-nowrap px-4 py-3 text-sm">
-                        {group?.name ?? "Unknown group"}
+                        {group?.name ?? "Unknown Exam"}
                       </td>
 
                       <td className="px-4 py-3 font-medium">
