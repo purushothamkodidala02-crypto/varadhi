@@ -97,6 +97,7 @@ export async function createQuestion(
   const reviewOn = String(formData.get("review_on") ?? "").trim();
   const expiresOn = String(formData.get("expires_on") ?? "").trim();
   const selectedExamIds = Array.from(new Set(formData.getAll("exam_ids").map((value) => String(value).trim()).filter(Boolean)));
+  const availabilityScope = String(formData.get("availability_scope") ?? "all_exam_entries");
 
   if (!subjectId) {
     return {
@@ -144,6 +145,10 @@ export async function createQuestion(
     return { success: false, message: "Tick at least one Exam before choosing an exam entry." };
   }
 
+  if (availabilityScope !== "all_exam_entries" && availabilityScope !== "selected_entry") {
+    return { success: false, message: "Choose where this Question can be used." };
+  }
+
   if (!validLifecycles.includes(lifecycle)) {
     return { success: false, message: "Choose a valid Question lifetime." };
   }
@@ -179,10 +184,11 @@ export async function createQuestion(
     return { success: false, message: "The selected Exam does not have any exam entries yet." };
   }
 
-  const suitableGroupIds = validGroups.map((group) => group.id);
-  if (!suitableGroupIds.includes(subject.exam_group_id)) {
+  const selectedExamGroupIds = validGroups.map((group) => group.id);
+  if (!selectedExamGroupIds.includes(subject.exam_group_id)) {
     return { success: false, message: "Choose a Subject that belongs to one of the checked Exams." };
   }
+  const suitableGroupIds = availabilityScope === "all_exam_entries" ? selectedExamGroupIds : [subject.exam_group_id];
 
   const { data: existingQuestion } = await supabase
     .from("questions")

@@ -14,6 +14,7 @@ const initialState: CreateQuestionState = { success: false, message: "" };
 export function CreateQuestionForm({ exams, groups, subjects }: CreateQuestionFormProps) {
   const [state, formAction, pending] = useActionState(createQuestion, initialState);
   const [lifecycle, setLifecycle] = useState<QuestionLifecycle>("permanent");
+  const [availabilityScope, setAvailabilityScope] = useState<"all_exam_entries" | "selected_entry">("all_exam_entries");
   const [selectedExamIds, setSelectedExamIds] = useState<string[]>([]);
   const [examGroupId, setExamGroupId] = useState("");
   const [subjectId, setSubjectId] = useState("");
@@ -26,6 +27,7 @@ export function CreateQuestionForm({ exams, groups, subjects }: CreateQuestionFo
   }, [entrySearch, groups, selectedExamIds]);
   const visibleSubjects = useMemo(() => subjects.filter((subject) => subject.examGroupId === examGroupId), [examGroupId, subjects]);
   const selectedExamNames = exams.filter((exam) => selectedExamIds.includes(exam.id)).map((exam) => exam.name);
+  const selectedGroupName = groups.find((group) => group.id === examGroupId)?.name ?? "the selected exam entry";
 
   function chooseGroup(nextGroupId: string) {
     setExamGroupId(nextGroupId);
@@ -74,6 +76,8 @@ export function CreateQuestionForm({ exams, groups, subjects }: CreateQuestionFo
               <select id="subject_id" name="subject_id" required value={subjectId} onChange={(event) => setSubjectId(event.target.value)} disabled={!examGroupId || visibleSubjects.length === 0} className="mt-2 w-full rounded-xl border px-4 py-3 text-sm disabled:bg-slate-100"><option value="">{!examGroupId ? "Choose an exam entry first" : visibleSubjects.length === 0 ? "No subjects found" : "Choose a subject"}</option>{visibleSubjects.map((subject) => <option key={subject.id} value={subject.id}>{subject.name}</option>)}</select>
               <p className="mt-3 text-xs leading-5 text-slate-500">{selectedExamNames.length ? `Showing entries for ${selectedExamNames.join(", ")}.` : "No exam selected yet."}</p>
 
+              <fieldset className="mt-6"><legend className="text-sm font-bold text-slate-800">Where can this question be used?</legend><div className="mt-3 space-y-2 rounded-xl border border-slate-200 bg-white p-3"><label className="flex cursor-pointer items-start gap-3 text-sm text-slate-700"><input name="availability_scope" value="all_exam_entries" type="radio" checked={availabilityScope === "all_exam_entries"} onChange={() => setAvailabilityScope("all_exam_entries")} className="mt-1 h-4 w-4 accent-teal-700" /><span><span className="block font-bold">All entries under checked exams</span><span className="block text-xs leading-5 text-slate-500">For example, ticking TGPSC makes it available for every TGPSC entry.</span></span></label><label className="flex cursor-pointer items-start gap-3 text-sm text-slate-700"><input name="availability_scope" value="selected_entry" type="radio" checked={availabilityScope === "selected_entry"} onChange={() => setAvailabilityScope("selected_entry")} className="mt-1 h-4 w-4 accent-teal-700" /><span><span className="block font-bold">Only the selected exam entry</span><span className="block text-xs leading-5 text-slate-500">Use it only for {selectedGroupName}.</span></span></label></div></fieldset>
+
               <label className="mt-6 flex cursor-pointer items-center gap-3 rounded-xl border border-slate-200 bg-white p-3"><input name="is_active" type="checkbox" defaultChecked className="h-4 w-4 accent-teal-700" /><span><span className="block text-sm font-bold text-slate-800">Ready to use</span><span className="block text-xs text-slate-500">Active questions can be assigned to mock tests.</span></span></label>
 
               <label htmlFor="content_lifecycle" className="mt-6 block text-sm font-bold text-slate-800">Question lifetime</label>
@@ -81,7 +85,7 @@ export function CreateQuestionForm({ exams, groups, subjects }: CreateQuestionFo
               {lifecycle === "review" && <label htmlFor="review_on" className="mt-4 block text-sm font-bold text-slate-800">Review on<input id="review_on" name="review_on" type="date" required className="mt-2 w-full rounded-xl border px-4 py-3 font-normal" /></label>}
               {lifecycle === "expires" && <label htmlFor="expires_on" className="mt-4 block text-sm font-bold text-slate-800">Stop using after<input id="expires_on" name="expires_on" type="date" required className="mt-2 w-full rounded-xl border px-4 py-3 font-normal" /><span className="mt-2 block text-xs font-normal leading-5 text-slate-500">Expired questions stay in your records, but cannot be added to new mock tests.</span></label>}
 
-              <div className="mt-6 rounded-xl border border-teal-100 bg-teal-50 p-4 text-sm leading-6 text-teal-900"><p className="font-bold">Automatic exam-entry access</p><p className="mt-1">This question will be available in all exam entries under: {selectedExamNames.length ? selectedExamNames.join(", ") : "tick an exam above"}.</p></div>
+              <div className="mt-6 rounded-xl border border-teal-100 bg-teal-50 p-4 text-sm leading-6 text-teal-900"><p className="font-bold">Question availability</p><p className="mt-1">{availabilityScope === "all_exam_entries" ? `This question will be available in all exam entries under: ${selectedExamNames.length ? selectedExamNames.join(", ") : "tick an exam above"}.` : `This question will be available only for: ${selectedGroupName}.`}</p></div>
             </section>
 
             <section>
