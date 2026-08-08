@@ -19,11 +19,11 @@ export default async function AdminLayout({ children }: { children: React.ReactN
   if (!profile || profile.role !== "admin") redirect("/dashboard");
 
   return (
-    <div className="min-h-screen bg-slate-50 text-slate-900 md:grid md:grid-cols-[17rem_minmax(0,1fr)]">
-      <Suspense fallback={<aside className="hidden min-h-screen border-r bg-white md:block" />}>
+    <div className="flex min-h-screen bg-slate-50 text-slate-900">
+      <Suspense fallback={<aside className="min-h-screen w-64 shrink-0 border-r bg-white" />}>
         <AdminNavigation />
       </Suspense>
-      <div className="min-w-0">
+      <div className="min-w-0 flex-1">
         <header className="flex min-h-18 items-center justify-between gap-4 border-b border-slate-200 bg-white px-5 py-4 sm:px-8">
           <div>
             <p className="text-xs font-bold uppercase tracking-[0.15em] text-teal-700">Control centre</p>
