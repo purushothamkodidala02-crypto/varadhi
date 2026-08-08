@@ -96,7 +96,7 @@ export async function createQuestion(
   const lifecycle = String(formData.get("content_lifecycle") ?? "permanent") as QuestionLifecycle;
   const reviewOn = String(formData.get("review_on") ?? "").trim();
   const expiresOn = String(formData.get("expires_on") ?? "").trim();
-  const selectedGroupIds = Array.from(new Set(formData.getAll("exam_group_ids").map((value) => String(value).trim()).filter(Boolean)));
+  const selectedExamIds = Array.from(new Set(formData.getAll("exam_ids").map((value) => String(value).trim()).filter(Boolean)));
 
   if (!subjectId) {
     return {
@@ -140,6 +140,10 @@ export async function createQuestion(
     };
   }
 
+  if (selectedExamIds.length === 0) {
+    return { success: false, message: "Tick at least one Exam before choosing an exam entry." };
+  }
+
   if (!validLifecycles.includes(lifecycle)) {
     return { success: false, message: "Choose a valid Question lifetime." };
   }
@@ -166,14 +170,18 @@ export async function createQuestion(
     };
   }
 
-  const suitableGroupIds = Array.from(new Set([subject.exam_group_id, ...selectedGroupIds]));
   const { data: validGroups, error: groupError } = await supabase
     .from("exam_groups")
-    .select("id")
-    .in("id", suitableGroupIds);
+    .select("id, exam_id")
+    .in("exam_id", selectedExamIds);
 
-  if (groupError || (validGroups?.length ?? 0) !== suitableGroupIds.length) {
-    return { success: false, message: "One or more selected exam entries could not be found." };
+  if (groupError || !validGroups?.length) {
+    return { success: false, message: "The selected Exam does not have any exam entries yet." };
+  }
+
+  const suitableGroupIds = validGroups.map((group) => group.id);
+  if (!suitableGroupIds.includes(subject.exam_group_id)) {
+    return { success: false, message: "Choose a Subject that belongs to one of the checked Exams." };
   }
 
   const { data: existingQuestion } = await supabase
@@ -215,10 +223,10 @@ export async function createQuestion(
     .select("id")
     .single();
 
-  if (insertError) {
+  if (insertError || !createdQuestion) {
     return {
       success: false,
-      message: insertError.message,
+      message: insertError?.message ?? "Unable to create the Question.",
     };
   }
 
