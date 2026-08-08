@@ -52,7 +52,7 @@ export function CreateQuestionForm({ exams, groups, subjects }: CreateQuestionFo
     const currentGroupIsVisible = groups.some((group) => group.id === examGroupId && nextExamIds.includes(group.examId));
     setSelectedExamIds(nextExamIds);
     setEntrySearch("");
-    setEntryMenuOpen(checked || currentGroupIsVisible);
+    setEntryMenuOpen(false);
     if (!currentGroupIsVisible) chooseGroup("");
   }
 
