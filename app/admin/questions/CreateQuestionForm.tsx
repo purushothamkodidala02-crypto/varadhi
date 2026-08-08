@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useMemo, useState } from "react";
+import { useActionState, useEffect, useMemo, useRef, useState } from "react";
 import { createQuestion, type CreateQuestionState } from "./actions";
 import type { QuestionLifecycle } from "@/types/question";
 
@@ -20,6 +20,7 @@ export function CreateQuestionForm({ exams, groups, subjects }: CreateQuestionFo
   const [subjectId, setSubjectId] = useState("");
   const [entrySearch, setEntrySearch] = useState("");
   const [entryMenuOpen, setEntryMenuOpen] = useState(false);
+  const entryDropdownRef = useRef<HTMLElement>(null);
   const hasSubjects = subjects.length > 0;
 
   const visibleGroups = useMemo(() => {
@@ -29,6 +30,17 @@ export function CreateQuestionForm({ exams, groups, subjects }: CreateQuestionFo
   const visibleSubjects = useMemo(() => subjects.filter((subject) => subject.examGroupId === examGroupId), [examGroupId, subjects]);
   const selectedExamNames = exams.filter((exam) => selectedExamIds.includes(exam.id)).map((exam) => exam.name);
   const selectedGroupName = groups.find((group) => group.id === examGroupId)?.name ?? "the selected exam entry";
+
+  useEffect(() => {
+    function closeWhenClickingOutside(event: MouseEvent) {
+      if (entryDropdownRef.current && !entryDropdownRef.current.contains(event.target as Node)) {
+        setEntryMenuOpen(false);
+      }
+    }
+
+    document.addEventListener("mousedown", closeWhenClickingOutside);
+    return () => document.removeEventListener("mousedown", closeWhenClickingOutside);
+  }, []);
 
   function chooseGroup(nextGroupId: string) {
     setExamGroupId(nextGroupId);
@@ -65,7 +77,7 @@ export function CreateQuestionForm({ exams, groups, subjects }: CreateQuestionFo
 
               <fieldset className="mt-4"><legend className="text-sm font-bold text-slate-800">Choose exam</legend><p className="mt-1 text-xs leading-5 text-slate-500">Tick TGPSC, TET, or another exam. This question will automatically be available in every exam entry under each checked exam.</p><div className="mt-3 space-y-2 rounded-xl border border-slate-200 bg-white p-3">{exams.map((exam) => <label key={exam.id} className="flex cursor-pointer items-center gap-2 text-sm font-medium text-slate-700"><input name="exam_ids" value={exam.id} type="checkbox" checked={selectedExamIds.includes(exam.id)} onChange={(event) => toggleExam(exam.id, event.target.checked)} className="h-4 w-4 accent-teal-700" />{exam.name}</label>)}</div></fieldset>
 
-              <section className="mt-5 rounded-2xl border border-slate-200 bg-white p-3">
+              <section ref={entryDropdownRef} className="mt-5 rounded-2xl border border-slate-200 bg-white p-3">
                 <label htmlFor="entry_search" className="block text-sm font-bold text-slate-800">Exam entry</label>
                 <div className="relative mt-2"><input id="entry_search" role="combobox" aria-controls="exam-entry-results" aria-expanded={entryMenuOpen} aria-autocomplete="list" type="search" value={entrySearch} onFocus={() => setEntryMenuOpen(true)} onChange={(event) => searchEntries(event.target.value)} disabled={selectedExamIds.length === 0} placeholder="Type to search exam entries" className="w-full rounded-xl border px-4 py-3 text-sm disabled:bg-slate-100" />{entryMenuOpen && selectedExamIds.length > 0 && <div id="exam-entry-results" role="listbox" className="absolute z-10 mt-2 max-h-56 w-full overflow-y-auto rounded-xl border border-slate-200 bg-white p-1 shadow-lg">{visibleGroups.length === 0 ? <p className="px-3 py-3 text-sm text-slate-500">No exam entries match this search.</p> : visibleGroups.map((group) => <button key={group.id} type="button" role="option" aria-selected={group.id === examGroupId} onClick={() => { chooseGroup(group.id); setEntrySearch(group.name); setEntryMenuOpen(false); }} className={`block w-full rounded-lg px-3 py-2.5 text-left text-sm font-medium transition ${group.id === examGroupId ? "bg-teal-50 text-teal-800" : "text-slate-700 hover:bg-slate-100"}`}>{group.name}</button>)}</div>}</div>
                 {examGroupId && <p className="mt-2 text-xs font-semibold text-teal-800">Selected: {selectedGroupName}</p>}
