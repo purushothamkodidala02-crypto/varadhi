@@ -2,6 +2,7 @@ import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import type { MockTest } from "@/types/mock-test";
 import { CreateMockTestForm } from "./CreateMockTestForm";
+import { MockTestManagementButtons } from "./MockTestManagementButtons";
 
 type GroupRecord = {
   id: string;
@@ -243,12 +244,19 @@ export default async function AdminMockTestsPage() {
                         </td>
                         <td className="px-4 py-3">
                             
-                            <Link
-                                href={`/admin/mock-tests/${mockTest.id}/edit`}
-                                className="text-blue-600 hover:text-blue-800"
-                            >
-                                Edit
-                            </Link>
+                            <div className="flex items-center gap-2">
+                              <Link
+                                  href={`/admin/mock-tests/${mockTest.id}/edit`}
+                                  className="rounded-lg px-2.5 py-1.5 text-sm font-bold text-teal-700 hover:bg-teal-50"
+                              >
+                                  {mockTest.status === "draft" ? "Edit" : "View"}
+                              </Link>
+                              <MockTestManagementButtons
+                                mockTestId={mockTest.id}
+                                mockTestTitle={mockTest.title}
+                                status={mockTest.status}
+                              />
+                            </div>
                         </td>
 
                       </tr>
