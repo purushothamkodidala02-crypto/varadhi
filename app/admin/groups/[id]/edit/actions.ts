@@ -2,19 +2,12 @@
 
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
-import type { ExamType } from "@/types/group";
+import { readPaperInputs, toPaperRows } from "../../paper-inputs";
 
 export type UpdateGroupState = {
   success: boolean;
   message: string;
 };
-
-const validExamTypes: ExamType[] = [
-  "group",
-  "gazetted",
-  "non_gazetted",
-  "other",
-];
 
 export async function updateGroup(
   groupId: string,
@@ -50,10 +43,6 @@ export async function updateGroup(
 
   const examId = String(formData.get("exam_id") ?? "").trim();
 
-  const examType = String(
-    formData.get("exam_type") ?? ""
-  ).trim() as ExamType;
-
   const name = String(formData.get("name") ?? "").trim();
 
   const slug = String(formData.get("slug") ?? "")
@@ -74,13 +63,6 @@ export async function updateGroup(
     return {
       success: false,
       message: "Please select an exam category.",
-    };
-  }
-
-  if (!validExamTypes.includes(examType)) {
-    return {
-      success: false,
-      message: "Please select a valid Exam Type.",
     };
   }
 
@@ -106,6 +88,15 @@ export async function updateGroup(
     };
   }
 
+  const newPaperInput = readPaperInputs(formData.get("new_papers_json"), 0);
+
+  if (newPaperInput.error || !newPaperInput.papers) {
+    return {
+      success: false,
+      message: newPaperInput.error ?? "Check the new Paper details.",
+    };
+  }
+
   const { data: exam, error: examError } = await supabase
     .from("exams")
     .select("id")
@@ -123,7 +114,6 @@ export async function updateGroup(
     .from("exam_groups")
     .update({
       exam_id: examId,
-      exam_type: examType,
       name,
       slug,
       description: description || null,
@@ -148,12 +138,36 @@ export async function updateGroup(
     };
   }
 
+  if (newPaperInput.papers.length > 0) {
+    const { data: existingPapers, error: existingPapersError } = await supabase
+      .from("papers")
+      .select("slug, display_order")
+      .eq("exam_group_id", groupId);
+
+    if (existingPapersError) {
+      return { success: false, message: existingPapersError.message };
+    }
+
+    const nextDisplayOrder = Math.max(0, ...(existingPapers ?? []).map((paper) => paper.display_order)) + 1;
+    const { error: papersError } = await supabase
+      .from("papers")
+      .insert(toPaperRows(groupId, newPaperInput.papers, (existingPapers ?? []).map((paper) => paper.slug), nextDisplayOrder));
+
+    if (papersError) {
+      return { success: false, message: `Exam details were saved, but the new Papers could not be added: ${papersError.message}` };
+    }
+  }
+
   revalidatePath("/admin/groups");
+  revalidatePath("/admin/papers");
   revalidatePath("/admin/subjects");
+  revalidatePath("/admin/mock-tests");
+  revalidatePath("/admin/questions");
+  revalidatePath("/mock-tests");
   revalidatePath(`/admin/groups/${groupId}/edit`);
 
   return {
     success: true,
-    message: "Exam updated successfully.",
+    message: newPaperInput.papers.length > 0 ? `Exam updated and ${newPaperInput.papers.length} ${newPaperInput.papers.length === 1 ? "Paper" : "Papers"} added.` : "Exam updated successfully.",
   };
 }

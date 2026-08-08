@@ -1,25 +1,8 @@
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
-import type {
-  ExamGroupWithExam,
-  ExamType,
-} from "@/types/group";
+import type { ExamGroupWithExam } from "@/types/group";
 import { CreateGroupForm } from "./CreateGroupForm";
 import { DeleteGroupButton } from "./DeleteGroupButton";
-
-const examTypeLabels: Record<ExamType, string> = {
-  group: "Group Exam",
-  gazetted: "Gazetted",
-  non_gazetted: "Non-Gazetted",
-  other: "Other",
-};
-
-const examTypeOrder: Record<ExamType, number> = {
-  group: 1,
-  gazetted: 2,
-  non_gazetted: 3,
-  other: 4,
-};
 
 export default async function AdminGroupsPage() {
   const supabase = await createClient();
@@ -31,7 +14,6 @@ export default async function AdminGroupsPage() {
         `
           id,
           exam_id,
-          exam_type,
           name,
           slug,
           description,
@@ -56,14 +38,7 @@ export default async function AdminGroupsPage() {
   const groups = (groupsResult.data ??
     []) as unknown as ExamGroupWithExam[];
 
-  const sortedGroups = [...groups].sort((a, b) => {
-    return (
-      examTypeOrder[a.exam_type] -
-        examTypeOrder[b.exam_type] ||
-      a.display_order - b.display_order ||
-      a.name.localeCompare(b.name)
-    );
-  });
+  const sortedGroups = [...groups].sort((a, b) => a.display_order - b.display_order || a.name.localeCompare(b.name));
 
   const exams = examsResult.data ?? [];
 
@@ -75,7 +50,7 @@ export default async function AdminGroupsPage() {
         </h1>
 
         <p className="mt-2 text-gray-600">
-          Manage Group, Gazetted, Non-Gazetted and other exams under each exam category.
+          Create any Exam under a category, then define its real government Papers yourself.
         </p>
       </div>
 
@@ -116,10 +91,6 @@ export default async function AdminGroupsPage() {
                   </th>
 
                   <th className="px-4 py-3 text-sm font-semibold">
-                    Type
-                  </th>
-
-                  <th className="px-4 py-3 text-sm font-semibold">
                     Exam
                   </th>
 
@@ -149,12 +120,6 @@ export default async function AdminGroupsPage() {
                   >
                     <td className="whitespace-nowrap px-4 py-3 text-sm">
                       {group.exams?.name ?? "Unknown category"}
-                    </td>
-
-                    <td className="whitespace-nowrap px-4 py-3">
-                      <span className="rounded-full bg-blue-50 px-3 py-1 text-xs font-medium text-blue-700">
-                        {examTypeLabels[group.exam_type]}
-                      </span>
                     </td>
 
                     <td className="whitespace-nowrap px-4 py-3 font-medium">

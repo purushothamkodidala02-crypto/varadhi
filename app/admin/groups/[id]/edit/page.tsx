@@ -16,11 +16,11 @@ export default async function EditGroupPage({
   const { id } = await params;
   const supabase = await createClient();
 
-  const [groupResult, examsResult] = await Promise.all([
+  const [groupResult, examsResult, papersResult] = await Promise.all([
     supabase
       .from("exam_groups")
       .select(
-        "id, exam_id, exam_type, name, slug, description, is_active, display_order, created_at, updated_at"
+        "id, exam_id, name, slug, description, is_active, display_order, created_at, updated_at"
       )
       .eq("id", id)
       .single(),
@@ -28,6 +28,12 @@ export default async function EditGroupPage({
     supabase
       .from("exams")
       .select("id, name")
+      .order("display_order", { ascending: true }),
+
+    supabase
+      .from("papers")
+      .select("id, name, duration_minutes, question_count, is_active, display_order")
+      .eq("exam_group_id", id)
       .order("display_order", { ascending: true }),
   ]);
 
@@ -53,11 +59,11 @@ export default async function EditGroupPage({
         </h1>
 
         <p className="mt-2 text-gray-600">
-          Update its classification, details and status.
+          Update the Exam details and add its Papers when needed.
         </p>
       </div>
 
-      <EditGroupForm group={group} exams={exams} />
+      <EditGroupForm group={group} exams={exams} papers={papersResult.data ?? []} />
     </main>
   );
 }

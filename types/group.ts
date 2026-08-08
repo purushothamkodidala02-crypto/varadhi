@@ -1,13 +1,6 @@
-export type ExamType =
-  | "group"
-  | "gazetted"
-  | "non_gazetted"
-  | "other";
-
 export interface ExamGroup {
   id: string;
   exam_id: string;
-  exam_type: ExamType;
   name: string;
   slug: string;
   description: string | null;
@@ -25,7 +18,6 @@ export interface ExamGroupWithExam extends ExamGroup {
 
 export interface CreateExamGroupInput {
   exam_id: string;
-  exam_type: ExamType;
   name: string;
   slug: string;
   description?: string;

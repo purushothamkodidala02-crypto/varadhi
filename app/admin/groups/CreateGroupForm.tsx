@@ -1,192 +1,40 @@
 "use client";
 
 import { useActionState } from "react";
-import {
-  createGroup,
-  type CreateGroupState,
-} from "./actions";
+import { createGroup, type CreateGroupState } from "./actions";
+import { PaperListInput } from "./PaperListInput";
 
-type ExamOption = {
-  id: string;
-  name: string;
-};
+type ExamOption = { id: string; name: string };
+type CreateGroupFormProps = { exams: ExamOption[] };
+const initialState: CreateGroupState = { success: false, message: "" };
 
-type CreateGroupFormProps = {
-  exams: ExamOption[];
-};
-
-const initialState: CreateGroupState = {
-  success: false,
-  message: "",
-};
-
-export function CreateGroupForm({
-  exams,
-}: CreateGroupFormProps) {
-  const [state, formAction, pending] = useActionState(
-    createGroup,
-    initialState
-  );
+export function CreateGroupForm({ exams }: CreateGroupFormProps) {
+  const [state, formAction, pending] = useActionState(createGroup, initialState);
 
   return (
-    <section className="mt-8 rounded-xl border p-6">
-      <h2 className="text-xl font-semibold">
-        Add Exam
-      </h2>
+    <section className="mt-8 rounded-2xl border bg-white p-6 shadow-sm">
+      <h2 className="text-xl font-bold">Add Exam</h2>
+      <p className="mt-1 text-sm text-slate-600">Choose the Exam Category, enter the Exam name, then add its actual Papers. Nothing is pre-defined.</p>
 
       <form action={formAction} className="mt-6 space-y-5">
-        <div>
-          <label
-            htmlFor="exam_id"
-            className="mb-2 block text-sm font-medium"
-          >
-            Exam category
-          </label>
+        <label className="block text-sm font-bold">Exam Category<select id="exam_id" name="exam_id" required defaultValue={exams[0]?.id ?? ""} className="mt-2 w-full rounded-lg border px-4 py-3 font-normal"><option value="">Choose a category</option>{exams.map((exam) => <option key={exam.id} value={exam.id}>{exam.name}</option>)}</select></label>
 
-          <select
-            id="exam_id"
-            name="exam_id"
-            required
-            defaultValue={exams[0]?.id}
-            className="w-full rounded-lg border px-4 py-3"
-          >
-            {exams.map((exam) => (
-              <option key={exam.id} value={exam.id}>
-                {exam.name}
-              </option>
-            ))}
-          </select>
+        <div className="grid gap-5 md:grid-cols-2">
+          <label className="block text-sm font-bold">Exam name<input id="name" name="name" type="text" required placeholder="For example: Group 2" className="mt-2 w-full rounded-lg border px-4 py-3 font-normal" /></label>
+          <label className="block text-sm font-bold">Slug<input id="slug" name="slug" type="text" required pattern="[a-z0-9-]+" placeholder="group-2" className="mt-2 w-full rounded-lg border px-4 py-3 font-normal" /><span className="mt-1 block text-xs font-normal text-slate-500">Lowercase letters, numbers and hyphens only.</span></label>
         </div>
 
-        <div>
-          <label
-            htmlFor="exam_type"
-            className="mb-2 block text-sm font-medium"
-          >
-            Exam Type
-          </label>
+        <label className="block text-sm font-bold">Description <span className="font-normal text-slate-500">optional</span><textarea id="description" name="description" rows={3} placeholder="Short introduction for students" className="mt-2 w-full rounded-lg border px-4 py-3 font-normal" /></label>
 
-          <select
-            id="exam_type"
-            name="exam_type"
-            required
-            defaultValue="group"
-            className="w-full rounded-lg border px-4 py-3"
-          >
-            <option value="group">Group Exam</option>
-            <option value="gazetted">Gazetted Exam</option>
-            <option value="non_gazetted">
-              Non-Gazetted Exam
-            </option>
-            <option value="other">Other Exam</option>
-          </select>
-        </div>
+        <div className="max-w-xs"><label className="block text-sm font-bold">Display order<input id="display_order" name="display_order" type="number" min="0" step="1" required defaultValue="1" className="mt-2 w-full rounded-lg border px-4 py-3 font-normal" /></label></div>
 
-        <div>
-          <label
-            htmlFor="name"
-            className="mb-2 block text-sm font-medium"
-          >
-            Exam name
-          </label>
+        <PaperListInput inputName="papers_json" />
 
-          <input
-            id="name"
-            name="name"
-            type="text"
-            required
-            defaultValue="Group I"
-            className="w-full rounded-lg border px-4 py-3"
-          />
-        </div>
+        <label className="flex items-center gap-3"><input name="is_active" type="checkbox" defaultChecked className="h-4 w-4" /><span className="text-sm font-medium">Available to students</span></label>
 
-        <div>
-          <label
-            htmlFor="slug"
-            className="mb-2 block text-sm font-medium"
-          >
-            Slug
-          </label>
+        <button type="submit" disabled={pending || exams.length === 0} className="rounded-lg bg-slate-950 px-5 py-3 font-bold text-white disabled:cursor-not-allowed disabled:opacity-50">{pending ? "Creating..." : "Create Exam and Papers"}</button>
 
-          <input
-            id="slug"
-            name="slug"
-            type="text"
-            required
-            pattern="[a-z0-9-]+"
-            defaultValue="group-i"
-            className="w-full rounded-lg border px-4 py-3"
-          />
-        </div>
-
-        <div>
-          <label
-            htmlFor="description"
-            className="mb-2 block text-sm font-medium"
-          >
-            Description
-          </label>
-
-          <textarea
-            id="description"
-            name="description"
-            rows={3}
-            defaultValue="TGPSC Group I mock tests"
-            className="w-full rounded-lg border px-4 py-3"
-          />
-        </div>
-
-        <div>
-          <label
-            htmlFor="display_order"
-            className="mb-2 block text-sm font-medium"
-          >
-            Display order
-          </label>
-
-          <input
-            id="display_order"
-            name="display_order"
-            type="number"
-            min="0"
-            step="1"
-            required
-            defaultValue="1"
-            className="w-full rounded-lg border px-4 py-3"
-          />
-        </div>
-
-        <label className="flex items-center gap-3">
-          <input
-            name="is_active"
-            type="checkbox"
-            defaultChecked
-            className="h-4 w-4"
-          />
-
-          <span className="text-sm font-medium">Active</span>
-        </label>
-
-        <button
-          type="submit"
-          disabled={pending || exams.length === 0}
-          className="rounded-lg bg-black px-5 py-3 font-medium text-white disabled:cursor-not-allowed disabled:opacity-50"
-        >
-          {pending ? "Adding..." : "Add Exam"}
-        </button>
-
-        {state.message && (
-          <p
-            aria-live="polite"
-            className={
-              state.success
-                ? "text-sm text-green-700"
-                : "text-sm text-red-600"
-            }
-          >
-            {state.message}
-          </p>
-        )}
+        {state.message && <p aria-live="polite" className={state.success ? "text-sm font-semibold text-green-700" : "text-sm font-semibold text-red-600"}>{state.message}</p>}
       </form>
     </section>
   );
