@@ -1,7 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
 import type { ExamGroupWithExam } from "@/types/group";
-import { CreateGroupForm } from "./CreateGroupForm";
-import { ExistingExamsTable } from "./ExistingExamsTable";
+import { ExamsWorkspace } from "./ExamsWorkspace";
 
 export default async function AdminGroupsPage() {
   const supabase = await createClient();
@@ -31,15 +30,16 @@ export default async function AdminGroupsPage() {
         </p>
       </div>
 
-      <CreateGroupForm exams={categories} />
-
       {groupsResult.error ? (
-        <div className="mt-6 rounded-lg border border-red-200 bg-red-50 p-4">
-          <p className="font-medium text-red-700">Unable to load Exams</p>
-          <p className="mt-1 text-sm text-red-600">{groupsResult.error.message}</p>
-        </div>
+        <>
+          <ExamsWorkspace categories={categories} exams={[]} />
+          <div className="mt-6 rounded-lg border border-red-200 bg-red-50 p-4">
+            <p className="font-medium text-red-700">Unable to load Exams</p>
+            <p className="mt-1 text-sm text-red-600">{groupsResult.error.message}</p>
+          </div>
+        </>
       ) : (
-        <ExistingExamsTable
+        <ExamsWorkspace
           categories={categories}
           exams={sortedGroups.map((group) => ({
             id: group.id,
