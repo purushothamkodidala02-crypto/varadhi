@@ -1,15 +1,18 @@
 "use client";
 
-import { useActionState } from "react";
+import { useActionState, useState } from "react";
 import { createQuestion, type CreateQuestionState } from "./actions";
+import type { QuestionLifecycle } from "@/types/question";
 
 type SubjectOption = { id: string; label: string };
-type CreateQuestionFormProps = { subjects: SubjectOption[] };
+type GroupOption = { id: string; label: string };
+type CreateQuestionFormProps = { subjects: SubjectOption[]; groups: GroupOption[] };
 
 const initialState: CreateQuestionState = { success: false, message: "" };
 
-export function CreateQuestionForm({ subjects }: CreateQuestionFormProps) {
+export function CreateQuestionForm({ subjects, groups }: CreateQuestionFormProps) {
   const [state, formAction, pending] = useActionState(createQuestion, initialState);
+  const [lifecycle, setLifecycle] = useState<QuestionLifecycle>("permanent");
   const hasSubjects = subjects.length > 0;
 
   return (
@@ -40,6 +43,23 @@ export function CreateQuestionForm({ subjects }: CreateQuestionFormProps) {
                 <input name="is_active" type="checkbox" defaultChecked className="h-4 w-4 accent-teal-700" />
                 <span><span className="block text-sm font-bold text-slate-800">Ready to use</span><span className="block text-xs text-slate-500">Active questions can be assigned to mock tests.</span></span>
               </label>
+
+              <label htmlFor="content_lifecycle" className="mt-6 block text-sm font-bold text-slate-800">Question lifetime</label>
+              <select id="content_lifecycle" name="content_lifecycle" value={lifecycle} onChange={(event) => setLifecycle(event.target.value as QuestionLifecycle)} className="mt-2 w-full rounded-xl border px-4 py-3 text-sm">
+                <option value="permanent">Permanent — keep in the library</option>
+                <option value="review">Review later — verify it on a chosen date</option>
+                <option value="expires">Expiring — stop using it in new mocks after a date</option>
+              </select>
+              {lifecycle === "review" && <label htmlFor="review_on" className="mt-4 block text-sm font-bold text-slate-800">Review on<input id="review_on" name="review_on" type="date" required className="mt-2 w-full rounded-xl border px-4 py-3 font-normal" /></label>}
+              {lifecycle === "expires" && <label htmlFor="expires_on" className="mt-4 block text-sm font-bold text-slate-800">Stop using after<input id="expires_on" name="expires_on" type="date" required className="mt-2 w-full rounded-xl border px-4 py-3 font-normal" /><span className="mt-2 block text-xs font-normal leading-5 text-slate-500">Expired questions stay in your records, but cannot be added to new mock tests.</span></label>}
+
+              <fieldset className="mt-6">
+                <legend className="text-sm font-bold text-slate-800">Also suitable for</legend>
+                <p className="mt-1 text-xs leading-5 text-slate-500">Select other TGPSC exam entries that may reuse this question. The entry from the chosen subject is included automatically.</p>
+                <div className="mt-3 max-h-48 space-y-2 overflow-y-auto rounded-xl border border-slate-200 bg-white p-3">
+                  {groups.map((group) => <label key={group.id} className="flex cursor-pointer items-start gap-2 text-sm text-slate-700"><input name="exam_group_ids" type="checkbox" value={group.id} className="mt-1 h-4 w-4 accent-teal-700" /><span>{group.label}</span></label>)}
+                </div>
+              </fieldset>
             </section>
 
             <section>

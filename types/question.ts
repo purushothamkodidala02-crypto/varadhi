@@ -1,4 +1,5 @@
 export type CorrectAnswer = "A" | "B" | "C" | "D";
+export type QuestionLifecycle = "permanent" | "review" | "expires";
 
 export interface Question {
   id: string;
@@ -15,6 +16,9 @@ export interface Question {
   image_url: string | null;
   source_reference: string | null;
   is_active: boolean;
+  content_lifecycle: QuestionLifecycle;
+  review_on: string | null;
+  expires_on: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -31,6 +35,9 @@ export interface CreateQuestionInput {
   image_url?: string;
   source_reference?: string;
   is_active?: boolean;
+  content_lifecycle?: QuestionLifecycle;
+  review_on?: string | null;
+  expires_on?: string | null;
 }
 
 export interface MockTestQuestion {

@@ -24,6 +24,7 @@ export default async function EditMockTestPage({
     subjectsResult,
     questionsResult,
     assignmentsResult,
+    suitabilityResult,
   ] = await Promise.all([
     supabase
       .from("mock_tests")
@@ -47,8 +48,7 @@ export default async function EditMockTestPage({
 
     supabase
       .from("questions")
-      .select("id, subject_id, question_text, is_active")
-      .eq("is_active", true)
+      .select("id, subject_id, question_text, is_active, expires_on")
       .order("created_at", { ascending: false }),
 
     supabase
@@ -56,6 +56,8 @@ export default async function EditMockTestPage({
       .select("id, question_id, question_order, marks, negative_marks")
       .eq("mock_test_id", id)
       .order("question_order", { ascending: true }),
+
+    supabase.from("question_exam_groups").select("question_id, exam_group_id"),
   ]);
 
   if (mockTestResult.error || !mockTestResult.data) {
@@ -66,6 +68,7 @@ export default async function EditMockTestPage({
   const groups = groupsResult.data ?? [];
   const exams = examsResult.data ?? [];
   const subjects = subjectsResult.data ?? [];
+  const today = new Date().toISOString().slice(0, 10);
 
   const examMap = new Map(
     exams.map((exam) => [exam.id, exam])
@@ -81,6 +84,14 @@ export default async function EditMockTestPage({
     examGroupId: subject.exam_group_id,
     name: subject.name,
   }));
+
+  const subjectsById = new Map(subjects.map((subject) => [subject.id, subject]));
+  const suitableGroupsByQuestion = new Map<string, Set<string>>();
+  for (const item of suitabilityResult.data ?? []) {
+    const current = suitableGroupsByQuestion.get(item.question_id) ?? new Set<string>();
+    current.add(item.exam_group_id);
+    suitableGroupsByQuestion.set(item.question_id, current);
+  }
 
   const questionMap = new Map(
     (questionsResult.data ?? []).map((question) => [
@@ -102,12 +113,16 @@ export default async function EditMockTestPage({
     assignments.map((assignment) => assignment.question_id)
   );
 
+  const targetSubject = mockTest.subject_id ? subjectsById.get(mockTest.subject_id) : undefined;
   const availableQuestions = (questionsResult.data ?? [])
-    .filter(
-      (question) =>
-        !assignedQuestionIds.has(question.id) &&
-        (!mockTest.subject_id || question.subject_id === mockTest.subject_id)
-    )
+    .filter((question) => {
+      if (assignedQuestionIds.has(question.id) || !question.is_active) return false;
+      if (question.expires_on && question.expires_on < today) return false;
+      if (!suitableGroupsByQuestion.get(question.id)?.has(mockTest.exam_group_id)) return false;
+      if (!targetSubject) return true;
+      const questionSubject = question.subject_id ? subjectsById.get(question.subject_id) : undefined;
+      return questionSubject?.name.trim().toLocaleLowerCase() === targetSubject.name.trim().toLocaleLowerCase();
+    })
     .map((question) => ({
       id: question.id,
       text: question.question_text,

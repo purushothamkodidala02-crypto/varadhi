@@ -18,11 +18,12 @@ export default async function EditQuestionPage({ params }: PageProps<"/admin/que
   const { id } = await params;
   const supabase = await createClient();
 
-  const [questionResult, subjectsResult, groupsResult, examsResult] = await Promise.all([
-    supabase.from("questions").select("id, subject_id, question_text, question_type, option_a, option_b, option_c, option_d, correct_answer, explanation, difficulty, image_url, source_reference, is_active, created_at, updated_at").eq("id", id).single(),
+  const [questionResult, subjectsResult, groupsResult, examsResult, suitabilityResult] = await Promise.all([
+    supabase.from("questions").select("id, subject_id, question_text, question_type, option_a, option_b, option_c, option_d, correct_answer, explanation, difficulty, image_url, source_reference, is_active, content_lifecycle, review_on, expires_on, created_at, updated_at").eq("id", id).single(),
     supabase.from("subjects").select("id, exam_group_id, name, display_order").order("display_order", { ascending: true }),
     supabase.from("exam_groups").select("id, exam_id, name, display_order").order("display_order", { ascending: true }),
     supabase.from("exams").select("id, name"),
+    supabase.from("question_exam_groups").select("exam_group_id").eq("question_id", id),
   ]);
 
   if (questionResult.error || !questionResult.data) notFound();
@@ -44,6 +45,13 @@ export default async function EditQuestionPage({ params }: PageProps<"/admin/que
     .sort((first, second) => first.groupOrder - second.groupOrder || first.subjectOrder - second.subjectOrder || first.label.localeCompare(second.label))
     .map(({ id, label }) => ({ id, label }));
 
+  const groupOptions = groups
+    .map((group) => ({ id: group.id, order: group.display_order, label: `${examMap.get(group.exam_id)?.name ?? "Unknown exam"} â€” ${group.name}` }))
+    .sort((first, second) => first.order - second.order || first.label.localeCompare(second.label))
+    .map(({ id, label }) => ({ id, label }));
+
+  const selectedGroupIds = (suitabilityResult.data ?? []).map((item) => item.exam_group_id);
+
   return (
     <main>
       <Link href="/admin/questions" className="text-sm font-medium text-gray-600 hover:text-black">← Back to Questions</Link>
@@ -51,7 +59,7 @@ export default async function EditQuestionPage({ params }: PageProps<"/admin/que
         <h1 className="text-3xl font-bold">Edit Question</h1>
         <p className="mt-2 text-gray-600">Update the Question, answer details, and active status.</p>
       </div>
-      <EditQuestionForm question={questionResult.data as Question} subjects={subjects} />
+      <EditQuestionForm question={questionResult.data as Question} subjects={subjects} groups={groupOptions} selectedGroupIds={selectedGroupIds} />
     </main>
   );
 }

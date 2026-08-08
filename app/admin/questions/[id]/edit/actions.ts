@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
-import type { CorrectAnswer } from "@/types/question";
+import type { CorrectAnswer, QuestionLifecycle } from "@/types/question";
 
 export type UpdateQuestionState = {
   success: boolean;
@@ -10,6 +10,11 @@ export type UpdateQuestionState = {
 };
 
 const validAnswers: CorrectAnswer[] = ["A", "B", "C", "D"];
+const validLifecycles: QuestionLifecycle[] = ["permanent", "review", "expires"];
+
+function validDate(value: string) {
+  return /^\d{4}-\d{2}-\d{2}$/.test(value) && !Number.isNaN(Date.parse(`${value}T00:00:00Z`));
+}
 
 export async function updateQuestion(
   questionId: string,
@@ -55,6 +60,10 @@ export async function updateQuestion(
   ).trim();
   const imageUrl = String(formData.get("image_url") ?? "").trim();
   const isActive = formData.get("is_active") === "on";
+  const lifecycle = String(formData.get("content_lifecycle") ?? "permanent") as QuestionLifecycle;
+  const reviewOn = String(formData.get("review_on") ?? "").trim();
+  const expiresOn = String(formData.get("expires_on") ?? "").trim();
+  const selectedGroupIds = Array.from(new Set(formData.getAll("exam_group_ids").map((value) => String(value).trim()).filter(Boolean)));
 
   if (!subjectId || !questionText) {
     return {
@@ -88,9 +97,21 @@ export async function updateQuestion(
     };
   }
 
+  if (!validLifecycles.includes(lifecycle)) {
+    return { success: false, message: "Choose a valid Question lifetime." };
+  }
+
+  if (lifecycle === "review" && !validDate(reviewOn)) {
+    return { success: false, message: "Choose a valid review date." };
+  }
+
+  if (lifecycle === "expires" && !validDate(expiresOn)) {
+    return { success: false, message: "Choose a valid expiry date." };
+  }
+
   const { data: subject, error: subjectError } = await supabase
     .from("subjects")
-    .select("id")
+    .select("id, exam_group_id")
     .eq("id", subjectId)
     .single();
 
@@ -99,6 +120,16 @@ export async function updateQuestion(
       success: false,
       message: "The selected Subject could not be found.",
     };
+  }
+
+  const suitableGroupIds = Array.from(new Set([subject.exam_group_id, ...selectedGroupIds]));
+  const { data: validGroups, error: groupError } = await supabase
+    .from("exam_groups")
+    .select("id")
+    .in("id", suitableGroupIds);
+
+  if (groupError || (validGroups?.length ?? 0) !== suitableGroupIds.length) {
+    return { success: false, message: "One or more selected exam entries could not be found." };
   }
 
   const { data: duplicate } = await supabase
@@ -130,11 +161,31 @@ export async function updateQuestion(
       image_url: imageUrl || null,
       source_reference: sourceReference || null,
       is_active: isActive,
+      content_lifecycle: lifecycle,
+      review_on: lifecycle === "review" ? reviewOn : null,
+      expires_on: lifecycle === "expires" ? expiresOn : null,
     })
     .eq("id", questionId);
 
   if (updateError) {
     return { success: false, message: updateError.message };
+  }
+
+  const { error: clearSuitabilityError } = await supabase
+    .from("question_exam_groups")
+    .delete()
+    .eq("question_id", questionId);
+
+  if (clearSuitabilityError) {
+    return { success: false, message: clearSuitabilityError.message };
+  }
+
+  const { error: suitabilityError } = await supabase
+    .from("question_exam_groups")
+    .insert(suitableGroupIds.map((examGroupId) => ({ question_id: questionId, exam_group_id: examGroupId })));
+
+  if (suitabilityError) {
+    return { success: false, message: suitabilityError.message };
   }
 
   revalidatePath("/admin");
