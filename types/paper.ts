@@ -6,6 +6,7 @@ export interface Paper {
   description: string | null;
   duration_minutes: number | null;
   question_count: number | null;
+  default_correct_marks: number;
   default_negative_marks: number;
   is_active: boolean;
   display_order: number;
@@ -20,6 +21,7 @@ export interface CreatePaperInput {
   description?: string;
   duration_minutes?: number | null;
   question_count?: number | null;
+  default_correct_marks?: number;
   default_negative_marks?: number;
   is_active?: boolean;
   display_order?: number;

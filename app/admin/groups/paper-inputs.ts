@@ -2,12 +2,16 @@ export type PaperInput = {
   name: string;
   duration_minutes: number | null;
   question_count: number | null;
+  default_correct_marks: number;
+  default_negative_marks: number;
 };
 
 type RawPaperInput = {
   name?: unknown;
   duration_minutes?: unknown;
   question_count?: unknown;
+  default_correct_marks?: unknown;
+  default_negative_marks?: unknown;
 };
 
 function readOptionalPositiveInteger(value: unknown, label: string): number | null | string {
@@ -15,6 +19,11 @@ function readOptionalPositiveInteger(value: unknown, label: string): number | nu
   if (!text) return null;
   const number = Number(text);
   return Number.isInteger(number) && number > 0 ? number : `${label} must be a positive whole number.`;
+}
+
+function readDecimal(value: unknown, label: string, minimum: number): number | string {
+  const number = Number(String(value ?? "").trim());
+  return Number.isFinite(number) && number >= minimum ? number : `${label} must be ${minimum === 0 ? "zero or more" : "greater than zero"}.`;
 }
 
 export function readPaperInputs(rawValue: FormDataEntryValue | null, minimum: number): { papers?: PaperInput[]; error?: string } {
@@ -37,9 +46,13 @@ export function readPaperInputs(rawValue: FormDataEntryValue | null, minimum: nu
     if (!name) return { error: `Enter a name for Paper ${index + 1}.` };
     const duration = readOptionalPositiveInteger(item.duration_minutes, `Paper ${index + 1} duration`);
     const questionCount = readOptionalPositiveInteger(item.question_count, `Paper ${index + 1} question count`);
+    const correctMarks = readDecimal(item.default_correct_marks, `Paper ${index + 1} correct marks`, 0.01);
+    const negativeMarks = readDecimal(item.default_negative_marks, `Paper ${index + 1} negative marks`, 0);
     if (typeof duration === "string") return { error: duration };
     if (typeof questionCount === "string") return { error: questionCount };
-    papers.push({ name, duration_minutes: duration, question_count: questionCount });
+    if (typeof correctMarks === "string") return { error: correctMarks };
+    if (typeof negativeMarks === "string") return { error: negativeMarks };
+    papers.push({ name, duration_minutes: duration, question_count: questionCount, default_correct_marks: correctMarks, default_negative_marks: negativeMarks });
   }
 
   const names = new Set(papers.map((paper) => paper.name.toLocaleLowerCase()));
@@ -63,6 +76,6 @@ export function toPaperRows(examGroupId: string, papers: PaperInput[], currentSl
       suffix += 1;
     }
     usedSlugs.add(slug);
-    return { exam_group_id: examGroupId, name: paper.name, slug, duration_minutes: paper.duration_minutes, question_count: paper.question_count, default_negative_marks: 0, display_order: displayOrderStart + index, is_active: true };
+    return { exam_group_id: examGroupId, name: paper.name, slug, duration_minutes: paper.duration_minutes, question_count: paper.question_count, default_correct_marks: paper.default_correct_marks, default_negative_marks: paper.default_negative_marks, display_order: displayOrderStart + index, is_active: true };
   });
 }

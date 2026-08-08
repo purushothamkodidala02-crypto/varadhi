@@ -5,4 +5,35 @@ import type { MockTest } from "@/types/mock-test";
 import { EditMockTestForm } from "./EditMockTestForm";
 import { QuestionAssignments } from "./QuestionAssignments";
 
-export default async function EditMockTestPage({ params }: { params: Promise<{ id: string }> }) { const { id } = await params; const supabase = await createClient(); const [testResult, subjectsResult, papersResult, groupsResult, categoriesResult, questionsResult, assignmentsResult] = await Promise.all([supabase.from("mock_tests").select("id, paper_id, subject_id, test_scope, title, slug, description, instructions, duration_minutes, difficulty, status, version, display_order, published_at, access_type, price_inr, created_at, updated_at").eq("id", id).maybeSingle(), supabase.from("subjects").select("id, paper_id, name").order("display_order"), supabase.from("papers").select("id, exam_group_id, name, duration_minutes"), supabase.from("exam_groups").select("id, exam_id, name"), supabase.from("exams").select("id, name"), supabase.from("questions").select("id, subject_id, question_text, is_active, expires_on").order("created_at", { ascending: false }), supabase.from("mock_test_questions").select("id, question_id, question_order, marks, negative_marks").eq("mock_test_id", id).order("question_order")]); if (!testResult.data) notFound(); const test = testResult.data as MockTest; const subjects = subjectsResult.data ?? []; const papers = papersResult.data ?? []; const groups = new Map((groupsResult.data ?? []).map((item) => [item.id, item])); const categories = new Map((categoriesResult.data ?? []).map((item) => [item.id, item])); const subjectById = new Map(subjects.map((item) => [item.id, item])); const questionById = new Map((questionsResult.data ?? []).map((item) => [item.id, item])); const assignments = (assignmentsResult.data ?? []).map((item) => ({ ...item, question_text: questionById.get(item.question_id)?.question_text ?? "Question unavailable" })); const assignedIds = new Set(assignments.map((item) => item.question_id)); const today = new Date().toISOString().slice(0, 10); const availableQuestions = (questionsResult.data ?? []).filter((question) => { const subject = subjectById.get(question.subject_id); return !assignedIds.has(question.id) && question.is_active && (!question.expires_on || question.expires_on >= today) && subject?.paper_id === test.paper_id && (test.test_scope === "paper" || question.subject_id === test.subject_id); }).map((question) => ({ id: question.id, text: question.question_text })); return <main><Link href="/admin/mock-tests" className="text-sm font-semibold text-teal-700 hover:underline">← Back to Mock Tests</Link><h1 className="mt-5 text-3xl font-black">Edit Mock Test</h1><p className="mt-2 text-slate-600">A Paper-wise test accepts all questions from its Paper. A Subject-wise test accepts only questions from its selected Subject.</p><EditMockTestForm mockTest={test} papers={papers.map((paper) => { const group = groups.get(paper.exam_group_id); return { id: paper.id, label: `${categories.get(group?.exam_id ?? "")?.name ?? "Unknown category"} → ${group?.name ?? "Unknown Exam"} → ${paper.name}`, duration: paper.duration_minutes }; })} subjects={subjects.map((subject) => ({ id: subject.id, paperId: subject.paper_id, name: subject.name }))} /><QuestionAssignments mockTestId={test.id} isDraft={test.status === "draft"} availableQuestions={availableQuestions} assignedQuestions={assignments} /></main>; }
+export default async function EditMockTestPage({ params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params;
+  const supabase = await createClient();
+  const [testResult, subjectsResult, papersResult, groupsResult, categoriesResult, questionsResult, assignmentsResult] = await Promise.all([
+    supabase.from("mock_tests").select("id, paper_id, subject_id, test_scope, title, slug, description, instructions, duration_minutes, difficulty, status, version, display_order, published_at, access_type, price_inr, created_at, updated_at").eq("id", id).maybeSingle(),
+    supabase.from("subjects").select("id, paper_id, name").order("display_order"),
+    supabase.from("papers").select("id, exam_group_id, name, duration_minutes, default_correct_marks, default_negative_marks"),
+    supabase.from("exam_groups").select("id, exam_id, name"),
+    supabase.from("exams").select("id, name"),
+    supabase.from("questions").select("id, subject_id, question_text, is_active, expires_on").order("created_at", { ascending: false }),
+    supabase.from("mock_test_questions").select("id, question_id, question_order, marks, negative_marks").eq("mock_test_id", id).order("question_order"),
+  ]);
+
+  if (!testResult.data) notFound();
+  const test = testResult.data as MockTest;
+  const subjects = subjectsResult.data ?? [];
+  const papers = papersResult.data ?? [];
+  const groups = new Map((groupsResult.data ?? []).map((item) => [item.id, item]));
+  const categories = new Map((categoriesResult.data ?? []).map((item) => [item.id, item]));
+  const subjectById = new Map(subjects.map((item) => [item.id, item]));
+  const questionById = new Map((questionsResult.data ?? []).map((item) => [item.id, item]));
+  const assignments = (assignmentsResult.data ?? []).map((item) => ({ ...item, question_text: questionById.get(item.question_id)?.question_text ?? "Question unavailable" }));
+  const assignedIds = new Set(assignments.map((item) => item.question_id));
+  const today = new Date().toISOString().slice(0, 10);
+  const availableQuestions = (questionsResult.data ?? []).filter((question) => {
+    const subject = subjectById.get(question.subject_id);
+    return !assignedIds.has(question.id) && question.is_active && (!question.expires_on || question.expires_on >= today) && subject?.paper_id === test.paper_id && (test.test_scope === "paper" || question.subject_id === test.subject_id);
+  }).map((question) => ({ id: question.id, text: question.question_text }));
+  const testPaper = papers.find((paper) => paper.id === test.paper_id);
+
+  return <main><Link href="/admin/mock-tests" className="text-sm font-semibold text-teal-700 hover:underline">&lt;- Back to Mock Tests</Link><h1 className="mt-5 text-3xl font-black">Edit Mock Test</h1><p className="mt-2 text-slate-600">A Paper-wise test accepts all questions from its Paper. A Subject-wise test accepts only questions from its selected Subject.</p><EditMockTestForm mockTest={test} papers={papers.map((paper) => { const group = groups.get(paper.exam_group_id); return { id: paper.id, label: `${categories.get(group?.exam_id ?? "")?.name ?? "Unknown category"} -> ${group?.name ?? "Unknown Exam"} -> ${paper.name}`, duration: paper.duration_minutes }; })} subjects={subjects.map((subject) => ({ id: subject.id, paperId: subject.paper_id, name: subject.name }))} /><QuestionAssignments mockTestId={test.id} isDraft={test.status === "draft"} availableQuestions={availableQuestions} assignedQuestions={assignments} defaultMarks={testPaper?.default_correct_marks ?? 1} defaultNegativeMarks={testPaper?.default_negative_marks ?? 0} /></main>;
+}

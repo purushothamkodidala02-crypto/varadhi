@@ -19,18 +19,20 @@ function readPaper(formData: FormData) {
   const slug = String(formData.get("slug") ?? "").trim().toLowerCase();
   const durationValue = String(formData.get("duration_minutes") ?? "").trim();
   const questionCountValue = String(formData.get("question_count") ?? "").trim();
+  const correctValue = String(formData.get("default_correct_marks") ?? "1").trim();
   const negativeValue = String(formData.get("default_negative_marks") ?? "0").trim();
   const displayOrder = Number(formData.get("display_order") ?? 0);
   const durationMinutes = durationValue ? Number(durationValue) : null;
   const questionCount = questionCountValue ? Number(questionCountValue) : null;
+  const defaultCorrectMarks = Number(correctValue);
   const defaultNegativeMarks = Number(negativeValue);
 
   if (!examGroupId || !name) return { error: "Choose an Exam and enter a Paper name." };
   if (!slug || !/^[a-z0-9-]+$/.test(slug)) return { error: "Slug can contain only lowercase letters, numbers and hyphens." };
   if ((durationMinutes !== null && (!Number.isInteger(durationMinutes) || durationMinutes <= 0)) || (questionCount !== null && (!Number.isInteger(questionCount) || questionCount <= 0))) return { error: "Duration and question count must be positive whole numbers." };
-  if (!Number.isFinite(defaultNegativeMarks) || defaultNegativeMarks < 0 || !Number.isInteger(displayOrder) || displayOrder < 0) return { error: "Check negative marks and display order." };
+  if (!Number.isFinite(defaultCorrectMarks) || defaultCorrectMarks <= 0 || !Number.isFinite(defaultNegativeMarks) || defaultNegativeMarks < 0 || !Number.isInteger(displayOrder) || displayOrder < 0) return { error: "Check correct marks, negative marks, and display order." };
 
-  return { value: { exam_group_id: examGroupId, name, slug, description: String(formData.get("description") ?? "").trim() || null, duration_minutes: durationMinutes, question_count: questionCount, default_negative_marks: defaultNegativeMarks, display_order: displayOrder, is_active: formData.get("is_active") === "on" } };
+  return { value: { exam_group_id: examGroupId, name, slug, description: String(formData.get("description") ?? "").trim() || null, duration_minutes: durationMinutes, question_count: questionCount, default_correct_marks: defaultCorrectMarks, default_negative_marks: defaultNegativeMarks, display_order: displayOrder, is_active: formData.get("is_active") === "on" } };
 }
 
 export async function createPaper(_previous: PaperActionState, formData: FormData): Promise<PaperActionState> {

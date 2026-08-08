@@ -7,7 +7,6 @@ const primaryLinks = [
   { href: "/admin", label: "Overview" },
   { href: "/admin/exams", label: "Exam categories" },
   { href: "/admin/groups", label: "Exams" },
-  { href: "/admin/papers", label: "Papers" },
 ];
 
 const moreLinks = [
