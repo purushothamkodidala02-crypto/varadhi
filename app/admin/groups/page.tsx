@@ -1,174 +1,55 @@
-import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import type { ExamGroupWithExam } from "@/types/group";
 import { CreateGroupForm } from "./CreateGroupForm";
-import { DeleteGroupButton } from "./DeleteGroupButton";
+import { ExistingExamsTable } from "./ExistingExamsTable";
 
 export default async function AdminGroupsPage() {
   const supabase = await createClient();
-
-  const [groupsResult, examsResult] = await Promise.all([
+  const [groupsResult, categoriesResult] = await Promise.all([
     supabase
       .from("exam_groups")
       .select(
-        `
-          id,
-          exam_id,
-          name,
-          slug,
-          description,
-          is_active,
-          display_order,
-          created_at,
-          updated_at,
-          exams (
-            name
-          )
-        `
+        "id, exam_id, name, slug, description, is_active, display_order, created_at, updated_at, exams (name)",
       )
       .order("display_order", { ascending: true })
       .order("created_at", { ascending: true }),
-
-    supabase
-      .from("exams")
-      .select("id, name")
-      .order("display_order", { ascending: true }),
+    supabase.from("exams").select("id, name").order("display_order", { ascending: true }),
   ]);
 
-  const groups = (groupsResult.data ??
-    []) as unknown as ExamGroupWithExam[];
-
-  const sortedGroups = [...groups].sort((a, b) => a.display_order - b.display_order || a.name.localeCompare(b.name));
-
-  const exams = examsResult.data ?? [];
+  const groups = (groupsResult.data ?? []) as unknown as ExamGroupWithExam[];
+  const categories = categoriesResult.data ?? [];
+  const sortedGroups = [...groups].sort(
+    (a, b) => a.display_order - b.display_order || a.name.localeCompare(b.name),
+  );
 
   return (
     <main>
       <div>
-        <h1 className="text-3xl font-bold">
-          Exams
-        </h1>
-
+        <h1 className="text-3xl font-bold">Exams</h1>
         <p className="mt-2 text-gray-600">
           Create any Exam under a category, then define its real government Papers yourself.
         </p>
       </div>
 
-      <CreateGroupForm exams={exams} />
+      <CreateGroupForm exams={categories} />
 
-      {groupsResult.error && (
+      {groupsResult.error ? (
         <div className="mt-6 rounded-lg border border-red-200 bg-red-50 p-4">
-          <p className="font-medium text-red-700">
-            Unable to load Exams
-          </p>
-
-          <p className="mt-1 text-sm text-red-600">
-            {groupsResult.error.message}
-          </p>
+          <p className="font-medium text-red-700">Unable to load Exams</p>
+          <p className="mt-1 text-sm text-red-600">{groupsResult.error.message}</p>
         </div>
-      )}
-
-      {!groupsResult.error && sortedGroups.length === 0 && (
-        <div className="mt-8 rounded-xl border border-dashed p-8 text-center">
-          <h2 className="text-lg font-semibold">
-            No Exams added yet
-          </h2>
-        </div>
-      )}
-
-      {!groupsResult.error && sortedGroups.length > 0 && (
-        <section className="mt-8">
-          <h2 className="text-xl font-semibold">
-            Existing Exams
-          </h2>
-
-          <div className="mt-4 overflow-x-auto rounded-xl border">
-            <table className="w-full text-left">
-              <thead className="border-b bg-gray-50">
-                <tr>
-                  <th className="px-4 py-3 text-sm font-semibold">
-                    Exam category
-                  </th>
-
-                  <th className="px-4 py-3 text-sm font-semibold">
-                    Exam
-                  </th>
-
-                  <th className="px-4 py-3 text-sm font-semibold">
-                    Slug
-                  </th>
-
-                  <th className="px-4 py-3 text-sm font-semibold">
-                    Status
-                  </th>
-
-                  <th className="px-4 py-3 text-sm font-semibold">
-                    Order
-                  </th>
-
-                  <th className="px-4 py-3 text-sm font-semibold">
-                    Actions
-                  </th>
-                </tr>
-              </thead>
-
-              <tbody>
-                {sortedGroups.map((group) => (
-                  <tr
-                    key={group.id}
-                    className="border-b last:border-b-0"
-                  >
-                    <td className="whitespace-nowrap px-4 py-3 text-sm">
-                      {group.exams?.name ?? "Unknown category"}
-                    </td>
-
-                    <td className="whitespace-nowrap px-4 py-3 font-medium">
-                      {group.name}
-                    </td>
-
-                    <td className="px-4 py-3 text-sm text-gray-600">
-                      {group.slug}
-                    </td>
-
-                    <td className="px-4 py-3">
-                      <span
-                        className={
-                          group.is_active
-                            ? "rounded-full bg-green-100 px-3 py-1 text-xs font-medium text-green-700"
-                            : "rounded-full bg-gray-100 px-3 py-1 text-xs font-medium text-gray-600"
-                        }
-                      >
-                        {group.is_active
-                          ? "Active"
-                          : "Inactive"}
-                      </span>
-                    </td>
-
-                    <td className="px-4 py-3 text-sm">
-                      {group.display_order}
-                    </td>
-
-                    <td className="px-4 py-3">
-                      <div className="flex items-center gap-4">
-                        <Link
-                          href={`/admin/groups/${group.id}/edit`}
-                          className="inline-flex h-6 items-center text-sm font-medium leading-none text-blue-600 hover:underline"
-                        >
-                          Edit
-                        </Link>
-
-                        <DeleteGroupButton
-                          groupId={group.id}
-                          groupName={group.name}
-                        />
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </section>
+      ) : (
+        <ExistingExamsTable
+          categories={categories}
+          exams={sortedGroups.map((group) => ({
+            id: group.id,
+            categoryId: group.exam_id,
+            name: group.name,
+            slug: group.slug,
+            isActive: group.is_active,
+            displayOrder: group.display_order,
+          }))}
+        />
       )}
     </main>
   );

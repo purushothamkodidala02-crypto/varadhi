@@ -2,7 +2,14 @@
 
 import Link from "next/link";
 import { useMemo, useState } from "react";
-import { SearchableSelect } from "@/components/admin/SearchableSelect";
+import {
+  LocationFilters,
+  type LocationCategory,
+  type LocationExam,
+  type LocationFilterValue,
+  type LocationPaper,
+  type LocationSubject,
+} from "@/components/admin/LocationFilters";
 import type { QuestionLifecycle } from "@/types/question";
 import { DeleteQuestionButton } from "./DeleteQuestionButton";
 
@@ -14,11 +21,20 @@ export type QuestionBankRow = {
   contentLifecycle: QuestionLifecycle;
   reviewOn: string | null;
   expiresOn: string | null;
-  categoryName: string;
+  categoryId: string;
+  examId: string;
+  paperId: string;
+  subjectId: string;
   examName: string;
   paperName: string;
   subjectName: string;
-  subjectKey: string;
+};
+
+const emptyLocation: LocationFilterValue = {
+  categoryId: "",
+  examId: "",
+  paperId: "",
+  subjectId: "",
 };
 
 function statusOf(question: QuestionBankRow) {
@@ -52,83 +68,83 @@ function statusOf(question: QuestionBankRow) {
   };
 }
 
-export function QuestionBankTable({ questions }: { questions: QuestionBankRow[] }) {
+export function QuestionBankTable({
+  categories,
+  exams,
+  papers,
+  subjects,
+  questions,
+}: {
+  categories: LocationCategory[];
+  exams: LocationExam[];
+  papers: LocationPaper[];
+  subjects: LocationSubject[];
+  questions: QuestionBankRow[];
+}) {
+  const [location, setLocation] = useState(emptyLocation);
   const [search, setSearch] = useState("");
-  const [subjectKey, setSubjectKey] = useState("all");
-  const subjectOptions = useMemo(
-    () =>
-      Array.from(
-        new Map(
-          questions.map((question) => [
-            question.subjectKey,
-            `${question.categoryName} → ${question.examName} → ${question.paperName} → ${question.subjectName}`,
-          ]),
-        ).entries(),
-      ),
-    [questions],
-  );
-  const filtered = useMemo(
-    () =>
-      questions.filter(
-        (question) =>
-          (subjectKey === "all" || question.subjectKey === subjectKey) &&
-          (!search.trim() ||
-            `${question.questionText} ${question.paperName} ${question.subjectName}`
-              .toLowerCase()
-              .includes(search.trim().toLowerCase())),
-      ),
-    [questions, search, subjectKey],
-  );
+  const filtered = useMemo(() => {
+    const query = search.trim().toLowerCase();
+    return questions.filter(
+      (question) =>
+        question.categoryId === location.categoryId &&
+        (!location.examId || question.examId === location.examId) &&
+        (!location.paperId || question.paperId === location.paperId) &&
+        (!location.subjectId || question.subjectId === location.subjectId) &&
+        (!query ||
+          `${question.questionText} ${question.subjectName}`
+            .toLowerCase()
+            .includes(query)),
+    );
+  }, [location, questions, search]);
 
   return (
-    <section className="mt-10">
-      <div className="flex flex-wrap items-end justify-between gap-3">
-        <div>
-          <h2 className="text-2xl font-black">Existing questions</h2>
-          <p className="mt-1 text-sm text-slate-600">
-            A question can be assigned to many mocks, but always stays in its own
-            Paper and Subject.
-          </p>
-        </div>
-        <span className="rounded-full bg-slate-200 px-3 py-1 text-xs font-bold">
-          {filtered.length} of {questions.length}
-        </span>
+    <section className="mt-10 overflow-hidden rounded-2xl border bg-white">
+      <div className="border-b px-6 py-5">
+        <h2 className="text-2xl font-black">Existing questions</h2>
+        <p className="mt-1 text-sm text-slate-600">
+          Browse the reusable Question Bank by where each question belongs.
+        </p>
       </div>
-
-      <div className="mt-5 grid gap-3 rounded-2xl border bg-white p-5 md:grid-cols-2">
-        <label className="text-sm font-bold">
-          Search
+      <div className="space-y-4 border-b bg-slate-50 px-6 py-5">
+        <LocationFilters
+          categories={categories}
+          exams={exams}
+          papers={papers}
+          subjects={subjects}
+          value={location}
+          onChange={setLocation}
+          includeSubjects
+        />
+        <label className="block max-w-xl text-sm font-bold">
+          Search existing questions
           <input
+            type="search"
             value={search}
             onChange={(event) => setSearch(event.target.value)}
-            placeholder="Search question text or subject"
-            className="mt-2 w-full rounded-xl border px-4 py-3 font-normal"
-          />
-        </label>
-        <label className="text-sm font-bold">
-          Subject
-          <SearchableSelect
-            value={subjectKey}
-            onChange={setSubjectKey}
-            options={[
-              { value: "all", label: "All Subjects" },
-              ...subjectOptions.map(([value, label]) => ({ value, label })),
-            ]}
-            placeholder="Search a subject"
+            placeholder="Type a word from the question"
+            disabled={!location.categoryId}
+            className="mt-2 w-full rounded-xl border px-4 py-3 font-normal disabled:cursor-not-allowed disabled:bg-slate-100"
           />
         </label>
       </div>
 
-      {filtered.length === 0 ? (
-        <div className="mt-5 rounded-2xl border border-dashed bg-white p-8 text-center text-sm text-slate-600">
-          No questions yet.
-        </div>
+      {!location.categoryId ? (
+        <p className="p-6 text-sm text-slate-600">
+          Select an Exam Category above to see its questions.
+        </p>
+      ) : filtered.length === 0 ? (
+        <p className="p-6 text-sm text-slate-600">
+          No questions match this location and search.
+        </p>
       ) : (
-        <div className="mt-5 overflow-x-auto rounded-2xl border bg-white">
-          <table className="min-w-[980px] w-full text-left">
+        <div className="overflow-x-auto">
+          <table className="min-w-[900px] w-full text-left">
             <thead className="bg-slate-50 text-xs uppercase tracking-wide text-slate-500">
               <tr>
-                <th className="px-5 py-4">Classification</th>
+                {!location.examId && <th className="px-5 py-4">Exam</th>}
+                {!location.paperId && <th className="px-5 py-4">Paper</th>}
+                {!location.subjectId && <th className="px-5 py-4">Subject</th>}
                 <th className="px-5 py-4">Question</th>
                 <th className="px-5 py-4">Status</th>
                 <th className="px-5 py-4">Answer</th>
@@ -141,17 +157,28 @@ export function QuestionBankTable({ questions }: { questions: QuestionBankRow[] 
 
                 return (
                   <tr key={question.id} className="align-top">
-                    <td className="px-5 py-5 text-sm">
-                      <p className="font-bold">{question.examName}</p>
-                      <p className="mt-1 text-xs text-slate-500">
-                        {question.categoryName} → {question.paperName} → {question.subjectName}
-                      </p>
-                    </td>
+                    {!location.examId && (
+                      <td className="px-5 py-5 text-sm text-slate-600">
+                        {question.examName}
+                      </td>
+                    )}
+                    {!location.paperId && (
+                      <td className="px-5 py-5 text-sm text-slate-600">
+                        {question.paperName}
+                      </td>
+                    )}
+                    {!location.subjectId && (
+                      <td className="px-5 py-5 text-sm text-slate-600">
+                        {question.subjectName}
+                      </td>
+                    )}
                     <td className="max-w-xl px-5 py-5 font-semibold leading-6">
                       {question.questionText}
                     </td>
                     <td className="px-5 py-5">
-                      <span className={`rounded-full px-3 py-1 text-xs font-bold ${status.className}`}>
+                      <span
+                        className={`rounded-full px-3 py-1 text-xs font-bold ${status.className}`}
+                      >
                         {status.label}
                       </span>
                     </td>
