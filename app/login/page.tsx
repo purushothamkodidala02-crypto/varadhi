@@ -3,6 +3,7 @@
 import { Suspense, useState } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
+import { PublicHeader } from "@/components/site/PublicHeader";
 import { createClient } from "@/lib/supabase/client";
 
 function LoginForm() {
@@ -12,127 +13,55 @@ function LoginForm() {
   const [loading, setLoading] = useState(false);
   const searchParams = useSearchParams();
   const requestedPath = searchParams.get("next");
-  const nextPath = requestedPath?.startsWith("/") && !requestedPath.startsWith("//")
-    ? requestedPath
-    : "/dashboard";
+  const nextPath = requestedPath?.startsWith("/") && !requestedPath.startsWith("//") ? requestedPath : "/dashboard";
 
-  async function handleLogin(e: React.FormEvent<HTMLFormElement>) {
-    e.preventDefault();
-
+  async function handleLogin(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
     setLoading(true);
     setMessage("");
-
     const supabase = createClient();
-
-    const {
-      data: { user },
-      error: loginError,
-    } = await supabase.auth.signInWithPassword({
-      email,
-      password,
-    });
-
+    const { data: { user }, error: loginError } = await supabase.auth.signInWithPassword({ email, password });
     if (loginError || !user) {
-      setMessage(loginError?.message ?? "Unable to log in.");
+      setMessage(loginError?.message ?? "Unable to log in. Please check your email and password.");
       setLoading(false);
       return;
     }
-
-    const { data: profile, error: profileError } = await supabase
-      .from("profiles")
-      .select("role")
-      .eq("id", user.id)
-      .single();
-
+    const { data: profile, error: profileError } = await supabase.from("profiles").select("role").eq("id", user.id).single();
     if (profileError || !profile) {
-      setMessage(
-        "Login succeeded, but your profile role could not be found."
-      );
+      setMessage("Login succeeded, but we could not find your account profile. Please contact Varadhi support.");
       setLoading(false);
       return;
     }
-
-    if (profile.role === "admin") {
-      window.location.replace("/admin");
-      return;
-    }
-
-    window.location.replace(nextPath);
+    window.location.replace(profile.role === "admin" ? "/admin" : nextPath);
   }
 
   return (
-    <main className="mx-auto max-w-md px-6 py-16">
-      <h1 className="text-3xl font-bold">Login</h1>
-
-      <p className="mt-2 text-gray-600">
-        Login to access mock tests and your dashboard.
-      </p>
-
-      <form onSubmit={handleLogin} className="mt-8 space-y-5">
-        <div>
-          <label
-            htmlFor="email"
-            className="mb-2 block text-sm font-medium"
-          >
-            Email
-          </label>
-
-          <input
-            id="email"
-            type="email"
-            required
-            autoComplete="email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            className="w-full rounded-lg border px-4 py-3"
-            placeholder="you@example.com"
-          />
-        </div>
-
-        <div>
-          <label
-            htmlFor="password"
-            className="mb-2 block text-sm font-medium"
-          >
-            Password
-          </label>
-
-          <input
-            id="password"
-            type="password"
-            required
-            autoComplete="current-password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            className="w-full rounded-lg border px-4 py-3"
-            placeholder="Enter your password"
-          />
-        </div>
-
-        <button
-          type="submit"
-          disabled={loading}
-          className="w-full rounded-lg bg-black px-4 py-3 text-white disabled:cursor-not-allowed disabled:opacity-50"
-        >
-          {loading ? "Logging in..." : "Login"}
-        </button>
-
-        {message && (
-          <p className="text-sm text-red-600">{message}</p>
-        )}
-
-        <p className="text-sm text-gray-600">
-          New to Varadhi? <Link href="/register" className="font-medium text-black underline">Create an account</Link>
-        </p>
-      </form>
+    <main className="min-h-screen bg-slate-50">
+      <PublicHeader compact />
+      <div className="mx-auto grid max-w-4xl gap-8 px-5 py-12 sm:px-8 sm:py-16 md:grid-cols-[0.85fr_1.15fr] md:items-start">
+        <aside className="rounded-3xl bg-slate-950 p-7 text-white md:sticky md:top-8">
+          <p className="text-xs font-bold uppercase tracking-[0.16em] text-teal-200">Welcome back</p>
+          <h1 className="mt-3 text-3xl font-black tracking-tight">Continue your preparation.</h1>
+          <p className="mt-4 text-sm leading-6 text-slate-300">Your mock-test dashboard keeps your attempts and subject progress ready for the next study session.</p>
+          <Link href="/mock-tests" className="mt-7 inline-flex text-sm font-bold text-teal-200 hover:text-teal-100">Browse available tests →</Link>
+        </aside>
+        <section className="rounded-3xl border bg-white p-6 shadow-sm sm:p-8">
+          <p className="text-xs font-bold uppercase tracking-[0.15em] text-teal-700">Student login</p>
+          <h2 className="mt-2 text-3xl font-black tracking-tight text-slate-950">Sign in to Varadhi</h2>
+          <p className="mt-3 text-sm leading-6 text-slate-600">Use the email and password you chose when registering.</p>
+          <form onSubmit={handleLogin} className="mt-7 space-y-5">
+            <label htmlFor="email" className="block text-sm font-bold text-slate-800">Email<input id="email" type="email" required autoComplete="email" value={email} onChange={(event) => setEmail(event.target.value)} placeholder="you@example.com" className="mt-2 w-full rounded-xl border px-4 py-3 font-normal" /></label>
+            <label htmlFor="password" className="block text-sm font-bold text-slate-800">Password<input id="password" type="password" required autoComplete="current-password" value={password} onChange={(event) => setPassword(event.target.value)} placeholder="Enter your password" className="mt-2 w-full rounded-xl border px-4 py-3 font-normal" /></label>
+            <button type="submit" disabled={loading} className="w-full rounded-xl bg-slate-950 px-4 py-3 font-bold text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-50">{loading ? "Signing in…" : "Sign in"}</button>
+            {message && <p aria-live="polite" className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-medium text-red-700">{message}</p>}
+          </form>
+          <p className="mt-6 border-t border-slate-100 pt-5 text-sm text-slate-600">New to Varadhi? <Link href="/register" className="font-bold text-teal-700 hover:text-teal-800">Create your free account</Link></p>
+        </section>
+      </div>
     </main>
   );
 }
 
 export default function LoginPage() {
-  return (
-    <Suspense fallback={<main className="mx-auto max-w-md px-6 py-16" />}>
-      <LoginForm />
-    </Suspense>
-  );
+  return <Suspense fallback={<main className="min-h-screen bg-slate-50" />}><LoginForm /></Suspense>;
 }

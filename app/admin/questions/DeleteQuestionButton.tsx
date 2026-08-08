@@ -4,58 +4,32 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { deleteQuestion } from "./deleteAction";
 
-type DeleteQuestionButtonProps = {
-  questionId: string;
-  questionText: string;
-};
+type DeleteQuestionButtonProps = { questionId: string; questionText: string };
 
-export function DeleteQuestionButton({
-  questionId,
-  questionText,
-}: DeleteQuestionButtonProps) {
+export function DeleteQuestionButton({ questionId, questionText }: DeleteQuestionButtonProps) {
   const router = useRouter();
   const [pending, setPending] = useState(false);
   const [message, setMessage] = useState("");
 
   async function handleDelete() {
-    const confirmed = window.confirm(
-      `Delete this question?\n\n${questionText}`
-    );
-
-    if (!confirmed) {
-      return;
-    }
-
+    if (!window.confirm(`Remove this question from the library?\n\n${questionText}\n\nQuestions already used in a mock test cannot be removed.`)) return;
     setPending(true);
     setMessage("");
-
     const result = await deleteQuestion(questionId);
-
     if (!result.success) {
       setMessage(result.message);
       setPending(false);
       return;
     }
-
     router.refresh();
   }
 
   return (
     <div className="flex flex-col items-start">
-      <button
-        type="button"
-        onClick={handleDelete}
-        disabled={pending}
-        className="text-sm font-medium text-red-600 hover:underline disabled:opacity-50"
-      >
-        {pending ? "Deleting..." : "Delete"}
+      <button type="button" onClick={handleDelete} disabled={pending} className="rounded-lg px-2.5 py-1.5 text-sm font-bold text-red-700 transition hover:bg-red-50 disabled:opacity-50">
+        {pending ? "Removing…" : "Remove"}
       </button>
-
-      {message && (
-        <p className="mt-2 max-w-xs text-xs leading-normal text-red-600">
-          {message}
-        </p>
-      )}
+      {message && <p className="mt-2 max-w-xs text-xs leading-5 text-red-700">{message}</p>}
     </div>
   );
 }

@@ -1,32 +1,23 @@
 "use client";
 
+import Link from "next/link";
 import { useActionState, useState } from "react";
+import { useRouter } from "next/navigation";
 import { assignQuestion, removeAssignedQuestion, type AssignmentState } from "./question-actions";
 
 type QuestionOption = { id: string; text: string };
-type AssignedQuestion = {
-  id: string;
-  question_order: number;
-  marks: number;
-  negative_marks: number;
-  question_text: string;
-};
-
-type QuestionAssignmentsProps = {
-  mockTestId: string;
-  isDraft: boolean;
-  availableQuestions: QuestionOption[];
-  assignedQuestions: AssignedQuestion[];
-};
+type AssignedQuestion = { id: string; question_order: number; marks: number; negative_marks: number; question_text: string };
+type QuestionAssignmentsProps = { mockTestId: string; isDraft: boolean; availableQuestions: QuestionOption[]; assignedQuestions: AssignedQuestion[] };
 
 const initialState: AssignmentState = { success: false, message: "" };
 
 function RemoveAssignmentButton({ mockTestId, assignmentId }: { mockTestId: string; assignmentId: string }) {
+  const router = useRouter();
   const [pending, setPending] = useState(false);
   const [message, setMessage] = useState("");
 
   async function removeAssignment() {
-    if (!window.confirm("Remove this Question from the Mock Test?")) return;
+    if (!window.confirm("Remove this question from this draft mock test? The original question will remain safely in the question bank.")) return;
     setPending(true);
     setMessage("");
     const result = await removeAssignedQuestion(mockTestId, assignmentId);
@@ -35,17 +26,10 @@ function RemoveAssignmentButton({ mockTestId, assignmentId }: { mockTestId: stri
       setPending(false);
       return;
     }
-    window.location.reload();
+    router.refresh();
   }
 
-  return (
-    <div>
-      <button type="button" onClick={removeAssignment} disabled={pending} className="text-sm font-medium text-red-600 hover:underline disabled:opacity-50">
-        {pending ? "Removing..." : "Remove"}
-      </button>
-      {message && <p className="mt-1 max-w-xs text-xs text-red-600">{message}</p>}
-    </div>
-  );
+  return <div className="flex flex-col items-end"><button type="button" onClick={removeAssignment} disabled={pending} className="rounded-lg px-2.5 py-1.5 text-sm font-bold text-red-700 hover:bg-red-50 disabled:opacity-50">{pending ? "Removing…" : "Remove"}</button>{message && <p className="mt-1 max-w-48 text-right text-xs leading-5 text-red-700">{message}</p>}</div>;
 }
 
 export function QuestionAssignments({ mockTestId, isDraft, availableQuestions, assignedQuestions }: QuestionAssignmentsProps) {
@@ -54,52 +38,28 @@ export function QuestionAssignments({ mockTestId, isDraft, availableQuestions, a
   const nextOrder = assignedQuestions.length + 1;
 
   return (
-    <section className="mt-8 rounded-xl border p-6">
-      <div>
-        <h2 className="text-xl font-semibold">Questions in this Mock Test</h2>
-        <p className="mt-2 text-sm text-gray-600">Answers and explanations remain private; students never receive them during an active test.</p>
+    <section className="mt-8 overflow-hidden rounded-3xl border bg-white shadow-sm">
+      <div className="flex flex-wrap items-start justify-between gap-4 border-b border-slate-100 bg-slate-50 px-6 py-5 sm:px-7">
+        <div><p className="text-xs font-bold uppercase tracking-[0.15em] text-teal-700">Test builder</p><h2 className="mt-2 text-2xl font-black tracking-tight text-slate-950">Questions in this mock test</h2><p className="mt-2 max-w-2xl text-sm leading-6 text-slate-600">Add active questions from this test’s subject. Students only see question content during the test; answers and explanations remain private.</p></div>
+        <span className="rounded-full bg-slate-200 px-3 py-1.5 text-xs font-bold text-slate-700">{assignedQuestions.length} assigned</span>
       </div>
 
       {isDraft ? (
-        <form action={formAction} className="mt-6 grid gap-4 md:grid-cols-2">
-          <div className="md:col-span-2">
-            <label htmlFor="question_id" className="mb-2 block text-sm font-medium">Question Bank</label>
-            <select id="question_id" name="question_id" required disabled={availableQuestions.length === 0} className="w-full rounded-lg border px-4 py-3 disabled:bg-gray-100">
-              <option value="">Select a Question</option>
-              {availableQuestions.map((question) => <option key={question.id} value={question.id}>{question.text}</option>)}
-            </select>
-            {availableQuestions.length === 0 && <p className="mt-2 text-sm text-amber-700">No other active Questions are available for this Mock Test's Subject.</p>}
+        <form action={formAction} className="border-b border-slate-100 p-6 sm:p-7">
+          <div className="flex flex-wrap items-end justify-between gap-3"><div><p className="text-sm font-black text-slate-950">Add a question</p><p className="mt-1 text-sm text-slate-600">Select one from the question bank and set scoring.</p></div><Link href="/admin/questions#add-question" className="text-sm font-bold text-teal-700 hover:text-teal-800">+ Create a new question</Link></div>
+          <div className="mt-5 grid gap-4 md:grid-cols-6">
+            <label htmlFor="question_id" className="block text-sm font-bold text-slate-800 md:col-span-6">Question from this subject<select id="question_id" name="question_id" required defaultValue="" disabled={availableQuestions.length === 0} className="mt-2 w-full rounded-xl border px-4 py-3 font-normal disabled:bg-slate-100"><option value="" disabled>Select a question to add</option>{availableQuestions.map((question) => <option key={question.id} value={question.id}>{question.text}</option>)}</select></label>
+            <label htmlFor="question_order" className="block text-sm font-bold text-slate-800 md:col-span-2">Order<input id="question_order" name="question_order" type="number" min="1" step="1" required defaultValue={nextOrder} className="mt-2 w-full rounded-xl border px-4 py-3 font-normal" /></label>
+            <label htmlFor="marks" className="block text-sm font-bold text-slate-800 md:col-span-2">Marks<input id="marks" name="marks" type="number" min="0.01" step="0.01" required defaultValue="1" className="mt-2 w-full rounded-xl border px-4 py-3 font-normal" /></label>
+            <label htmlFor="negative_marks" className="block text-sm font-bold text-slate-800 md:col-span-2">Negative marks<input id="negative_marks" name="negative_marks" type="number" min="0" step="0.01" required defaultValue="0" className="mt-2 w-full rounded-xl border px-4 py-3 font-normal" /></label>
           </div>
-
-          <div>
-            <label htmlFor="question_order" className="mb-2 block text-sm font-medium">Question order</label>
-            <input id="question_order" name="question_order" type="number" min="1" step="1" required defaultValue={nextOrder} className="w-full rounded-lg border px-4 py-3" />
-          </div>
-          <div>
-            <label htmlFor="marks" className="mb-2 block text-sm font-medium">Marks</label>
-            <input id="marks" name="marks" type="number" min="0.01" step="0.01" required defaultValue="1" className="w-full rounded-lg border px-4 py-3" />
-          </div>
-          <div>
-            <label htmlFor="negative_marks" className="mb-2 block text-sm font-medium">Negative marks</label>
-            <input id="negative_marks" name="negative_marks" type="number" min="0" step="0.01" required defaultValue="0" className="w-full rounded-lg border px-4 py-3" />
-          </div>
-          <div className="flex items-end">
-            <button type="submit" disabled={pending || availableQuestions.length === 0} className="w-full rounded-lg bg-black px-5 py-3 font-medium text-white disabled:opacity-50">{pending ? "Adding..." : "Add Question"}</button>
-          </div>
-          {state.message && <p aria-live="polite" className={`md:col-span-2 text-sm ${state.success ? "text-green-700" : "text-red-600"}`}>{state.message}</p>}
+          {availableQuestions.length === 0 && <p className="mt-4 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm font-medium text-amber-900">There are no unassigned active questions for this subject. Create one in the question bank, or change this mock test’s subject.</p>}
+          <div className="mt-5 flex flex-wrap items-center gap-4"><button type="submit" disabled={pending || availableQuestions.length === 0} className="rounded-xl bg-slate-950 px-5 py-3 text-sm font-bold text-white hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-50">{pending ? "Adding question…" : "Add to mock test"}</button><p className="text-sm text-slate-500">Draft tests can be changed until you publish them.</p></div>
+          {state.message && <p aria-live="polite" className={`mt-4 rounded-xl border px-4 py-3 text-sm font-semibold ${state.success ? "border-emerald-200 bg-emerald-50 text-emerald-800" : "border-red-200 bg-red-50 text-red-700"}`}>{state.message}</p>}
         </form>
-      ) : <p className="mt-6 rounded-lg bg-gray-100 p-4 text-sm text-gray-700">Published and archived Mock Tests are locked. Create a new draft version to change Questions.</p>}
+      ) : <div className="m-6 rounded-2xl border border-amber-200 bg-amber-50 p-5 text-sm leading-6 text-amber-900">This mock test is published or archived, so its questions are locked to protect past and current student attempts. Create a new draft version to make changes.</div>}
 
-      {assignedQuestions.length === 0 ? (
-        <p className="mt-6 rounded-lg border border-dashed p-5 text-sm text-gray-600">No Questions assigned yet. This Mock Test cannot be published until at least one Question is added.</p>
-      ) : (
-        <div className="mt-6 overflow-x-auto rounded-xl border">
-          <table className="w-full text-left">
-            <thead className="border-b bg-gray-50"><tr><th className="px-4 py-3 text-sm">Order</th><th className="px-4 py-3 text-sm">Question</th><th className="px-4 py-3 text-sm">Marks</th><th className="px-4 py-3 text-sm">Negative</th>{isDraft && <th className="px-4 py-3 text-sm">Action</th>}</tr></thead>
-            <tbody>{assignedQuestions.map((assignment) => <tr key={assignment.id} className="border-b last:border-b-0"><td className="px-4 py-3">{assignment.question_order}</td><td className="max-w-xl px-4 py-3 text-sm">{assignment.question_text}</td><td className="px-4 py-3 text-sm">{assignment.marks}</td><td className="px-4 py-3 text-sm">{assignment.negative_marks}</td>{isDraft && <td className="px-4 py-3"><RemoveAssignmentButton mockTestId={mockTestId} assignmentId={assignment.id} /></td>}</tr>)}</tbody>
-          </table>
-        </div>
-      )}
+      {assignedQuestions.length === 0 ? <div className="p-7"><p className="rounded-2xl border border-dashed bg-slate-50 p-6 text-center text-sm leading-6 text-slate-600">No questions are assigned yet. Add at least one question before this mock test can be published.</p></div> : <div className="overflow-x-auto"><table className="min-w-[700px] w-full text-left"><thead className="border-y border-slate-100 bg-white text-xs font-bold uppercase tracking-[0.1em] text-slate-500"><tr><th className="px-6 py-4">Order</th><th className="px-6 py-4">Question</th><th className="px-6 py-4">Scoring</th>{isDraft && <th className="px-6 py-4 text-right">Manage</th>}</tr></thead><tbody className="divide-y divide-slate-100">{assignedQuestions.map((assignment) => <tr key={assignment.id} className="align-top hover:bg-slate-50"><td className="px-6 py-5"><span className="grid h-8 w-8 place-items-center rounded-lg bg-slate-100 text-sm font-black text-slate-700">{assignment.question_order}</span></td><td className="max-w-xl px-6 py-5 text-sm font-semibold leading-6 text-slate-900">{assignment.question_text}</td><td className="px-6 py-5 text-sm"><p className="font-bold text-slate-800">{assignment.marks} mark{assignment.marks === 1 ? "" : "s"}</p><p className="mt-1 text-xs text-slate-500">−{assignment.negative_marks} negative</p></td>{isDraft && <td className="px-6 py-5"><RemoveAssignmentButton mockTestId={mockTestId} assignmentId={assignment.id} /></td>}</tr>)}</tbody></table></div>}
     </section>
   );
 }

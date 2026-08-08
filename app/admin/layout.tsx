@@ -1,22 +1,14 @@
-import Link from "next/link";
+import { Suspense } from "react";
 import { redirect } from "next/navigation";
-import { createClient } from "@/lib/supabase/server";
+import { AdminNavigation } from "@/components/admin/AdminNavigation";
 import LogoutButton from "@/components/admin/LogoutButton";
+import { createClient } from "@/lib/supabase/server";
 
-export default async function AdminLayout({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
+export default async function AdminLayout({ children }: { children: React.ReactNode }) {
   const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
 
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
-  if (!user) {
-    redirect("/login");
-  }
+  if (!user) redirect("/login");
 
   const { data: profile } = await supabase
     .from("profiles")
@@ -24,95 +16,25 @@ export default async function AdminLayout({
     .eq("id", user.id)
     .single();
 
-  if (!profile || profile.role !== "admin") {
-    redirect("/dashboard");
-  }
+  if (!profile || profile.role !== "admin") redirect("/dashboard");
 
   return (
-    <div className="min-h-screen bg-gray-50 text-gray-900">
-      <div className="flex min-h-screen">
-        <aside className="w-64 shrink-0 border-r bg-white p-6">
-          <Link href="/admin" className="text-xl font-bold">
-            Varadhi Admin
-          </Link>
-
-          <nav className="mt-8 space-y-2 text-sm">
-            <Link
-              href="/admin"
-              className="block rounded-lg px-3 py-2 hover:bg-gray-100"
-            >
-              Dashboard
-            </Link>
-
-            <p className="mt-6 px-3 text-xs font-semibold uppercase text-gray-400">
-              Content
-            </p>
-
-            <Link
-              href="/admin/exams"
-              className="block rounded-lg px-3 py-2 hover:bg-gray-100"
-            >
-              Exams
-            </Link>
-
-            <Link
-              href="/admin/groups"
-              className="block rounded-lg px-3 py-2 hover:bg-gray-100"
-            >
-              Exam Entries
-            </Link>
-
-            <Link
-              href="/admin/subjects"
-              className="block rounded-lg px-3 py-2 hover:bg-gray-100"
-            >
-              Subjects
-            </Link>
-
-            <Link
-              href="/admin/mock-tests"
-              className="block rounded-lg px-3 py-2 hover:bg-gray-100"
-            >
-              Mock Tests
-            </Link>
-
-            <Link
-              href="/admin/questions"
-              className="block rounded-lg px-3 py-2 hover:bg-gray-100"
-            >
-              Questions
-            </Link>
-
-            <p className="mt-6 px-3 text-xs font-semibold uppercase text-gray-400">
-              Management
-            </p>
-
-            <Link
-              href="/admin/results"
-              className="block rounded-lg px-3 py-2 hover:bg-gray-100"
-            >
-              Results
-            </Link>
-          </nav>
-        </aside>
-
-        <div className="min-w-0 flex-1">
-          <header className="flex h-16 items-center justify-between border-b bg-white px-8">
-            <p className="text-sm text-gray-500">
-              Admin Panel
-            </p>
-
-            <div className="flex items-center gap-4">
-              <p className="text-sm font-medium">
-                {user.email}
-              </p>
-
-              <LogoutButton />
-            </div>
-          </header>
-
-          <main className="p-8">{children}</main>
-        </div>
+    <div className="min-h-screen bg-slate-50 text-slate-900 lg:grid lg:grid-cols-[17rem_minmax(0,1fr)]">
+      <Suspense fallback={<aside className="hidden min-h-screen border-r bg-white lg:block" />}>
+        <AdminNavigation />
+      </Suspense>
+      <div className="min-w-0">
+        <header className="flex min-h-18 items-center justify-between gap-4 border-b border-slate-200 bg-white px-5 py-4 sm:px-8">
+          <div>
+            <p className="text-xs font-bold uppercase tracking-[0.15em] text-teal-700">Control centre</p>
+            <p className="mt-1 text-sm text-slate-500">Create, organise and publish learning content.</p>
+          </div>
+          <div className="flex items-center gap-3">
+            <p className="hidden max-w-56 truncate text-sm font-semibold text-slate-700 sm:block">{user.email}</p>
+            <LogoutButton />
+          </div>
+        </header>
+        <main className="mx-auto max-w-7xl p-5 sm:p-8">{children}</main>
       </div>
     </div>
   );
