@@ -19,6 +19,7 @@ export function CreateQuestionForm({ exams, groups, subjects }: CreateQuestionFo
   const [examGroupId, setExamGroupId] = useState("");
   const [subjectId, setSubjectId] = useState("");
   const [entrySearch, setEntrySearch] = useState("");
+  const [entryMenuOpen, setEntryMenuOpen] = useState(false);
   const hasSubjects = subjects.length > 0;
 
   const visibleGroups = useMemo(() => {
@@ -37,17 +38,15 @@ export function CreateQuestionForm({ exams, groups, subjects }: CreateQuestionFo
   function toggleExam(nextExamId: string, checked: boolean) {
     const nextExamIds = checked ? Array.from(new Set([...selectedExamIds, nextExamId])) : selectedExamIds.filter((id) => id !== nextExamId);
     const currentGroupIsVisible = groups.some((group) => group.id === examGroupId && nextExamIds.includes(group.examId));
-    const nextGroupId = currentGroupIsVisible ? examGroupId : groups.find((group) => nextExamIds.includes(group.examId))?.id ?? "";
     setSelectedExamIds(nextExamIds);
     setEntrySearch("");
-    if (nextGroupId !== examGroupId) chooseGroup(nextGroupId);
+    setEntryMenuOpen(checked || currentGroupIsVisible);
+    if (!currentGroupIsVisible) chooseGroup("");
   }
 
   function searchEntries(nextSearch: string) {
-    const query = nextSearch.trim().toLowerCase();
-    const matchingGroups = groups.filter((group) => selectedExamIds.includes(group.examId) && (!query || group.name.toLowerCase().includes(query)));
     setEntrySearch(nextSearch);
-    if (!matchingGroups.some((group) => group.id === examGroupId)) chooseGroup(matchingGroups[0]?.id ?? "");
+    setEntryMenuOpen(true);
   }
 
   return (
@@ -68,8 +67,8 @@ export function CreateQuestionForm({ exams, groups, subjects }: CreateQuestionFo
 
               <section className="mt-5 rounded-2xl border border-slate-200 bg-white p-3">
                 <label htmlFor="entry_search" className="block text-sm font-bold text-slate-800">Exam entry</label>
-                <input id="entry_search" type="search" value={entrySearch} onChange={(event) => searchEntries(event.target.value)} disabled={selectedExamIds.length === 0} placeholder="Search the selected exam entries" className="mt-2 w-full rounded-xl border px-4 py-3 text-sm disabled:bg-slate-100" />
-                <select id="exam_group_id" aria-label="Exam entry results" value={examGroupId} onChange={(event) => chooseGroup(event.target.value)} disabled={selectedExamIds.length === 0 || visibleGroups.length === 0} className="mt-2 w-full rounded-xl border px-4 py-3 text-sm disabled:bg-slate-100"><option value="">{selectedExamIds.length === 0 ? "Tick an exam first" : visibleGroups.length === 0 ? "No entries found" : "Choose an exam entry"}</option>{visibleGroups.map((group) => <option key={group.id} value={group.id}>{group.name}</option>)}</select>
+                <div className="relative mt-2"><input id="entry_search" role="combobox" aria-controls="exam-entry-results" aria-expanded={entryMenuOpen} aria-autocomplete="list" type="search" value={entrySearch} onFocus={() => setEntryMenuOpen(true)} onChange={(event) => searchEntries(event.target.value)} disabled={selectedExamIds.length === 0} placeholder="Type to search exam entries" className="w-full rounded-xl border px-4 py-3 text-sm disabled:bg-slate-100" />{entryMenuOpen && selectedExamIds.length > 0 && <div id="exam-entry-results" role="listbox" className="absolute z-10 mt-2 max-h-56 w-full overflow-y-auto rounded-xl border border-slate-200 bg-white p-1 shadow-lg">{visibleGroups.length === 0 ? <p className="px-3 py-3 text-sm text-slate-500">No exam entries match this search.</p> : visibleGroups.map((group) => <button key={group.id} type="button" role="option" aria-selected={group.id === examGroupId} onClick={() => { chooseGroup(group.id); setEntrySearch(group.name); setEntryMenuOpen(false); }} className={`block w-full rounded-lg px-3 py-2.5 text-left text-sm font-medium transition ${group.id === examGroupId ? "bg-teal-50 text-teal-800" : "text-slate-700 hover:bg-slate-100"}`}>{group.name}</button>)}</div>}</div>
+                {examGroupId && <p className="mt-2 text-xs font-semibold text-teal-800">Selected: {selectedGroupName}</p>}
               </section>
 
               <label htmlFor="subject_id" className="mt-5 block text-sm font-bold text-slate-800">Subject</label>
