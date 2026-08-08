@@ -44,6 +44,7 @@ export function CreateMockTestForm({
 
   const [selectedSubjectId, setSelectedSubjectId] =
     useState(initialSubjectId);
+  const [accessType, setAccessType] = useState<"free" | "paid">("free");
 
   const [state, formAction, pending] = useActionState(
     createMockTest,
@@ -222,24 +223,19 @@ export function CreateMockTestForm({
           />
         </div>
 
-        <div>
-          <label
-            htmlFor="status"
-            className="mb-2 block text-sm font-medium"
-          >
-            Status
-          </label>
+        <input name="status" type="hidden" value="draft" />
 
-          <select
-            id="status"
-            name="status"
-            defaultValue="draft"
-            className="w-full rounded-lg border px-4 py-3"
-          >
-            <option value="draft">Draft</option>
-            <option value="published">Published</option>
-          </select>
+        <p className="rounded-lg bg-yellow-50 p-4 text-sm text-yellow-800">
+          New Mock Tests are created as drafts. Add at least one Question
+          before publishing.
+        </p>
+
+        <div>
+          <label htmlFor="access_type" className="mb-2 block text-sm font-medium">Student access</label>
+          <select id="access_type" name="access_type" value={accessType} onChange={(event) => setAccessType(event.target.value as "free" | "paid")} className="w-full rounded-lg border px-4 py-3"><option value="free">Free</option><option value="paid">Paid</option></select>
         </div>
+
+        {accessType === "paid" && <div><label htmlFor="price_inr" className="mb-2 block text-sm font-medium">Price (₹)</label><input id="price_inr" name="price_inr" type="number" min="1" step="0.01" required className="w-full rounded-lg border px-4 py-3" placeholder="99" /></div>}
 
         <div>
           <label

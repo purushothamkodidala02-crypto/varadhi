@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
-import type { MockTestStatus } from "@/types/mock-test";
+import type { MockTestAccessType, MockTestStatus } from "@/types/mock-test";
 
 export type UpdateMockTestState = {
   success: boolean;
@@ -102,6 +102,9 @@ export async function updateMockTest(
   const displayOrder = Number(
     formData.get("display_order") ?? 0
   );
+  const accessType = String(formData.get("access_type") ?? "free") as MockTestAccessType;
+  const priceValue = String(formData.get("price_inr") ?? "").trim();
+  const priceInr = priceValue ? Number(priceValue) : null;
 
   if (!examGroupId || !title) {
     return {
@@ -135,11 +138,40 @@ export async function updateMockTest(
     };
   }
 
+  if (status === "published") {
+    const { count, error: assignmentError } = await supabase
+      .from("mock_test_questions")
+      .select("id", { count: "exact", head: true })
+      .eq("mock_test_id", mockTestId);
+
+    if (assignmentError) {
+      return {
+        success: false,
+        message: "Unable to check the Mock Test's assigned Questions.",
+      };
+    }
+
+    if ((count ?? 0) === 0) {
+      return {
+        success: false,
+        message: "Add at least one Question before publishing this Mock Test.",
+      };
+    }
+  }
+
   if (!Number.isInteger(displayOrder) || displayOrder < 0) {
     return {
       success: false,
       message: "Display order must be zero or positive.",
     };
+  }
+
+  if (accessType !== "free" && accessType !== "paid") {
+    return { success: false, message: "Please choose Free or Paid access." };
+  }
+
+  if (accessType === "paid" && (!priceInr || !Number.isFinite(priceInr) || priceInr <= 0)) {
+    return { success: false, message: "Enter a valid price in INR for a paid Mock Test." };
   }
 
   const { data: group, error: groupError } = await supabase
@@ -193,6 +225,8 @@ export async function updateMockTest(
         status === "published"
           ? new Date().toISOString()
           : null,
+      access_type: accessType,
+      price_inr: accessType === "paid" ? priceInr : null,
     })
     .eq("id", mockTestId)
     .select("id")

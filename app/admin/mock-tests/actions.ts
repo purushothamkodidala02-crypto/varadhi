@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
-import type { MockTestStatus } from "@/types/mock-test";
+import type { MockTestAccessType, MockTestStatus } from "@/types/mock-test";
 
 export type CreateMockTestState = {
   success: boolean;
@@ -11,7 +11,6 @@ export type CreateMockTestState = {
 
 const validStatuses: MockTestStatus[] = [
   "draft",
-  "published",
 ];
 
 export async function createMockTest(
@@ -79,6 +78,9 @@ export async function createMockTest(
   const displayOrder = Number(
     formData.get("display_order") ?? 0
   );
+  const accessType = String(formData.get("access_type") ?? "free") as MockTestAccessType;
+  const priceValue = String(formData.get("price_inr") ?? "").trim();
+  const priceInr = priceValue ? Number(priceValue) : null;
 
   if (!examGroupId) {
     return {
@@ -124,6 +126,14 @@ export async function createMockTest(
       success: false,
       message: "Display order must be zero or a positive number.",
     };
+  }
+
+  if (accessType !== "free" && accessType !== "paid") {
+    return { success: false, message: "Please choose Free or Paid access." };
+  }
+
+  if (accessType === "paid" && (!priceInr || !Number.isFinite(priceInr) || priceInr <= 0)) {
+    return { success: false, message: "Enter a valid price in INR for a paid Mock Test." };
   }
 
   const { data: group, error: groupError } = await supabase
@@ -178,6 +188,8 @@ export async function createMockTest(
         status === "published"
           ? new Date().toISOString()
           : null,
+      access_type: accessType,
+      price_inr: accessType === "paid" ? priceInr : null,
     });
 
   if (insertError?.code === "23505") {

@@ -39,6 +39,7 @@ export function EditMockTestForm({
 
   const [selectedSubjectId, setSelectedSubjectId] =
     useState(mockTest.subject_id ?? "");
+  const [accessType, setAccessType] = useState(mockTest.access_type);
 
   const updateMockTestWithId = updateMockTest.bind(
     null,
@@ -95,6 +96,13 @@ export function EditMockTestForm({
             ))}
           </select>
         </div>
+
+        <div>
+          <label htmlFor="access_type" className="mb-2 block text-sm font-medium">Student access</label>
+          <select id="access_type" name="access_type" value={accessType} onChange={(event) => setAccessType(event.target.value as "free" | "paid")} className="w-full rounded-lg border px-4 py-3"><option value="free">Free</option><option value="paid">Paid</option></select>
+        </div>
+
+        {accessType === "paid" && <div><label htmlFor="price_inr" className="mb-2 block text-sm font-medium">Price (₹)</label><input id="price_inr" name="price_inr" type="number" min="1" step="0.01" required defaultValue={mockTest.price_inr ?? ""} className="w-full rounded-lg border px-4 py-3" /></div>}
 
         <div>
           <label

@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import type { MockTest } from "@/types/mock-test";
 import { EditMockTestForm } from "./EditMockTestForm";
+import { QuestionAssignments } from "./QuestionAssignments";
 
 type PageProps = {
   params: Promise<{
@@ -21,11 +22,13 @@ export default async function EditMockTestPage({
     groupsResult,
     examsResult,
     subjectsResult,
+    questionsResult,
+    assignmentsResult,
   ] = await Promise.all([
     supabase
       .from("mock_tests")
       .select(
-        "id, exam_group_id, subject_id, title, slug, description, instructions, duration_minutes, difficulty, status, version, display_order, published_at, created_at, updated_at"
+        "id, exam_group_id, subject_id, title, slug, description, instructions, duration_minutes, difficulty, status, version, display_order, published_at, access_type, price_inr, created_at, updated_at"
       )
       .eq("id", id)
       .single(),
@@ -41,6 +44,18 @@ export default async function EditMockTestPage({
       .from("subjects")
       .select("id, exam_group_id, name, display_order")
       .order("display_order", { ascending: true }),
+
+    supabase
+      .from("questions")
+      .select("id, subject_id, question_text, is_active")
+      .eq("is_active", true)
+      .order("created_at", { ascending: false }),
+
+    supabase
+      .from("mock_test_questions")
+      .select("id, question_id, question_order, marks, negative_marks")
+      .eq("mock_test_id", id)
+      .order("question_order", { ascending: true }),
   ]);
 
   if (mockTestResult.error || !mockTestResult.data) {
@@ -67,6 +82,37 @@ export default async function EditMockTestPage({
     name: subject.name,
   }));
 
+  const questionMap = new Map(
+    (questionsResult.data ?? []).map((question) => [
+      question.id,
+      question,
+    ])
+  );
+
+  const assignments = (assignmentsResult.data ?? []).map(
+    (assignment) => ({
+      ...assignment,
+      question_text:
+        questionMap.get(assignment.question_id)?.question_text ??
+        "Question unavailable",
+    })
+  );
+
+  const assignedQuestionIds = new Set(
+    assignments.map((assignment) => assignment.question_id)
+  );
+
+  const availableQuestions = (questionsResult.data ?? [])
+    .filter(
+      (question) =>
+        !assignedQuestionIds.has(question.id) &&
+        (!mockTest.subject_id || question.subject_id === mockTest.subject_id)
+    )
+    .map((question) => ({
+      id: question.id,
+      text: question.question_text,
+    }));
+
   return (
     <main>
       <Link
@@ -91,6 +137,13 @@ export default async function EditMockTestPage({
         mockTest={mockTest}
         groups={groupOptions}
         subjects={subjectOptions}
+      />
+
+      <QuestionAssignments
+        mockTestId={mockTest.id}
+        isDraft={mockTest.status === "draft"}
+        availableQuestions={availableQuestions}
+        assignedQuestions={assignments}
       />
     </main>
   );

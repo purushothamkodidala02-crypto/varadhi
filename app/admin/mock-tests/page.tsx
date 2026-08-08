@@ -34,7 +34,7 @@ export default async function AdminMockTestsPage() {
     supabase
       .from("mock_tests")
       .select(
-        "id, exam_group_id, subject_id, title, slug, description, instructions, duration_minutes, difficulty, status, version, display_order, published_at, created_at, updated_at"
+        "id, exam_group_id, subject_id, title, slug, description, instructions, duration_minutes, difficulty, status, version, display_order, published_at, access_type, price_inr, created_at, updated_at"
       )
       .order("display_order", { ascending: true })
       .order("created_at", { ascending: true }),
@@ -172,6 +172,8 @@ export default async function AdminMockTestsPage() {
                       Status
                     </th>
 
+                    <th className="px-4 py-3 text-sm font-semibold">Access</th>
+
                     <th className="px-4 py-3 text-sm font-semibold">
                       Version
                     </th>
@@ -233,6 +235,8 @@ export default async function AdminMockTestsPage() {
                             {mockTest.status}
                           </span>
                         </td>
+
+                        <td className="px-4 py-3 text-sm font-medium">{mockTest.access_type === "paid" ? `Paid · ₹${mockTest.price_inr}` : "Free"}</td>
 
                         <td className="px-4 py-3 text-sm">
                           v{mockTest.version}

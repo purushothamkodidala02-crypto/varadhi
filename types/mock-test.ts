@@ -9,6 +9,8 @@ export type MockTestStatus =
   | "published"
   | "archived";
 
+export type MockTestAccessType = "free" | "paid";
+
 export interface MockTest {
   id: string;
   exam_group_id: string;
@@ -23,6 +25,8 @@ export interface MockTest {
   version: number;
   display_order: number;
   published_at: string | null;
+  access_type: MockTestAccessType;
+  price_inr: number | null;
   created_at: string;
   updated_at: string;
 }
@@ -39,4 +43,6 @@ export interface CreateMockTestInput {
   status?: MockTestStatus;
   version?: number;
   display_order?: number;
+  access_type?: MockTestAccessType;
+  price_inr?: number | null;
 }
