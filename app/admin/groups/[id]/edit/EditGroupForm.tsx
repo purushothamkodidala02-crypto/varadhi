@@ -1,7 +1,8 @@
 "use client";
 
-import { useActionState } from "react";
+import { useActionState, useState } from "react";
 import Link from "next/link";
+import { SearchableSelect } from "@/components/admin/SearchableSelect";
 import type { ExamGroup } from "@/types/group";
 import { PaperListInput } from "../../PaperListInput";
 import { updateGroup, type UpdateGroupState } from "./actions";
@@ -14,11 +15,12 @@ const initialState: UpdateGroupState = { success: false, message: "" };
 export function EditGroupForm({ group, exams, papers }: EditGroupFormProps) {
   const updateGroupWithId = updateGroup.bind(null, group.id);
   const [state, formAction, pending] = useActionState(updateGroupWithId, initialState);
+  const [examId, setExamId] = useState(group.exam_id);
 
   return (
     <section className="mt-8 rounded-2xl border bg-white p-6 shadow-sm">
       <form action={formAction} className="space-y-5">
-        <label className="block text-sm font-bold">Exam Category<select id="exam_id" name="exam_id" required defaultValue={group.exam_id} className="mt-2 w-full rounded-lg border px-4 py-3 font-normal">{exams.map((exam) => <option key={exam.id} value={exam.id}>{exam.name}</option>)}</select></label>
+        <label className="block text-sm font-bold">Exam Category<SearchableSelect name="exam_id" value={examId} onChange={setExamId} options={exams.map((exam) => ({ value: exam.id, label: exam.name }))} placeholder="Search an Exam Category" /></label>
 
         <div className="grid gap-5 md:grid-cols-2">
           <label className="block text-sm font-bold">Exam name<input id="name" name="name" type="text" required defaultValue={group.name} className="mt-2 w-full rounded-lg border px-4 py-3 font-normal" /></label>

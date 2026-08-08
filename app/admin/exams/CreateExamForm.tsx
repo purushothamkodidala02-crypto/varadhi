@@ -35,7 +35,7 @@ export function CreateExamForm() {
             name="name"
             type="text"
             required
-            defaultValue="TGPSC"
+            placeholder="For example: TGPSC"
             className="w-full rounded-lg border px-4 py-3"
           />
         </div>
@@ -54,7 +54,7 @@ export function CreateExamForm() {
             type="text"
             required
             pattern="[a-z0-9-]+"
-            defaultValue="tgpsc"
+            placeholder="For example: tgpsc"
             className="w-full rounded-lg border px-4 py-3"
           />
 
@@ -75,7 +75,7 @@ export function CreateExamForm() {
             id="description"
             name="description"
             rows={3}
-            defaultValue="Telangana Public Service Commission mock tests"
+            placeholder="For example: Telangana Public Service Commission mock tests"
             className="w-full rounded-lg border px-4 py-3"
           />
         </div>
@@ -93,7 +93,7 @@ export function CreateExamForm() {
             name="display_order"
             type="number"
             min="0"
-            defaultValue="1"
+            placeholder="For example: 1"
             className="w-full rounded-lg border px-4 py-3"
           />
         </div>
