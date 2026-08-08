@@ -15,8 +15,44 @@ export type SubmitAttemptResult = {
   unansweredQuestions?: number;
 };
 
+function cleanAnswers(answers: Record<string, Answer>) {
+  const validAnswers = new Set<Answer>(["A", "B", "C", "D"]);
+  const cleanedAnswers: Record<string, Answer> = {};
+
+  for (const [questionId, answer] of Object.entries(answers)) {
+    if (!questionId || !validAnswers.has(answer)) {
+      return null;
+    }
+    cleanedAnswers[questionId] = answer;
+  }
+
+  return cleanedAnswers;
+}
+
+export async function saveAttemptProgress(
+  sessionId: string,
+  answers: Record<string, Answer>
+): Promise<{ success: boolean }> {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  const cleanedAnswers = cleanAnswers(answers);
+  if (!user || !sessionId || !cleanedAnswers) {
+    return { success: false };
+  }
+
+  const { error } = await supabase.rpc("save_mock_test_session_answers", {
+    requested_session_id: sessionId,
+    submitted_answers: cleanedAnswers,
+  });
+
+  return { success: !error };
+}
+
 export async function submitAttempt(
-  mockTestId: string,
+  sessionId: string,
   answers: Record<string, Answer>
 ): Promise<SubmitAttemptResult> {
   const supabase = await createClient();
@@ -29,18 +65,13 @@ export async function submitAttempt(
     return { success: false, message: "You must be logged in." };
   }
 
-  const validAnswers = new Set<Answer>(["A", "B", "C", "D"]);
-  const cleanedAnswers: Record<string, Answer> = {};
-
-  for (const [questionId, answer] of Object.entries(answers)) {
-    if (!questionId || !validAnswers.has(answer)) {
-      return { success: false, message: "One or more submitted answers are invalid." };
-    }
-    cleanedAnswers[questionId] = answer;
+  const cleanedAnswers = cleanAnswers(answers);
+  if (!sessionId || !cleanedAnswers) {
+    return { success: false, message: "One or more submitted answers are invalid." };
   }
 
   const { data, error } = await supabase.rpc("submit_mock_test_attempt", {
-    requested_mock_test_id: mockTestId,
+    requested_session_id: sessionId,
     submitted_answers: cleanedAnswers,
   });
 

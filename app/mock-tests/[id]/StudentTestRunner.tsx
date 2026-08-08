@@ -1,8 +1,12 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useMemo, useState } from "react";
-import { submitAttempt, type SubmitAttemptResult } from "./attempt-actions";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import {
+  saveAttemptProgress,
+  submitAttempt,
+  type SubmitAttemptResult,
+} from "./attempt-actions";
 
 type TestQuestion = {
   question_id: string;
@@ -15,12 +19,13 @@ type TestQuestion = {
   option_c: string;
   option_d: string;
   image_url: string | null;
+  selected_answer: "A" | "B" | "C" | "D" | null;
 };
 
 type StudentTestRunnerProps = {
   title: string;
-  mockTestId: string;
-  durationMinutes: number;
+  sessionId: string;
+  expiresAt: string;
   questions: TestQuestion[];
 };
 
@@ -30,29 +35,50 @@ function formatTime(totalSeconds: number) {
   return `${minutes}:${seconds}`;
 }
 
-export function StudentTestRunner({ title, mockTestId, durationMinutes, questions }: StudentTestRunnerProps) {
+function getSecondsRemaining(expiresAt: string) {
+  return Math.max(0, Math.ceil((new Date(expiresAt).getTime() - Date.now()) / 1000));
+}
+
+export function StudentTestRunner({ title, sessionId, expiresAt, questions }: StudentTestRunnerProps) {
   const [currentIndex, setCurrentIndex] = useState(0);
-  const [answers, setAnswers] = useState<Record<string, "A" | "B" | "C" | "D">>({});
-  const [secondsRemaining, setSecondsRemaining] = useState(durationMinutes * 60);
+  const [answers, setAnswers] = useState<Record<string, "A" | "B" | "C" | "D">>(() => Object.fromEntries(questions.flatMap((question) => question.selected_answer ? [[question.question_id, question.selected_answer]] : [])));
+  const [secondsRemaining, setSecondsRemaining] = useState(() => getSecondsRemaining(expiresAt));
   const [submission, setSubmission] = useState<SubmitAttemptResult | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
-    if (submission || secondsRemaining === 0) return;
-    const timer = window.setInterval(() => setSecondsRemaining((seconds) => Math.max(0, seconds - 1)), 1000);
+    if (submission) return;
+    const updateTime = () => setSecondsRemaining(getSecondsRemaining(expiresAt));
+    updateTime();
+    const timer = window.setInterval(updateTime, 1000);
     return () => window.clearInterval(timer);
-  }, [secondsRemaining, submission]);
+  }, [expiresAt, submission]);
 
   const question = questions[currentIndex];
   const answeredCount = useMemo(() => Object.keys(answers).length, [answers]);
 
-  async function finishTest() {
+  useEffect(() => {
+    if (submission || submitting) return;
+    const saveDelay = window.setTimeout(() => {
+      void saveAttemptProgress(sessionId, answers);
+    }, 350);
+
+    return () => window.clearTimeout(saveDelay);
+  }, [answers, sessionId, submission, submitting]);
+
+  const finishTest = useCallback(async () => {
     if (submitting || submission) return;
     setSubmitting(true);
-    const result = await submitAttempt(mockTestId, answers);
+    const result = await submitAttempt(sessionId, answers);
     setSubmission(result);
     setSubmitting(false);
-  }
+  }, [answers, sessionId, submission, submitting]);
+
+  useEffect(() => {
+    if (secondsRemaining === 0 && !submission && !submitting) {
+      void finishTest();
+    }
+  }, [finishTest, secondsRemaining, submission, submitting]);
 
   if (submission) {
     return (
@@ -86,19 +112,19 @@ export function StudentTestRunner({ title, mockTestId, durationMinutes, question
           {question.image_url && <img src={question.image_url} alt="Question reference" className="mt-5 max-h-80 rounded-lg border object-contain" />}
           <div className="mt-6 grid gap-3">
             {options.map(([key, label]) => (
-              <label key={key} className={`flex cursor-pointer items-center gap-3 rounded-lg border p-4 ${answers[question.question_id] === key ? "border-gray-900 bg-gray-50" : "hover:bg-gray-50"}`}>
-                <input type="radio" name={question.question_id} value={key} checked={answers[question.question_id] === key} onChange={() => setAnswers((current) => ({ ...current, [question.question_id]: key }))} />
+              <label key={key} className={`flex items-center gap-3 rounded-lg border p-4 ${secondsRemaining === 0 || submitting ? "cursor-not-allowed opacity-60" : "cursor-pointer"} ${answers[question.question_id] === key ? "border-gray-900 bg-gray-50" : "hover:bg-gray-50"}`}>
+                <input type="radio" name={question.question_id} value={key} disabled={secondsRemaining === 0 || submitting} checked={answers[question.question_id] === key} onChange={() => setAnswers((current) => ({ ...current, [question.question_id]: key }))} />
                 <span><span className="mr-2 font-semibold">{key}.</span>{label}</span>
               </label>
             ))}
           </div>
         </section>
 
-        {secondsRemaining === 0 && <p className="mt-6 rounded-lg bg-amber-50 p-4 text-sm text-amber-800">Time is up. Submit your answers to record this attempt.</p>}
+        {secondsRemaining === 0 && <p className="mt-6 rounded-lg bg-amber-50 p-4 text-sm text-amber-800">Time is up. Submitting your saved answers.</p>}
 
         <div className="mt-6 flex items-center justify-between gap-4">
-          <button type="button" onClick={() => setCurrentIndex((index) => Math.max(0, index - 1))} disabled={currentIndex === 0} className="rounded-lg border px-5 py-3 font-medium disabled:opacity-40">Previous</button>
-          {currentIndex === questions.length - 1 ? <button type="button" onClick={finishTest} disabled={submitting} className="rounded-lg bg-black px-5 py-3 font-medium text-white disabled:opacity-50">{submitting ? "Submitting..." : "Finish Test"}</button> : <button type="button" onClick={() => setCurrentIndex((index) => Math.min(questions.length - 1, index + 1))} className="rounded-lg bg-black px-5 py-3 font-medium text-white">Next</button>}
+          <button type="button" onClick={() => setCurrentIndex((index) => Math.max(0, index - 1))} disabled={currentIndex === 0 || secondsRemaining === 0 || submitting} className="rounded-lg border px-5 py-3 font-medium disabled:opacity-40">Previous</button>
+          {currentIndex === questions.length - 1 ? <button type="button" onClick={finishTest} disabled={submitting || secondsRemaining === 0} className="rounded-lg bg-black px-5 py-3 font-medium text-white disabled:opacity-50">{submitting ? "Submitting..." : "Finish Test"}</button> : <button type="button" onClick={() => setCurrentIndex((index) => Math.min(questions.length - 1, index + 1))} disabled={secondsRemaining === 0 || submitting} className="rounded-lg bg-black px-5 py-3 font-medium text-white disabled:opacity-50">Next</button>}
         </div>
       </div>
     </main>

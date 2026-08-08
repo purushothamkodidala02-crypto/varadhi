@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 
 export default function RegisterPage() {
@@ -21,6 +22,7 @@ export default function RegisterPage() {
       email,
       password,
       options: {
+        emailRedirectTo: `${window.location.origin}/login`,
         data: {
           full_name: fullName,
         },
@@ -103,6 +105,10 @@ export default function RegisterPage() {
         {message && (
           <p className="text-sm text-gray-600">{message}</p>
         )}
+
+        <p className="text-sm text-gray-600">
+          Already have an account? <Link href="/login" className="font-medium text-black underline">Login</Link>
+        </p>
       </form>
     </main>
   );

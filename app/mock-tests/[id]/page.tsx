@@ -14,6 +14,7 @@ type TestQuestion = {
   option_c: string;
   option_d: string;
   image_url: string | null;
+  selected_answer: "A" | "B" | "C" | "D" | null;
 };
 
 export default async function TakeMockTestPage({ params }: PageProps<"/mock-tests/[id]">) {
@@ -21,7 +22,7 @@ export default async function TakeMockTestPage({ params }: PageProps<"/mock-test
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
 
-  if (!user) redirect("/login");
+  if (!user) redirect(`/login?next=${encodeURIComponent(`/mock-tests/${id}`)}`);
 
   const { data: mockTest } = await supabase
     .from("mock_tests")
@@ -32,16 +33,38 @@ export default async function TakeMockTestPage({ params }: PageProps<"/mock-test
 
   if (!mockTest) notFound();
 
+  let hasAccess = mockTest.access_type === "free";
+
   if (mockTest.access_type === "paid") {
+    const { data: entitlement } = await supabase
+      .from("mock_test_entitlements")
+      .select("id")
+      .eq("mock_test_id", mockTest.id)
+      .maybeSingle();
+
+    hasAccess = Boolean(entitlement);
+  }
+
+  if (!hasAccess) {
     return <main className="mx-auto max-w-2xl px-6 py-16"><section className="rounded-2xl border bg-white p-8 text-center shadow-sm"><p className="text-sm font-semibold uppercase tracking-wide text-amber-700">Paid Mock Test</p><h1 className="mt-2 text-3xl font-bold">{mockTest.title}</h1><p className="mt-4 text-gray-600">This Mock Test costs ₹{mockTest.price_inr}. Online purchase will be available here soon.</p><Link href="/mock-tests" className="mt-6 inline-flex rounded-lg bg-black px-5 py-3 font-medium text-white">Back to Mock Tests</Link></section></main>;
   }
 
-  const { data, error } = await supabase.rpc("get_mock_test_attempt_payload", {
+  const { data: sessionData, error: sessionError } = await supabase.rpc("start_mock_test_session", {
     requested_mock_test_id: id,
+  });
+
+  const session = sessionData?.[0] as
+    | { session_id: string; expires_at: string }
+    | undefined;
+
+  if (sessionError || !session) notFound();
+
+  const { data, error } = await supabase.rpc("get_mock_test_session_payload", {
+    requested_session_id: session.session_id,
   });
 
   const questions = (data ?? []) as TestQuestion[];
   if (error || questions.length === 0) notFound();
 
-  return <StudentTestRunner title={mockTest.title} mockTestId={mockTest.id} durationMinutes={mockTest.duration_minutes} questions={questions} />;
+  return <StudentTestRunner title={mockTest.title} sessionId={session.session_id} expiresAt={session.expires_at} questions={questions} />;
 }

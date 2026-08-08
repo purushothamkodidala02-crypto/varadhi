@@ -1,13 +1,20 @@
 "use client";
 
-import { useState } from "react";
+import { Suspense, useState } from "react";
+import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 
-export default function LoginPage() {
+function LoginForm() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [message, setMessage] = useState("");
   const [loading, setLoading] = useState(false);
+  const searchParams = useSearchParams();
+  const requestedPath = searchParams.get("next");
+  const nextPath = requestedPath?.startsWith("/") && !requestedPath.startsWith("//")
+    ? requestedPath
+    : "/dashboard";
 
   async function handleLogin(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -50,7 +57,7 @@ export default function LoginPage() {
       return;
     }
 
-    window.location.replace("/dashboard");
+    window.location.replace(nextPath);
   }
 
   return (
@@ -113,7 +120,19 @@ export default function LoginPage() {
         {message && (
           <p className="text-sm text-red-600">{message}</p>
         )}
+
+        <p className="text-sm text-gray-600">
+          New to Varadhi? <Link href="/register" className="font-medium text-black underline">Create an account</Link>
+        </p>
       </form>
     </main>
+  );
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense fallback={<main className="mx-auto max-w-md px-6 py-16" />}>
+      <LoginForm />
+    </Suspense>
   );
 }
