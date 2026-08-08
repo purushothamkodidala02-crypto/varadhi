@@ -38,13 +38,13 @@ export function AdminNavigation() {
 
   return (
     <>
-      <aside className="hidden min-h-screen border-r border-slate-200 bg-white px-5 py-6 lg:block">
+      <aside className="hidden min-h-screen border-r border-slate-200 bg-white px-5 py-6 md:block">
         <Link href="/admin" className="flex items-center gap-3 px-2"><span className="grid h-9 w-9 place-items-center rounded-xl bg-slate-950 text-sm font-black text-white">V</span><span><span className="block text-lg font-black tracking-tight text-slate-950">Varadhi</span><span className="block text-[11px] font-bold uppercase tracking-[0.14em] text-teal-700">Admin workspace</span></span></Link>
         <nav className="mt-8 space-y-1"><p className="px-3 text-[11px] font-bold uppercase tracking-[0.16em] text-slate-400">Main menu</p><div className="mt-2 space-y-1">{primaryLinks.map((link) => <NavLink key={link.href} {...link} />)}</div><div className="mt-3 border-t border-slate-100 pt-3"><MoreButton open={moreOpen} onClick={() => setMoreOpen((open) => !open)} active={moreIsActive} />{moreOpen && <div className="mt-2 space-y-1 border-l border-slate-200 pl-3">{moreLinks.map((link) => <NavLink key={link.href} {...link} />)}</div>}</div></nav>
         <Link href="/" className="mt-10 inline-flex px-3 text-sm font-semibold text-slate-500 hover:text-slate-950">← View student site</Link>
       </aside>
 
-      <div className="border-b border-slate-200 bg-white px-4 py-3 lg:hidden"><div className="overflow-x-auto pb-1"><nav className="flex min-w-max gap-2">{primaryLinks.map((link) => <NavLink key={link.href} {...link} compact />)}<MoreButton open={moreOpen} onClick={() => setMoreOpen((open) => !open)} compact active={moreIsActive} />{moreOpen && moreLinks.map((link) => <NavLink key={link.href} {...link} compact />)}</nav></div></div>
+      <div className="border-b border-slate-200 bg-white px-4 py-3 md:hidden"><div className="overflow-x-auto pb-1"><nav className="flex min-w-max gap-2">{primaryLinks.map((link) => <NavLink key={link.href} {...link} compact />)}<MoreButton open={moreOpen} onClick={() => setMoreOpen((open) => !open)} compact active={moreIsActive} />{moreOpen && moreLinks.map((link) => <NavLink key={link.href} {...link} compact />)}</nav></div></div>
     </>
   );
 }

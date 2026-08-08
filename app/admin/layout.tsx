@@ -19,8 +19,8 @@ export default async function AdminLayout({ children }: { children: React.ReactN
   if (!profile || profile.role !== "admin") redirect("/dashboard");
 
   return (
-    <div className="min-h-screen bg-slate-50 text-slate-900 lg:grid lg:grid-cols-[17rem_minmax(0,1fr)]">
-      <Suspense fallback={<aside className="hidden min-h-screen border-r bg-white lg:block" />}>
+    <div className="min-h-screen bg-slate-50 text-slate-900 md:grid md:grid-cols-[17rem_minmax(0,1fr)]">
+      <Suspense fallback={<aside className="hidden min-h-screen border-r bg-white md:block" />}>
         <AdminNavigation />
       </Suspense>
       <div className="min-w-0">
