@@ -21,7 +21,9 @@ export default async function AdminExamsPage() {
         </p>
       </div>
 
-      <CreateExamForm />
+      <CreateExamForm
+        existingCategories={exams.map((exam) => ({ id: exam.id, name: exam.name }))}
+      />
 
       {error ? (
         <div className="mt-6 rounded-lg border border-red-200 bg-red-50 p-4">

@@ -62,6 +62,28 @@ export async function createExam(
     };
   }
 
+  const { data: existingCategories, error: existingCategoriesError } = await supabase
+    .from("exams")
+    .select("id, name");
+
+  if (existingCategoriesError) {
+    return {
+      success: false,
+      message: existingCategoriesError.message,
+    };
+  }
+
+  if (
+    (existingCategories ?? []).some(
+      (category) => category.name.trim().toLocaleLowerCase() === name.toLocaleLowerCase(),
+    )
+  ) {
+    return {
+      success: false,
+      message: `An exam category named "${name}" already exists. Names are not case-sensitive.`,
+    };
+  }
+
   if (!slug || !/^[a-z0-9-]+$/.test(slug)) {
     return {
       success: false,
