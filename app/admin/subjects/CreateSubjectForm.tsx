@@ -18,18 +18,20 @@ export function CreateSubjectForm({
   exams,
   specializations,
   papers,
+  initialLocation,
   onLocationChange,
 }: {
   categories: Category[];
   exams: Exam[];
   specializations: Specialization[];
   papers: Paper[];
+  initialLocation?: SubjectLocation;
   onLocationChange?: (location: SubjectLocation) => void;
 }) {
-  const [categoryId, setCategoryId] = useState("");
-  const [examId, setExamId] = useState("");
-  const [specializationId, setSpecializationId] = useState("");
-  const [paperId, setPaperId] = useState("");
+  const [categoryId, setCategoryId] = useState(initialLocation?.categoryId ?? "");
+  const [examId, setExamId] = useState(initialLocation?.examId ?? "");
+  const [specializationId, setSpecializationId] = useState(initialLocation?.specializationId ?? "");
+  const [paperId, setPaperId] = useState(initialLocation?.paperId ?? "");
   const [subjectResetKey, setSubjectResetKey] = useState(0);
   const [state, formAction, pending] = useActionState(createSubjects, initialState);
 

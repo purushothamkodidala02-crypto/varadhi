@@ -1,7 +1,8 @@
 import { createClient } from "@/lib/supabase/server";
 import { SubjectsWorkspace } from "./SubjectsWorkspace";
 
-export default async function SubjectsPage() {
+export default async function SubjectsPage({ searchParams }: { searchParams: Promise<{ category?: string; exam?: string; specialization?: string; paper?: string }> }) {
+  const selected = await searchParams;
   const supabase = await createClient();
   const [subjectsResult, papersResult, groupsResult, categoriesResult, specializationsResult] = await Promise.all([
     supabase.from("subjects").select("id, paper_id, name, slug, content_language_mode, is_active, display_order").order("display_order"),
@@ -10,12 +11,12 @@ export default async function SubjectsPage() {
     supabase.from("exams").select("id, name").order("display_order"),
     supabase.from("exam_specializations").select("id, exam_group_id, name").order("display_order"),
   ]);
-
   const categories = categoriesResult.data ?? [];
   const exams = groupsResult.data ?? [];
   const papers = papersResult.data ?? [];
   const specializations = specializationsResult.data ?? [];
   const subjects = subjectsResult.data ?? [];
+  const initialLocation = { categoryId: selected.category ?? "", examId: selected.exam ?? "", specializationId: selected.specialization ?? "", paperId: selected.paper ?? "" };
 
-  return <main><div><p className="text-xs font-bold uppercase tracking-[0.14em] text-teal-700">Exam structure</p><h1 className="mt-2 text-3xl font-black">Subjects</h1><p className="mt-2 text-slate-600">Choose the Category, Exam, Specialisation when needed, and Paper first, then add all of its Subjects.</p></div><SubjectsWorkspace categories={categories} exams={exams} specializations={specializations.map((item) => ({ id: item.id, examId: item.exam_group_id, name: item.name }))} papers={papers} subjects={subjects.map((subject) => ({ id: subject.id, paperId: subject.paper_id, name: subject.name, slug: subject.slug, contentLanguageMode: subject.content_language_mode, isActive: subject.is_active }))} />{subjectsResult.error && <p className="mt-6 rounded-xl bg-red-50 p-4 text-red-700">{subjectsResult.error.message}</p>}</main>;
+  return <main><div><p className="text-xs font-bold uppercase tracking-[0.14em] text-teal-700">Exam structure</p><h1 className="mt-2 text-3xl font-black">Subjects</h1><p className="mt-2 text-slate-600">Choose the Category, Exam, Specialisation when needed, and Paper first, then add all of its Subjects.</p></div><SubjectsWorkspace categories={categories} exams={exams} specializations={specializations.map((item) => ({ id: item.id, examId: item.exam_group_id, name: item.name }))} papers={papers} subjects={subjects.map((subject) => ({ id: subject.id, paperId: subject.paper_id, name: subject.name, slug: subject.slug, contentLanguageMode: subject.content_language_mode, isActive: subject.is_active }))} initialLocation={initialLocation} />{subjectsResult.error && <p className="mt-6 rounded-xl bg-red-50 p-4 text-red-700">{subjectsResult.error.message}</p>}</main>;
 }

@@ -13,6 +13,7 @@ type ExistingSubject = {
   contentLanguageMode: SubjectContentLanguageMode;
   isActive: boolean;
 };
+type ReturnLocation = { categoryId: string; examId: string; specializationId: string; paperId: string };
 
 const pageSize = 20;
 
@@ -22,6 +23,7 @@ export function ExistingSubjectsTable({
   specializationName,
   paperId,
   paperName,
+  returnLocation,
   subjects,
 }: {
   categoryName: string | null;
@@ -29,6 +31,7 @@ export function ExistingSubjectsTable({
   specializationName: string | null;
   paperId: string;
   paperName: string | null;
+  returnLocation: ReturnLocation;
   subjects: ExistingSubject[];
 }) {
   const [search, setSearch] = useState("");
@@ -128,7 +131,7 @@ export function ExistingSubjectsTable({
                     <td className="px-5 py-4">
                       <div className="flex justify-end gap-2">
                         <Link
-                          href={`/admin/subjects/${subject.id}/edit`}
+                          href={`/admin/subjects/${subject.id}/edit?fromCategory=${returnLocation.categoryId}&fromExam=${returnLocation.examId}&fromSpecialization=${returnLocation.specializationId}&fromPaper=${returnLocation.paperId}`}
                           className="rounded-lg px-2.5 py-1.5 text-sm font-bold text-teal-700 hover:bg-teal-50"
                         >
                           Edit

@@ -14,12 +14,12 @@ type Location = { categoryId: string; examId: string; specializationId: string; 
 
 const emptyLocation: Location = { categoryId: "", examId: "", specializationId: "", paperId: "" };
 
-export function SubjectsWorkspace({ categories, exams, specializations, papers, subjects }: { categories: Category[]; exams: Exam[]; specializations: Specialization[]; papers: Paper[]; subjects: Subject[] }) {
-  const [location, setLocation] = useState(emptyLocation);
+export function SubjectsWorkspace({ categories, exams, specializations, papers, subjects, initialLocation = emptyLocation }: { categories: Category[]; exams: Exam[]; specializations: Specialization[]; papers: Paper[]; subjects: Subject[]; initialLocation?: Location }) {
+  const [location, setLocation] = useState(initialLocation);
   const categoryName = useMemo(() => categories.find((category) => category.id === location.categoryId)?.name ?? null, [categories, location.categoryId]);
   const examName = useMemo(() => exams.find((exam) => exam.id === location.examId)?.name ?? null, [exams, location.examId]);
   const specializationName = useMemo(() => specializations.find((specialization) => specialization.id === location.specializationId)?.name ?? null, [location.specializationId, specializations]);
   const paperName = useMemo(() => papers.find((paper) => paper.id === location.paperId)?.name ?? null, [papers, location.paperId]);
 
-  return <><CreateSubjectForm categories={categories} exams={exams} specializations={specializations} papers={papers} onLocationChange={setLocation} /><ExistingSubjectsTable categoryName={categoryName} examName={examName} specializationName={specializationName} paperId={location.paperId} paperName={paperName} subjects={subjects} /></>;
+  return <><CreateSubjectForm categories={categories} exams={exams} specializations={specializations} papers={papers} initialLocation={initialLocation} onLocationChange={setLocation} /><ExistingSubjectsTable categoryName={categoryName} examName={examName} specializationName={specializationName} paperId={location.paperId} paperName={paperName} returnLocation={location} subjects={subjects} /></>;
 }
