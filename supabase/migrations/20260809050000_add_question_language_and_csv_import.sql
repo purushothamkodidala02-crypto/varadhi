@@ -116,8 +116,9 @@ begin
     raise exception 'Mock Test has no active Questions.';
   end if;
 
-  select expires_at into active_expires_at
-  from public.test_attempt_sessions where id = new_session_id;
+  select session.expires_at into active_expires_at
+  from public.test_attempt_sessions as session
+  where session.id = new_session_id;
   return query select new_session_id, requested_mock_test_id, active_expires_at;
 end;
 $$;
