@@ -26,8 +26,14 @@ const requiredHeaders = [
   "question_te", "option_a_te", "option_b_te", "option_c_te", "option_d_te", "correct_answer",
 ];
 const answers: CorrectAnswer[] = ["A", "B", "C", "D"];
-const lifecycles: QuestionLifecycle[] = ["permanent", "review", "expires"];
 const validDate = (value: string) => /^\d{4}-\d{2}-\d{2}$/.test(value) && !Number.isNaN(Date.parse(`${value}T00:00:00Z`));
+function lifecycleValue(value: string): QuestionLifecycle | null {
+  const normalized = value.trim().toLowerCase().replace(/[_\s]+/g, "-");
+  if (["", "permanent", "evergreen"].includes(normalized)) return "permanent";
+  if (["review", "time-sensitive", "current-affairs"].includes(normalized)) return "review";
+  if (["expires", "expire", "expiry"].includes(normalized)) return "expires";
+  return null;
+}
 const optionalNumber = (value: string) => {
   const normalized = value.trim();
   if (!normalized) return null;
@@ -182,7 +188,7 @@ async function importQuestions(
     const importKey = (row.import_key ?? "").trim().toLocaleLowerCase();
     const subject = subjectByName.get((row.subject ?? "").trim().toLocaleLowerCase());
     const correctAnswer = (row.correct_answer ?? "").trim().toUpperCase() as CorrectAnswer;
-    const lifecycle = ((row.content_lifecycle ?? "permanent").trim().toLowerCase() || "permanent") as QuestionLifecycle;
+    const lifecycle = lifecycleValue(row.content_lifecycle ?? "");
     const reviewOn = (row.review_on ?? "").trim();
     const expiresOn = (row.expires_on ?? "").trim();
     const sourceExamDate = (row.source_exam_date ?? "").trim();
@@ -198,7 +204,7 @@ async function importQuestions(
     if (subject && importKeys.has(`${subject.id}:${importKey}`)) errors.push(`Row ${rowNumber}: import_key "${importKey}" is repeated for ${subject.name}.`);
     if (subject && importKey) importKeys.add(`${subject.id}:${importKey}`);
     if (!answers.includes(correctAnswer)) errors.push(`Row ${rowNumber}: correct_answer must be A, B, C, or D.`);
-    if (!lifecycles.includes(lifecycle) || (lifecycle === "review" && !validDate(reviewOn)) || (lifecycle === "expires" && !validDate(expiresOn))) errors.push(`Row ${rowNumber}: check content_lifecycle and its date.`);
+    if (!lifecycle || (lifecycle === "review" && !validDate(reviewOn)) || (lifecycle === "expires" && !validDate(expiresOn))) errors.push(`Row ${rowNumber}: use permanent, time_sensitive, review, or expires and provide its required date.`);
     if (sourceExamDate && !validDate(sourceExamDate)) errors.push(`Row ${rowNumber}: source_exam_date must use YYYY-MM-DD.`);
     if (isActive === null) errors.push(`Row ${rowNumber}: is_active must be true or false.`);
     if (mockTest && questionOrder !== null && (!Number.isInteger(questionOrder) || questionOrder < 1)) errors.push(`Row ${rowNumber}: question_order must be a whole number greater than zero.`);
@@ -222,7 +228,7 @@ async function importQuestions(
     if (mockTest?.test_scope === "subject" && subject && subject.id !== mockTest.subject_id) {
       errors.push(`Row ${rowNumber}: this subject-wise Mock Test only accepts Questions for its selected Subject.`);
     }
-    if (!subject || !importKey || !answers.includes(correctAnswer) || !lifecycles.includes(lifecycle) || isActive === null || (mockTest?.test_scope === "subject" && subject.id !== mockTest.subject_id)) return;
+    if (!subject || !importKey || !answers.includes(correctAnswer) || !lifecycle || isActive === null || (mockTest?.test_scope === "subject" && subject.id !== mockTest.subject_id)) return;
     const canonical = languageMode === "telugu" ? telugu : english;
     importRows.push({
       subject_id: subject.id,
