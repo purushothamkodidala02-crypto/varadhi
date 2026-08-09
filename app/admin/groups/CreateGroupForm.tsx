@@ -20,7 +20,58 @@ export function CreateGroupForm({ categories, existingExams, onExamCategoryChang
   const matchingExams = useMemo(() => { const query = name.trim().toLowerCase(); return categoryExams.filter((exam) => !query || exam.name.toLowerCase().includes(query)); }, [categoryExams, name]);
   const duplicate = categoryExams.some((exam) => exam.name.trim().toLowerCase() === name.trim().toLowerCase());
 
-  function chooseExamCategory(nextExamId: string) { setExamId(nextExamId); setName(""); onExamCategoryChange?.(nextExamId); }
+  function chooseExamCategory(nextExamId: string) {
+    setExamId(nextExamId);
+    setName("");
+    onExamCategoryChange?.(nextExamId);
+  }
 
-  return <section className="mt-8 rounded-2xl border bg-white p-6 shadow-sm"><h2 className="text-xl font-bold">Add Exam</h2><p className="mt-1 text-sm text-slate-600">Create the Exam, then add optional Specialisations and the Papers under each one. Nothing is pre-defined.</p><form action={formAction} className="mt-6 space-y-5"><label className="block text-sm font-bold">Exam Category<SearchableSelect name="exam_id" value={examId} onChange={chooseExamCategory} options={categories.map((category) => ({ value: category.id, label: category.name }))} placeholder="Search and choose an Exam Category" /></label><div className="grid gap-5 md:grid-cols-2"><div><label className="block text-sm font-bold">Exam name<input id="name" name="name" type="text" required value={name} onChange={(event) => setName(event.target.value)} disabled={!examId} placeholder="For example: AEE" className="mt-2 w-full rounded-lg border px-4 py-3 font-normal disabled:cursor-not-allowed disabled:bg-slate-100" /></label>{categoryName && <div className="mt-3 overflow-hidden rounded-xl border"><div className="bg-slate-950 px-3 py-2 text-xs font-bold uppercase tracking-wide text-white">Existing Exams under {categoryName}</div>{matchingExams.length === 0 ? <p className="bg-slate-50 px-3 py-3 text-sm text-slate-600">{categoryExams.length === 0 ? "No Exams in this category yet. Enter a new Exam name." : "No matching Exam names. You can create this new name."}</p> : <div className="max-h-[15.5rem] overflow-y-auto divide-y bg-white">{matchingExams.map((exam) => <div key={exam.id} className="flex items-center justify-between gap-3 px-3 py-2.5 text-sm"><span className="font-semibold text-slate-800">{exam.name}</span><span className="text-xs text-slate-500">{exam.slug}</span></div>)}</div>}<p className="border-t bg-slate-50 px-3 py-2 text-xs font-semibold text-slate-600">{matchingExams.length === categoryExams.length ? `${categoryExams.length} existing ${categoryExams.length === 1 ? "Exam" : "Exams"}` : `${matchingExams.length} matching of ${categoryExams.length} existing Exams`}</p></div>}{duplicate && <p className="mt-2 text-sm font-semibold text-red-600">An Exam named “{name.trim()}” already exists under {categoryName}. Choose a different name or edit the existing Exam below.</p>}</div><label className="block text-sm font-bold">Slug<input id="slug" name="slug" type="text" required pattern="[a-z0-9-]+" placeholder="For example: aee" className="mt-2 w-full rounded-lg border px-4 py-3 font-normal" /><span className="mt-1 block text-xs font-normal text-slate-500">Lowercase letters, numbers and hyphens only.</span></label></div><label className="block text-sm font-bold">Description <span className="font-normal text-slate-500">optional</span><textarea id="description" name="description" rows={3} placeholder="Short introduction for students" className="mt-2 w-full rounded-lg border px-4 py-3 font-normal" /></label><div className="max-w-xs"><label className="block text-sm font-bold">Display order<input id="display_order" name="display_order" type="number" min="0" step="1" required placeholder="For example: 1" className="mt-2 w-full rounded-lg border px-4 py-3 font-normal" /></label></div><SpecializationPapersInput /><PaperListInput inputName="papers_json" initialRows={0} title="Direct / common Papers" description="Add Papers that belong directly to this Exam. Use this for Group 1, Group 2, and Group 4, or for a Paper shared by every Specialisation." /><label className="flex items-center gap-3"><input name="is_active" type="checkbox" defaultChecked className="h-4 w-4" /><span className="text-sm font-medium">Available to students</span></label><button type="submit" disabled={pending || categories.length === 0 || !examId || duplicate} className="rounded-lg bg-slate-950 px-5 py-3 font-bold text-white disabled:cursor-not-allowed disabled:opacity-50">{pending ? "Creating..." : "Create Exam"}</button>{state.message && <p aria-live="polite" className={state.success ? "text-sm font-semibold text-green-700" : "text-sm font-semibold text-red-600"}>{state.message}</p>}</form></section>;
+  return (
+    <section className="mt-8 rounded-2xl border bg-white p-6 shadow-sm">
+      <h2 className="text-xl font-bold">Add Exam</h2>
+      <p className="mt-1 text-sm text-slate-600">Create the Exam, then add optional Specialisations and the Papers under each one. Nothing is pre-defined.</p>
+      <form action={formAction} className="mt-6 space-y-5">
+        <label className="block text-sm font-bold">
+          Exam Category
+          <SearchableSelect name="exam_id" value={examId} onChange={chooseExamCategory} options={categories.map((category) => ({ value: category.id, label: category.name }))} placeholder="Search and choose an Exam Category" />
+        </label>
+
+        <div className="grid gap-5 md:grid-cols-2">
+          <div>
+            <label className="block text-sm font-bold">
+              Exam name
+              <input id="name" name="name" type="text" required value={name} onChange={(event) => setName(event.target.value)} disabled={!examId} placeholder="For example: AEE" className="mt-2 w-full rounded-lg border px-4 py-3 font-normal disabled:cursor-not-allowed disabled:bg-slate-100" />
+            </label>
+            {categoryName && (
+              <div className="mt-3 overflow-hidden rounded-xl border">
+                {matchingExams.length === 0 ? (
+                  <p className="bg-slate-50 px-3 py-3 text-sm text-slate-600">{categoryExams.length === 0 ? "No Exams in this category yet. Enter a new Exam name." : "No matching Exam names. You can create this new name."}</p>
+                ) : (
+                  <div className="max-h-[12.5rem] divide-y overflow-y-auto bg-white">
+                    {matchingExams.map((exam) => <p key={exam.id} className="px-3 py-2.5 text-sm font-semibold text-slate-800">{exam.name}</p>)}
+                  </div>
+                )}
+                <p className="border-t bg-slate-50 px-3 py-2 text-xs font-semibold text-slate-600">{matchingExams.length === categoryExams.length ? `${categoryExams.length} existing ${categoryExams.length === 1 ? "Exam" : "Exams"}` : `${matchingExams.length} matching of ${categoryExams.length} existing Exams`}</p>
+              </div>
+            )}
+            {duplicate && <p className="mt-2 text-sm font-semibold text-red-600">An Exam named “{name.trim()}” already exists under {categoryName}. Choose a different name or edit the existing Exam below.</p>}
+          </div>
+
+          <label className="block text-sm font-bold">
+            Slug
+            <input id="slug" name="slug" type="text" required pattern="[a-z0-9-]+" placeholder="For example: aee" className="mt-2 w-full rounded-lg border px-4 py-3 font-normal" />
+            <span className="mt-1 block text-xs font-normal text-slate-500">Lowercase letters, numbers and hyphens only.</span>
+          </label>
+        </div>
+
+        <label className="block text-sm font-bold">Description <span className="font-normal text-slate-500">optional</span><textarea id="description" name="description" rows={3} placeholder="Short introduction for students" className="mt-2 w-full rounded-lg border px-4 py-3 font-normal" /></label>
+        <div className="max-w-xs"><label className="block text-sm font-bold">Display order<input id="display_order" name="display_order" type="number" min="0" step="1" required placeholder="For example: 1" className="mt-2 w-full rounded-lg border px-4 py-3 font-normal" /></label></div>
+        <SpecializationPapersInput />
+        <PaperListInput inputName="papers_json" initialRows={0} title="Direct / common Papers" description="Add Papers that belong directly to this Exam. Use this for Group 1, Group 2, and Group 4, or for a Paper shared by every Specialisation." />
+        <label className="flex items-center gap-3"><input name="is_active" type="checkbox" defaultChecked className="h-4 w-4" /><span className="text-sm font-medium">Available to students</span></label>
+        <button type="submit" disabled={pending || categories.length === 0 || !examId || duplicate} className="rounded-lg bg-slate-950 px-5 py-3 font-bold text-white disabled:cursor-not-allowed disabled:opacity-50">{pending ? "Creating..." : "Create Exam"}</button>
+        {state.message && <p aria-live="polite" className={state.success ? "text-sm font-semibold text-green-700" : "text-sm font-semibold text-red-600"}>{state.message}</p>}
+      </form>
+    </section>
+  );
 }
