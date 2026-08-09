@@ -12,6 +12,8 @@ type ExistingSubject = {
   isActive: boolean;
 };
 
+const pageSize = 20;
+
 export function ExistingSubjectsTable({
   categoryName,
   examName,
@@ -26,6 +28,7 @@ export function ExistingSubjectsTable({
   subjects: ExistingSubject[];
 }) {
   const [search, setSearch] = useState("");
+  const [page, setPage] = useState(1);
   const filtered = useMemo(() => {
     const query = search.trim().toLowerCase();
     return subjects.filter(
@@ -34,10 +37,19 @@ export function ExistingSubjectsTable({
         (!query || `${subject.name} ${subject.slug}`.toLowerCase().includes(query)),
     );
   }, [paperId, search, subjects]);
+  const pageCount = Math.max(1, Math.ceil(filtered.length / pageSize));
+  const visibleSubjects = filtered.slice((page - 1) * pageSize, page * pageSize);
+  const firstEntry = filtered.length === 0 ? 0 : (page - 1) * pageSize + 1;
+  const lastEntry = Math.min(page * pageSize, filtered.length);
 
   useEffect(() => {
     setSearch("");
+    setPage(1);
   }, [paperId]);
+
+  useEffect(() => {
+    setPage(1);
+  }, [search]);
 
   return (
     <section className="mt-8 overflow-hidden rounded-2xl border bg-white">
@@ -81,45 +93,73 @@ export function ExistingSubjectsTable({
           No Subjects match this Paper and search.
         </p>
       ) : (
-        <div className="overflow-x-auto">
-          <table className="w-full text-left text-sm">
-            <thead className="bg-slate-50 text-xs uppercase tracking-wide text-slate-500">
-              <tr>
-                <th className="px-5 py-3">Subject</th>
-                <th className="px-5 py-3">Status</th>
-                <th className="px-5 py-3 text-right">Actions</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y">
-              {filtered.map((subject) => (
-                <tr key={subject.id}>
-                  <td className="px-5 py-4">
-                    <p className="font-bold">{subject.name}</p>
-                    <p className="text-xs text-slate-500">{subject.slug}</p>
-                  </td>
-                  <td className="px-5 py-4">
-                    <span
-                      className={`rounded-full px-2.5 py-1 text-xs font-bold ${subject.isActive ? "bg-emerald-100 text-emerald-800" : "bg-slate-100 text-slate-600"}`}
-                    >
-                      {subject.isActive ? "Active" : "Inactive"}
-                    </span>
-                  </td>
-                  <td className="px-5 py-4">
-                    <div className="flex justify-end gap-2">
-                      <Link
-                        href={`/admin/subjects/${subject.id}/edit`}
-                        className="rounded-lg px-2.5 py-1.5 text-sm font-bold text-teal-700 hover:bg-teal-50"
-                      >
-                        Edit
-                      </Link>
-                      <DeleteSubjectButton subjectId={subject.id} subjectName={subject.name} />
-                    </div>
-                  </td>
+        <>
+          <div className="max-h-[48rem] overflow-auto">
+            <table className="min-w-[640px] w-full text-left text-sm">
+              <thead className="sticky top-0 z-10 bg-slate-50 text-xs uppercase tracking-wide text-slate-500">
+                <tr>
+                  <th className="px-5 py-3">Subject</th>
+                  <th className="px-5 py-3">Status</th>
+                  <th className="px-5 py-3 text-right">Actions</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+              </thead>
+              <tbody className="divide-y">
+                {visibleSubjects.map((subject) => (
+                  <tr key={subject.id}>
+                    <td className="px-5 py-4">
+                      <p className="font-bold">{subject.name}</p>
+                      <p className="text-xs text-slate-500">{subject.slug}</p>
+                    </td>
+                    <td className="px-5 py-4">
+                      <span
+                        className={`rounded-full px-2.5 py-1 text-xs font-bold ${subject.isActive ? "bg-emerald-100 text-emerald-800" : "bg-slate-100 text-slate-600"}`}
+                      >
+                        {subject.isActive ? "Active" : "Inactive"}
+                      </span>
+                    </td>
+                    <td className="px-5 py-4">
+                      <div className="flex justify-end gap-2">
+                        <Link
+                          href={`/admin/subjects/${subject.id}/edit`}
+                          className="rounded-lg px-2.5 py-1.5 text-sm font-bold text-teal-700 hover:bg-teal-50"
+                        >
+                          Edit
+                        </Link>
+                        <DeleteSubjectButton subjectId={subject.id} subjectName={subject.name} />
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          <div className="flex flex-wrap items-center justify-between gap-3 border-t bg-slate-50 px-6 py-4 text-sm">
+            <p className="text-slate-600">
+              Showing {firstEntry}–{lastEntry} of {filtered.length} entries
+            </p>
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => setPage((current) => Math.max(1, current - 1))}
+                disabled={page === 1}
+                className="rounded-lg border bg-white px-3 py-2 font-bold disabled:cursor-not-allowed disabled:opacity-40"
+              >
+                Previous
+              </button>
+              <span className="px-2 font-semibold text-slate-600">
+                Page {page} of {pageCount}
+              </span>
+              <button
+                type="button"
+                onClick={() => setPage((current) => Math.min(pageCount, current + 1))}
+                disabled={page === pageCount}
+                className="rounded-lg border bg-white px-3 py-2 font-bold disabled:cursor-not-allowed disabled:opacity-40"
+              >
+                Next
+              </button>
+            </div>
+          </div>
+        </>
       )}
     </section>
   );
