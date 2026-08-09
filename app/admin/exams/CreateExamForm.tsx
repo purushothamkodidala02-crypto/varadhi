@@ -68,12 +68,12 @@ export function CreateExamForm({
               setListOpen(true);
             }}
             placeholder="For example: TGPSC"
-            aria-expanded={listOpen}
+            aria-expanded={listOpen && Boolean(normalizedName)}
             aria-controls="existing-category-suggestions"
             className="w-full rounded-lg border px-4 py-3"
           />
 
-          {listOpen && (
+          {listOpen && normalizedName && (
             <div
               id="existing-category-suggestions"
               className="absolute z-30 mt-1 max-h-56 w-full overflow-y-auto rounded-xl border bg-white p-1 shadow-xl shadow-slate-950/10"
