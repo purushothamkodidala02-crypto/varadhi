@@ -8,6 +8,7 @@ import { SubjectListInput } from "./SubjectListInput";
 type Category = { id: string; name: string };
 type Exam = { id: string; exam_id: string; name: string };
 type Paper = { id: string; exam_group_id: string; name: string };
+type SubjectLocation = { categoryId: string; examId: string; paperId: string };
 
 const initialState: CreateSubjectState = { success: false, message: "" };
 
@@ -15,10 +16,12 @@ export function CreateSubjectForm({
   categories,
   exams,
   papers,
+  onLocationChange,
 }: {
   categories: Category[];
   exams: Exam[];
   papers: Paper[];
+  onLocationChange?: (location: SubjectLocation) => void;
 }) {
   const [categoryId, setCategoryId] = useState("");
   const [examId, setExamId] = useState("");
@@ -37,11 +40,18 @@ export function CreateSubjectForm({
     setCategoryId(nextCategoryId);
     setExamId("");
     setPaperId("");
+    onLocationChange?.({ categoryId: nextCategoryId, examId: "", paperId: "" });
   }
 
   function changeExam(nextExamId: string) {
     setExamId(nextExamId);
     setPaperId("");
+    onLocationChange?.({ categoryId, examId: nextExamId, paperId: "" });
+  }
+
+  function changePaper(nextPaperId: string) {
+    setPaperId(nextPaperId);
+    onLocationChange?.({ categoryId, examId, paperId: nextPaperId });
   }
 
   return (
@@ -88,7 +98,7 @@ export function CreateSubjectForm({
             <SearchableSelect
               name="paper_id"
               value={paperId}
-              onChange={setPaperId}
+              onChange={changePaper}
               options={availablePapers.map((paper) => ({
                 value: paper.id,
                 label: paper.name,

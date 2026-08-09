@@ -1,75 +1,64 @@
 "use client";
 
 import Link from "next/link";
-import { useMemo, useState } from "react";
-import {
-  LocationFilters,
-  type LocationCategory,
-  type LocationExam,
-  type LocationFilterValue,
-  type LocationPaper,
-} from "@/components/admin/LocationFilters";
+import { useEffect, useMemo, useState } from "react";
 import { DeleteSubjectButton } from "./DeleteSubjectButton";
 
 type ExistingSubject = {
   id: string;
-  categoryId: string;
-  examId: string;
   paperId: string;
-  examName: string;
-  paperName: string;
   name: string;
   slug: string;
   isActive: boolean;
 };
 
-const emptyLocation: LocationFilterValue = {
-  categoryId: "",
-  examId: "",
-  paperId: "",
-  subjectId: "",
-};
-
 export function ExistingSubjectsTable({
-  categories,
-  exams,
-  papers,
+  categoryName,
+  examName,
+  paperId,
+  paperName,
   subjects,
 }: {
-  categories: LocationCategory[];
-  exams: LocationExam[];
-  papers: LocationPaper[];
+  categoryName: string | null;
+  examName: string | null;
+  paperId: string;
+  paperName: string | null;
   subjects: ExistingSubject[];
 }) {
-  const [location, setLocation] = useState(emptyLocation);
   const [search, setSearch] = useState("");
   const filtered = useMemo(() => {
     const query = search.trim().toLowerCase();
     return subjects.filter(
       (subject) =>
-        subject.categoryId === location.categoryId &&
-        (!location.examId || subject.examId === location.examId) &&
-        (!location.paperId || subject.paperId === location.paperId) &&
+        subject.paperId === paperId &&
         (!query || `${subject.name} ${subject.slug}`.toLowerCase().includes(query)),
     );
-  }, [location, search, subjects]);
+  }, [paperId, search, subjects]);
+
+  useEffect(() => {
+    setSearch("");
+  }, [paperId]);
 
   return (
     <section className="mt-8 overflow-hidden rounded-2xl border bg-white">
       <div className="border-b px-6 py-5">
-        <h2 className="font-bold">Existing Subjects</h2>
+        <div className="flex flex-wrap items-center gap-2">
+          <h2 className="font-bold">Existing Subjects</h2>
+          {[categoryName, examName, paperName].filter(Boolean).map((name) => (
+            <span
+              key={name}
+              className="rounded-full bg-teal-50 px-3 py-1 text-xs font-bold text-teal-800"
+            >
+              {name}
+            </span>
+          ))}
+        </div>
         <p className="mt-1 text-sm text-slate-600">
-          Choose a location, then search the Subjects already stored there.
+          This list follows the Category, Exam, and Paper selected above in Add Subjects.
         </p>
       </div>
-      <div className="space-y-4 border-b bg-slate-50 px-6 py-5">
-        <LocationFilters
-          categories={categories}
-          exams={exams}
-          papers={papers}
-          value={location}
-          onChange={setLocation}
-        />
+
+      <div className="border-b bg-slate-50 px-6 py-5">
         <label className="block max-w-xl text-sm font-bold">
           Search existing Subjects
           <input
@@ -77,27 +66,25 @@ export function ExistingSubjectsTable({
             value={search}
             onChange={(event) => setSearch(event.target.value)}
             placeholder="For example: History or General Studies"
-            disabled={!location.categoryId}
+            disabled={!paperId}
             className="mt-2 w-full rounded-xl border px-4 py-3 font-normal disabled:cursor-not-allowed disabled:bg-slate-100"
           />
         </label>
       </div>
 
-      {!location.categoryId ? (
+      {!paperId ? (
         <p className="p-6 text-sm text-slate-600">
-          Select an Exam Category above to see its Subjects.
+          Choose an Exam Category, Exam, and Paper in Add Subjects to see existing Subjects.
         </p>
       ) : filtered.length === 0 ? (
         <p className="p-6 text-sm text-slate-600">
-          No Subjects match this location and search.
+          No Subjects match this Paper and search.
         </p>
       ) : (
         <div className="overflow-x-auto">
           <table className="w-full text-left text-sm">
             <thead className="bg-slate-50 text-xs uppercase tracking-wide text-slate-500">
               <tr>
-                {!location.examId && <th className="px-5 py-3">Exam</th>}
-                {!location.paperId && <th className="px-5 py-3">Paper</th>}
                 <th className="px-5 py-3">Subject</th>
                 <th className="px-5 py-3">Status</th>
                 <th className="px-5 py-3 text-right">Actions</th>
@@ -106,12 +93,6 @@ export function ExistingSubjectsTable({
             <tbody className="divide-y">
               {filtered.map((subject) => (
                 <tr key={subject.id}>
-                  {!location.examId && (
-                    <td className="px-5 py-4 text-slate-600">{subject.examName}</td>
-                  )}
-                  {!location.paperId && (
-                    <td className="px-5 py-4 text-slate-600">{subject.paperName}</td>
-                  )}
                   <td className="px-5 py-4">
                     <p className="font-bold">{subject.name}</p>
                     <p className="text-xs text-slate-500">{subject.slug}</p>

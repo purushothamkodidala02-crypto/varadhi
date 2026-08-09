@@ -16,6 +16,9 @@ export async function updateSubject(subjectId: string, _previous: UpdateSubjectS
   if (!Number.isInteger(displayOrder) || displayOrder < 0) return { success: false, message: "Display order must be zero or a positive number." };
   const { data: paper } = await supabase.from("papers").select("id").eq("id", paperId).maybeSingle();
   if (!paper) return { success: false, message: "The selected Paper could not be found." };
+  const { data: existingSubjects, error: existingSubjectsError } = await supabase.from("subjects").select("id, name").eq("paper_id", paperId).neq("id", subjectId);
+  if (existingSubjectsError) return { success: false, message: existingSubjectsError.message };
+  if ((existingSubjects ?? []).some((subject) => subject.name.trim().toLowerCase() === name.toLowerCase())) return { success: false, message: `The Subject "${name}" already exists in this Paper. Subject names are not case-sensitive.` };
   const { error } = await supabase.from("subjects").update({ paper_id: paperId, name, slug, description: String(formData.get("description") ?? "").trim() || null, is_active: formData.get("is_active") === "on", display_order: displayOrder }).eq("id", subjectId);
   if (error?.code === "23505") return { success: false, message: "A Subject with this slug already exists in the selected Paper." };
   if (error) return { success: false, message: error.message };

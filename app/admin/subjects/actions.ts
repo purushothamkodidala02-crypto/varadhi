@@ -40,8 +40,11 @@ export async function createSubjects(_previous: CreateSubjectState, formData: Fo
   const [{ data: paper }, { data: exam }] = await Promise.all([supabase.from("papers").select("id, exam_group_id").eq("id", paperId).maybeSingle(), supabase.from("exam_groups").select("id, exam_id").eq("id", examGroupId).maybeSingle()]);
   if (!paper || !exam || paper.exam_group_id !== examGroupId || exam.exam_id !== categoryId) return { success: false, message: "The selected Category, Exam, and Paper do not belong together." };
 
-  const { data: existingSubjects, error: existingError } = await supabase.from("subjects").select("slug, display_order").eq("paper_id", paperId);
+  const { data: existingSubjects, error: existingError } = await supabase.from("subjects").select("name, slug, display_order").eq("paper_id", paperId);
   if (existingError) return { success: false, message: existingError.message };
+  const existingNames = new Set((existingSubjects ?? []).map((subject) => subject.name.trim().toLowerCase()));
+  const duplicateName = subjectInput.names.find((name) => existingNames.has(name.toLowerCase()));
+  if (duplicateName) return { success: false, message: `The Subject "${duplicateName}" already exists in this Paper. Subject names are not case-sensitive.` };
   const usedSlugs = new Set((existingSubjects ?? []).map((subject) => subject.slug));
   const nextOrder = Math.max(0, ...(existingSubjects ?? []).map((subject) => subject.display_order)) + 1;
   const { error } = await supabase.from("subjects").insert(subjectInput.names.map((name, index) => ({ paper_id: paperId, name, slug: subjectSlug(name, index, usedSlugs), description: null, display_order: nextOrder + index, is_active: true })));

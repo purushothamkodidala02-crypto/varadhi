@@ -1,6 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
-import { CreateSubjectForm } from "./CreateSubjectForm";
-import { ExistingSubjectsTable } from "./ExistingSubjectsTable";
+import { SubjectsWorkspace } from "./SubjectsWorkspace";
 
 export default async function SubjectsPage() {
   const supabase = await createClient();
@@ -21,8 +20,6 @@ export default async function SubjectsPage() {
   const exams = groupsResult.data ?? [];
   const papers = papersResult.data ?? [];
   const subjects = subjectsResult.data ?? [];
-  const examById = new Map(exams.map((exam) => [exam.id, exam]));
-  const paperById = new Map(papers.map((paper) => [paper.id, paper]));
 
   return (
     <main>
@@ -36,42 +33,23 @@ export default async function SubjectsPage() {
         </p>
       </div>
 
-      <CreateSubjectForm categories={categories} exams={exams} papers={papers} />
+      <SubjectsWorkspace
+        categories={categories}
+        exams={exams}
+        papers={papers}
+        subjects={subjects.map((subject) => ({
+          id: subject.id,
+          paperId: subject.paper_id,
+          name: subject.name,
+          slug: subject.slug,
+          isActive: subject.is_active,
+        }))}
+      />
 
-      {subjectsResult.error ? (
+      {subjectsResult.error && (
         <p className="mt-6 rounded-xl bg-red-50 p-4 text-red-700">
           {subjectsResult.error.message}
         </p>
-      ) : (
-        <ExistingSubjectsTable
-          categories={categories}
-          exams={exams.map((exam) => ({
-            id: exam.id,
-            categoryId: exam.exam_id,
-            name: exam.name,
-          }))}
-          papers={papers.map((paper) => ({
-            id: paper.id,
-            examId: paper.exam_group_id,
-            name: paper.name,
-          }))}
-          subjects={subjects.map((subject) => {
-            const paper = paperById.get(subject.paper_id);
-            const exam = paper ? examById.get(paper.exam_group_id) : undefined;
-
-            return {
-              id: subject.id,
-              categoryId: exam?.exam_id ?? "",
-              examId: exam?.id ?? "",
-              paperId: paper?.id ?? "",
-              examName: exam?.name ?? "Unknown Exam",
-              paperName: paper?.name ?? "Unknown Paper",
-              name: subject.name,
-              slug: subject.slug,
-              isActive: subject.is_active,
-            };
-          })}
-        />
       )}
     </main>
   );
