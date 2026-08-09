@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useMemo, useState } from "react";
+import { useActionState, useEffect, useMemo, useState } from "react";
 import { SearchableSelect } from "@/components/admin/SearchableSelect";
 import { createSubjects, type CreateSubjectState } from "./actions";
 import { SubjectListInput } from "./SubjectListInput";
@@ -26,6 +26,7 @@ export function CreateSubjectForm({
   const [categoryId, setCategoryId] = useState("");
   const [examId, setExamId] = useState("");
   const [paperId, setPaperId] = useState("");
+  const [subjectResetKey, setSubjectResetKey] = useState(0);
   const [state, formAction, pending] = useActionState(createSubjects, initialState);
   const availableExams = useMemo(
     () => exams.filter((exam) => exam.exam_id === categoryId),
@@ -35,6 +36,10 @@ export function CreateSubjectForm({
     () => papers.filter((paper) => paper.exam_group_id === examId),
     [examId, papers],
   );
+
+  useEffect(() => {
+    if (state.success) setSubjectResetKey((current) => current + 1);
+  }, [state]);
 
   function changeCategory(nextCategoryId: string) {
     setCategoryId(nextCategoryId);
@@ -111,7 +116,7 @@ export function CreateSubjectForm({
           </label>
         </div>
 
-        <SubjectListInput />
+        <SubjectListInput resetKey={subjectResetKey} />
 
         <button
           disabled={pending || !paperId}
