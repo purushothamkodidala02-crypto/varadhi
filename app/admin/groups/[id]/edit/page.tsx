@@ -3,8 +3,6 @@ import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import type { ExamGroup } from "@/types/group";
 import { EditGroupForm } from "./EditGroupForm";
-import { SpecializationForm } from "@/app/admin/specializations/SpecializationForm";
-import { ExistingSpecializationsTable } from "@/app/admin/specializations/ExistingSpecializationsTable";
 import { ExamPaperManager } from "./ExamPaperManager";
 
 type EditGroupPageProps = {
@@ -74,21 +72,10 @@ export default async function EditGroupPage({
 
       <EditGroupForm group={group} exams={exams} />
 
-      <SpecializationForm exams={[{ id: group.id, label: group.name }]} />
-      <ExistingSpecializationsTable
-        exams={[{ id: group.id, label: group.name }]}
-        specializations={(specializationsResult.data ?? []).map((item) => ({
-          id: item.id,
-          examId: item.exam_group_id,
-          name: item.name,
-          slug: item.slug,
-          isActive: item.is_active,
-        }))}
-      />
       <ExamPaperManager
         examId={group.id}
         examName={group.name}
-        specializations={(specializationsResult.data ?? []).map((item) => ({ id: item.id, name: item.name }))}
+        specializations={(specializationsResult.data ?? []).map((item) => ({ id: item.id, name: item.name, slug: item.slug, isActive: item.is_active, displayOrder: item.display_order }))}
         papers={(papersResult.data ?? []).map((paper) => ({
           id: paper.id,
           specializationId: paper.specialization_id,

@@ -57,11 +57,17 @@ export async function updateSpecialization(_previous: SpecializationActionState,
 export async function deleteSpecialization(specializationId: string): Promise<SpecializationActionState> {
   const result = await requireAdmin();
   if (result.error) return { success: false, message: result.error };
+  const { data: specialization, error: specializationError } = await result.supabase
+    .from("exam_specializations")
+    .select("exam_group_id")
+    .eq("id", specializationId)
+    .maybeSingle();
+  if (specializationError || !specialization) return { success: false, message: specializationError?.message ?? "This Specialisation could not be found." };
   const { count, error: countError } = await result.supabase.from("papers").select("id", { count: "exact", head: true }).eq("specialization_id", specializationId);
   if (countError) return { success: false, message: countError.message };
   if ((count ?? 0) > 0) return { success: false, message: "This Specialisation has Papers. Deactivate it instead." };
   const { error } = await result.supabase.from("exam_specializations").delete().eq("id", specializationId);
   if (error) return { success: false, message: error.message };
-  revalidatePath("/admin/groups"); revalidatePath("/admin/papers"); revalidatePath("/mock-tests");
+  revalidatePath("/admin/groups"); revalidatePath(`/admin/groups/${specialization.exam_group_id}/edit`); revalidatePath("/admin/papers"); revalidatePath("/mock-tests");
   return { success: true, message: "Specialisation deleted." };
 }
