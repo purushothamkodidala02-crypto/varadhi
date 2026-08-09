@@ -9,7 +9,6 @@ type Exam = { id: string; label: string };
 type ExistingPaper = {
   id: string;
   examId: string;
-  specializationName: string | null;
   name: string;
   slug: string;
   durationMinutes: number | null;
@@ -76,7 +75,6 @@ export function ExistingPapersTable({
             <thead className="bg-slate-50 text-xs uppercase tracking-wide text-slate-500">
               <tr>
                 <th className="px-5 py-3">Paper</th>
-                <th className="px-5 py-3">Specialisation</th>
                 <th className="px-5 py-3">Structure</th>
                 <th className="px-5 py-3">Status</th>
                 <th className="px-5 py-3 text-right">Actions</th>
@@ -89,7 +87,6 @@ export function ExistingPapersTable({
                     <p className="font-bold">{paper.name}</p>
                     <p className="text-xs text-slate-500">{paper.slug}</p>
                   </td>
-                  <td className="px-5 py-4 text-slate-600">{paper.specializationName ?? "Direct to Exam"}</td>
                   <td className="px-5 py-4 text-slate-600">
                     {paper.questionCount
                       ? `${paper.questionCount} questions`

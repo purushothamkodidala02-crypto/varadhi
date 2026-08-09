@@ -26,7 +26,7 @@ export default async function AdminGroupsPage() {
       <div>
         <h1 className="text-3xl font-bold">Exams</h1>
         <p className="mt-2 text-gray-600">
-          Create any Exam under a category, then define its real government Papers yourself.
+          Create any Exam under a category, then define its real government Papers yourself. For branch-based recruitment, create separate Exams such as AEE Civil Engineering and AEE Electrical Engineering.
         </p>
       </div>
 

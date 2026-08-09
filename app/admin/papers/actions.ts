@@ -15,7 +15,6 @@ async function requireAdmin() {
 
 function readPaper(formData: FormData) {
   const examGroupId = String(formData.get("exam_group_id") ?? "").trim();
-  const specializationId = String(formData.get("specialization_id") ?? "").trim() || null;
   const name = String(formData.get("name") ?? "").trim();
   const slug = String(formData.get("slug") ?? "").trim().toLowerCase();
   const durationValue = String(formData.get("duration_minutes") ?? "").trim();
@@ -33,13 +32,7 @@ function readPaper(formData: FormData) {
   if ((durationMinutes !== null && (!Number.isInteger(durationMinutes) || durationMinutes <= 0)) || (questionCount !== null && (!Number.isInteger(questionCount) || questionCount <= 0))) return { error: "Duration and question count must be positive whole numbers." };
   if (!Number.isFinite(defaultCorrectMarks) || defaultCorrectMarks <= 0 || !Number.isFinite(defaultNegativeMarks) || defaultNegativeMarks < 0 || !Number.isInteger(displayOrder) || displayOrder < 0) return { error: "Check correct marks, negative marks, and display order." };
 
-  return { value: { exam_group_id: examGroupId, specialization_id: specializationId, name, slug, description: String(formData.get("description") ?? "").trim() || null, duration_minutes: durationMinutes, question_count: questionCount, default_correct_marks: defaultCorrectMarks, default_negative_marks: defaultNegativeMarks, display_order: displayOrder, is_active: formData.get("is_active") === "on" } };
-}
-
-async function specializationBelongsToExam(supabase: Awaited<ReturnType<typeof createClient>>, specializationId: string | null, examGroupId: string) {
-  if (!specializationId) return true;
-  const { data: specialization } = await supabase.from("exam_specializations").select("exam_group_id").eq("id", specializationId).maybeSingle();
-  return specialization?.exam_group_id === examGroupId;
+  return { value: { exam_group_id: examGroupId, name, slug, description: String(formData.get("description") ?? "").trim() || null, duration_minutes: durationMinutes, question_count: questionCount, default_correct_marks: defaultCorrectMarks, default_negative_marks: defaultNegativeMarks, display_order: displayOrder, is_active: formData.get("is_active") === "on" } };
 }
 
 export async function createPaper(_previous: PaperActionState, formData: FormData): Promise<PaperActionState> {
@@ -49,7 +42,6 @@ export async function createPaper(_previous: PaperActionState, formData: FormDat
   if (parsed.error || !parsed.value) return { success: false, message: parsed.error ?? "Check the Paper details." };
   const { data: group } = await result.supabase.from("exam_groups").select("id").eq("id", parsed.value.exam_group_id).maybeSingle();
   if (!group) return { success: false, message: "The selected Exam could not be found." };
-  if (!(await specializationBelongsToExam(result.supabase, parsed.value.specialization_id, parsed.value.exam_group_id))) return { success: false, message: "The selected Specialisation must belong to the selected Exam." };
   const { error } = await result.supabase.from("papers").insert(parsed.value);
   if (error?.code === "23505") return { success: false, message: "A Paper with this slug already exists under the selected Exam." };
   if (error) return { success: false, message: error.message };
@@ -63,7 +55,6 @@ export async function updatePaper(_previous: PaperActionState, formData: FormDat
   const paperId = String(formData.get("paper_id") ?? "").trim();
   const parsed = readPaper(formData);
   if (!paperId || parsed.error || !parsed.value) return { success: false, message: parsed.error ?? "Paper not found." };
-  if (!(await specializationBelongsToExam(result.supabase, parsed.value.specialization_id, parsed.value.exam_group_id))) return { success: false, message: "The selected Specialisation must belong to the selected Exam." };
   const { error } = await result.supabase.from("papers").update(parsed.value).eq("id", paperId);
   if (error?.code === "23505") return { success: false, message: "A Paper with this slug already exists under the selected Exam." };
   if (error) return { success: false, message: error.message };
