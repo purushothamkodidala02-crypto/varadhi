@@ -3,12 +3,14 @@
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { DeleteSubjectButton } from "./DeleteSubjectButton";
+import type { SubjectContentLanguageMode } from "@/types/subject";
 
 type ExistingSubject = {
   id: string;
   paperId: string;
   name: string;
   slug: string;
+  contentLanguageMode: SubjectContentLanguageMode;
   isActive: boolean;
 };
 
@@ -99,6 +101,7 @@ export function ExistingSubjectsTable({
               <thead className="sticky top-0 z-10 bg-slate-50 text-xs uppercase tracking-wide text-slate-500">
                 <tr>
                   <th className="px-5 py-3">Subject</th>
+                  <th className="px-5 py-3">Question language</th>
                   <th className="px-5 py-3">Status</th>
                   <th className="px-5 py-3 text-right">Actions</th>
                 </tr>
@@ -109,6 +112,9 @@ export function ExistingSubjectsTable({
                     <td className="px-5 py-4">
                       <p className="font-bold">{subject.name}</p>
                       <p className="text-xs text-slate-500">{subject.slug}</p>
+                    </td>
+                    <td className="px-5 py-4 text-sm font-semibold text-slate-700">
+                      {subject.contentLanguageMode === "bilingual" ? "English + Telugu" : subject.contentLanguageMode === "telugu" ? "Telugu only" : "English only"}
                     </td>
                     <td className="px-5 py-4">
                       <span

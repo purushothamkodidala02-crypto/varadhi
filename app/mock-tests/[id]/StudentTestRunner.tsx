@@ -16,6 +16,12 @@ type TestQuestion = {
   option_d: string;
   image_url: string | null;
   selected_answer: "A" | "B" | "C" | "D" | null;
+  content_language_mode: "bilingual" | "english" | "telugu";
+  question_text_te: string | null;
+  option_a_te: string | null;
+  option_b_te: string | null;
+  option_c_te: string | null;
+  option_d_te: string | null;
 };
 
 type StudentTestRunnerProps = { title: string; sessionId: string; expiresAt: string; questions: TestQuestion[] };
@@ -36,6 +42,7 @@ export function StudentTestRunner({ title, sessionId, expiresAt, questions }: St
   const [secondsRemaining, setSecondsRemaining] = useState(() => getSecondsRemaining(expiresAt));
   const [submission, setSubmission] = useState<SubmitAttemptResult | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const [language, setLanguage] = useState<"en" | "te">("en");
 
   useEffect(() => {
     if (submission) return;
@@ -79,7 +86,10 @@ export function StudentTestRunner({ title, sessionId, expiresAt, questions }: St
     );
   }
 
-  const options = [["A", question.option_a], ["B", question.option_b], ["C", question.option_c], ["D", question.option_d]] as const;
+  const showLanguageToggle = question.content_language_mode === "bilingual" && Boolean(question.question_text_te);
+  const showTelugu = showLanguageToggle && language === "te";
+  const questionText = showTelugu ? question.question_text_te ?? question.question_text : question.question_text;
+  const options = [["A", showTelugu ? question.option_a_te ?? question.option_a : question.option_a], ["B", showTelugu ? question.option_b_te ?? question.option_b : question.option_b], ["C", showTelugu ? question.option_c_te ?? question.option_c : question.option_c], ["D", showTelugu ? question.option_d_te ?? question.option_d : question.option_d]] as const;
   const locked = secondsRemaining === 0 || submitting;
 
   return (
@@ -92,8 +102,8 @@ export function StudentTestRunner({ title, sessionId, expiresAt, questions }: St
 
         <div className="mt-6 grid gap-6 lg:grid-cols-[minmax(0,1fr)_13rem]">
           <section className="rounded-3xl border bg-white p-6 shadow-sm sm:p-8">
-            <p className="text-xs font-bold uppercase tracking-[0.15em] text-teal-700">Multiple choice question</p>
-            <p className="mt-4 text-lg font-bold leading-8 text-slate-950">{question.question_text}</p>
+            <div className="flex flex-wrap items-center justify-between gap-3"><p className="text-xs font-bold uppercase tracking-[0.15em] text-teal-700">Multiple choice question</p>{showLanguageToggle && <div className="rounded-lg bg-slate-100 p-1 text-xs font-bold"><button type="button" onClick={() => setLanguage("en")} className={`rounded-md px-3 py-1.5 ${language === "en" ? "bg-white text-slate-950 shadow-sm" : "text-slate-600"}`}>English</button><button type="button" onClick={() => setLanguage("te")} className={`rounded-md px-3 py-1.5 ${language === "te" ? "bg-white text-slate-950 shadow-sm" : "text-slate-600"}`}>తెలుగు</button></div>}</div>
+            <p className="mt-4 text-lg font-bold leading-8 text-slate-950">{questionText}</p>
             {question.image_url && <img src={question.image_url} alt="Question reference" className="mt-6 max-h-80 rounded-xl border object-contain" />}
             <div className="mt-7 grid gap-3">
               {options.map(([key, label]) => {

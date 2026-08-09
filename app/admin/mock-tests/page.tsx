@@ -9,7 +9,7 @@ export default async function MockTestsPage() {
       supabase
         .from("mock_tests")
         .select(
-          "id, paper_id, subject_id, test_scope, title, slug, duration_minutes, status, access_type, price_inr, display_order",
+          "id, paper_id, subject_id, test_scope, title, slug, duration_minutes, status, access_type, price_inr, display_order, created_at",
         )
         .order("display_order"),
       supabase.from("subjects").select("id, paper_id, name"),
@@ -102,6 +102,7 @@ export default async function MockTestsPage() {
               status: test.status as "draft" | "published" | "archived",
               accessType: test.access_type as "free" | "paid",
               priceInr: test.price_inr,
+              createdAt: test.created_at,
             };
           })}
         />

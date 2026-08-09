@@ -1,6 +1,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { CreateQuestionForm } from "./CreateQuestionForm";
 import { QuestionBankTable, type QuestionBankRow } from "./QuestionBankTable";
+import { QuestionCsvImport } from "./QuestionCsvImport";
 
 export default async function QuestionsPage() {
   const supabase = await createClient();
@@ -80,6 +81,19 @@ export default async function QuestionsPage() {
         subjects={subjects.map((item) => ({
           id: item.id,
           paperId: item.paper_id,
+          name: item.name,
+        }))}
+      />
+      <QuestionCsvImport
+        categories={categories.map((item) => ({ id: item.id, name: item.name }))}
+        exams={exams.map((item) => ({
+          id: item.id,
+          categoryId: item.exam_id,
+          name: item.name,
+        }))}
+        papers={papers.map((item) => ({
+          id: item.id,
+          examId: item.exam_group_id,
           name: item.name,
         }))}
       />

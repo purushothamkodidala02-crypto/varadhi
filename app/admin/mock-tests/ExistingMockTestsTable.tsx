@@ -27,6 +27,7 @@ type ExistingMockTest = {
   status: MockTestStatus;
   accessType: "free" | "paid";
   priceInr: number | null;
+  createdAt: string;
 };
 
 const emptyLocation: LocationFilterValue = {
@@ -107,6 +108,7 @@ export function ExistingMockTestsTable({
                 <th className="px-5 py-3">Mock Test</th>
                 <th className="px-5 py-3">Type</th>
                 <th className="px-5 py-3">Status</th>
+                <th className="px-5 py-3">Created</th>
                 <th className="px-5 py-3 text-right">Manage</th>
               </tr>
             </thead>
@@ -124,6 +126,9 @@ export function ExistingMockTestsTable({
                     <p className="text-xs text-slate-500">
                       {test.durationMinutes} min · {test.accessType === "paid" ? `₹${test.priceInr}` : "Free"}
                     </p>
+                  </td>
+                  <td className="px-5 py-4 text-xs font-medium text-slate-600">
+                    {new Intl.DateTimeFormat("en-IN", { day: "numeric", month: "short", year: "numeric" }).format(new Date(test.createdAt))}
                   </td>
                   <td className="px-5 py-4">
                     <p className="font-semibold">

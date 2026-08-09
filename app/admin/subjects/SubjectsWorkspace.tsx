@@ -3,11 +3,12 @@
 import { useMemo, useState } from "react";
 import { CreateSubjectForm } from "./CreateSubjectForm";
 import { ExistingSubjectsTable } from "./ExistingSubjectsTable";
+import type { SubjectContentLanguageMode } from "@/types/subject";
 
 type Category = { id: string; name: string };
 type Exam = { id: string; exam_id: string; name: string };
 type Paper = { id: string; exam_group_id: string; name: string };
-type Subject = { id: string; paperId: string; name: string; slug: string; isActive: boolean };
+type Subject = { id: string; paperId: string; name: string; slug: string; contentLanguageMode: SubjectContentLanguageMode; isActive: boolean };
 type Location = { categoryId: string; examId: string; paperId: string };
 
 const emptyLocation: Location = { categoryId: "", examId: "", paperId: "" };

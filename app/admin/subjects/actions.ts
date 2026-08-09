@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
+import type { SubjectContentLanguageMode } from "@/types/subject";
 
 export type CreateSubjectState = { success: boolean; message: string };
 
@@ -12,15 +13,19 @@ function subjectSlug(name: string, index: number, used: Set<string>) {
   used.add(slug); return slug;
 }
 
-function readSubjectNames(value: FormDataEntryValue | null): { names?: string[]; error?: string } {
+function readSubjects(value: FormDataEntryValue | null): { subjects?: { name: string; contentLanguageMode: SubjectContentLanguageMode }[]; error?: string } {
   let raw: unknown;
   try { raw = JSON.parse(String(value ?? "[]")); } catch { return { error: "Subject details could not be read. Please try again." }; }
   if (!Array.isArray(raw) || raw.length === 0) return { error: "Add at least one Subject." };
   if (raw.length > 30) return { error: "You can add up to 30 Subjects at one time." };
-  const names = raw.map((item) => item && typeof item === "object" ? String((item as { name?: unknown }).name ?? "").trim() : "");
-  if (names.some((name) => !name)) return { error: "Enter a name for every Subject." };
-  if (new Set(names.map((name) => name.toLowerCase())).size !== names.length) return { error: "Each Subject needs a different name." };
-  return { names };
+  const subjects = raw.map((item) => ({
+    name: item && typeof item === "object" ? String((item as { name?: unknown }).name ?? "").trim() : "",
+    contentLanguageMode: item && typeof item === "object" ? String((item as { contentLanguageMode?: unknown }).contentLanguageMode ?? "bilingual") : "bilingual",
+  }));
+  if (subjects.some((subject) => !subject.name)) return { error: "Enter a name for every Subject." };
+  if (subjects.some((subject) => !["bilingual", "english", "telugu"].includes(subject.contentLanguageMode))) return { error: "Choose a valid language setting for every Subject." };
+  if (new Set(subjects.map((subject) => subject.name.toLowerCase())).size !== subjects.length) return { error: "Each Subject needs a different name." };
+  return { subjects: subjects as { name: string; contentLanguageMode: SubjectContentLanguageMode }[] };
 }
 
 export async function createSubjects(_previous: CreateSubjectState, formData: FormData): Promise<CreateSubjectState> {
@@ -33,9 +38,9 @@ export async function createSubjects(_previous: CreateSubjectState, formData: Fo
   const categoryId = String(formData.get("exam_category_id") ?? "").trim();
   const examGroupId = String(formData.get("exam_group_id") ?? "").trim();
   const paperId = String(formData.get("paper_id") ?? "").trim();
-  const subjectInput = readSubjectNames(formData.get("subjects_json"));
+  const subjectInput = readSubjects(formData.get("subjects_json"));
   if (!categoryId || !examGroupId || !paperId) return { success: false, message: "Choose an Exam Category, Exam, and Paper." };
-  if (subjectInput.error || !subjectInput.names) return { success: false, message: subjectInput.error ?? "Add Subjects." };
+  if (subjectInput.error || !subjectInput.subjects) return { success: false, message: subjectInput.error ?? "Add Subjects." };
 
   const [{ data: paper }, { data: exam }] = await Promise.all([supabase.from("papers").select("id, exam_group_id").eq("id", paperId).maybeSingle(), supabase.from("exam_groups").select("id, exam_id").eq("id", examGroupId).maybeSingle()]);
   if (!paper || !exam || paper.exam_group_id !== examGroupId || exam.exam_id !== categoryId) return { success: false, message: "The selected Category, Exam, and Paper do not belong together." };
@@ -43,12 +48,12 @@ export async function createSubjects(_previous: CreateSubjectState, formData: Fo
   const { data: existingSubjects, error: existingError } = await supabase.from("subjects").select("name, slug, display_order").eq("paper_id", paperId);
   if (existingError) return { success: false, message: existingError.message };
   const existingNames = new Set((existingSubjects ?? []).map((subject) => subject.name.trim().toLowerCase()));
-  const duplicateName = subjectInput.names.find((name) => existingNames.has(name.toLowerCase()));
+  const duplicateName = subjectInput.subjects.find((subject) => existingNames.has(subject.name.toLowerCase()))?.name;
   if (duplicateName) return { success: false, message: `The Subject "${duplicateName}" already exists in this Paper. Subject names are not case-sensitive.` };
   const usedSlugs = new Set((existingSubjects ?? []).map((subject) => subject.slug));
   const nextOrder = Math.max(0, ...(existingSubjects ?? []).map((subject) => subject.display_order)) + 1;
-  const { error } = await supabase.from("subjects").insert(subjectInput.names.map((name, index) => ({ paper_id: paperId, name, slug: subjectSlug(name, index, usedSlugs), description: null, display_order: nextOrder + index, is_active: true })));
+  const { error } = await supabase.from("subjects").insert(subjectInput.subjects.map((subject, index) => ({ paper_id: paperId, name: subject.name, slug: subjectSlug(subject.name, index, usedSlugs), description: null, content_language_mode: subject.contentLanguageMode, display_order: nextOrder + index, is_active: true })));
   if (error) return { success: false, message: error.message };
   revalidatePath("/admin/subjects"); revalidatePath("/admin/questions"); revalidatePath("/admin/mock-tests"); revalidatePath("/mock-tests");
-  return { success: true, message: `${subjectInput.names.length} ${subjectInput.names.length === 1 ? "Subject" : "Subjects"} added successfully.` };
+  return { success: true, message: `${subjectInput.subjects.length} ${subjectInput.subjects.length === 1 ? "Subject" : "Subjects"} added successfully.` };
 }

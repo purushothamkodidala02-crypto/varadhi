@@ -6,7 +6,7 @@ export default async function SubjectsPage() {
   const [subjectsResult, papersResult, groupsResult, categoriesResult] = await Promise.all([
     supabase
       .from("subjects")
-      .select("id, paper_id, name, slug, is_active, display_order")
+      .select("id, paper_id, name, slug, content_language_mode, is_active, display_order")
       .order("display_order"),
     supabase
       .from("papers")
@@ -42,6 +42,7 @@ export default async function SubjectsPage() {
           paperId: subject.paper_id,
           name: subject.name,
           slug: subject.slug,
+          contentLanguageMode: subject.content_language_mode,
           isActive: subject.is_active,
         }))}
       />

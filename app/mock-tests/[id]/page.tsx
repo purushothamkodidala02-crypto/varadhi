@@ -15,6 +15,12 @@ type TestQuestion = {
   option_d: string;
   image_url: string | null;
   selected_answer: "A" | "B" | "C" | "D" | null;
+  content_language_mode: "bilingual" | "english" | "telugu";
+  question_text_te: string | null;
+  option_a_te: string | null;
+  option_b_te: string | null;
+  option_c_te: string | null;
+  option_d_te: string | null;
 };
 
 export default async function TakeMockTestPage({ params }: PageProps<"/mock-tests/[id]">) {
