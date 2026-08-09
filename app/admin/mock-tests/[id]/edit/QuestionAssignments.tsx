@@ -17,6 +17,7 @@ type AssignedQuestion = {
   marks: number;
   negative_marks: number;
   question_text: string;
+  is_active: boolean;
 };
 type QuestionAssignmentsProps = {
   mockTestId: string;
@@ -116,7 +117,7 @@ export function QuestionAssignments({
           </p>
         </div>
         <span className="rounded-full bg-slate-200 px-3 py-1.5 text-xs font-bold text-slate-700">
-          {assignedQuestions.length} assigned
+          {assignedQuestions.filter((question) => question.is_active).length} active of {assignedQuestions.length} assigned
         </span>
       </div>
 
@@ -255,11 +256,12 @@ export function QuestionAssignments({
         </div>
       ) : (
         <div className="overflow-x-auto">
-          <table className="min-w-[700px] w-full text-left">
+          <table className="min-w-[820px] w-full text-left">
             <thead className="border-y border-slate-100 bg-white text-xs font-bold uppercase tracking-[0.1em] text-slate-500">
               <tr>
                 <th className="px-6 py-4">Order</th>
                 <th className="px-6 py-4">Question</th>
+                <th className="px-6 py-4">Availability</th>
                 <th className="px-6 py-4">Scoring</th>
                 {isDraft && <th className="px-6 py-4 text-right">Manage</th>}
               </tr>
@@ -274,6 +276,12 @@ export function QuestionAssignments({
                   </td>
                   <td className="max-w-xl px-6 py-5 text-sm font-semibold leading-6 text-slate-900">
                     {assignment.question_text}
+                  </td>
+                  <td className="px-6 py-5 text-sm">
+                    <span className={`rounded-full px-2.5 py-1 text-xs font-bold ${assignment.is_active ? "bg-emerald-100 text-emerald-800" : "bg-red-100 text-red-800"}`}>
+                      {assignment.is_active ? "Active" : "Inactive"}
+                    </span>
+                    {!assignment.is_active && <p className="mt-2 max-w-40 text-xs leading-5 text-red-700">Activate this Question in the Question Bank before students can take the test.</p>}
                   </td>
                   <td className="px-6 py-5 text-sm">
                     <p className="font-bold text-slate-800">

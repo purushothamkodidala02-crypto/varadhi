@@ -23,7 +23,13 @@ type TestQuestion = {
   option_d_te: string | null;
 };
 
-function TestNotReady({ title }: { title: string }) {
+function TestNotReady({
+  title,
+  message,
+}: {
+  title: string;
+  message: string;
+}) {
   return (
     <main className="mx-auto max-w-2xl px-6 py-16">
       <section className="rounded-2xl border bg-white p-8 text-center shadow-sm">
@@ -31,9 +37,7 @@ function TestNotReady({ title }: { title: string }) {
           Test being prepared
         </p>
         <h1 className="mt-2 text-3xl font-bold text-slate-950">{title}</h1>
-        <p className="mt-4 text-slate-600">
-          This mock test does not have active questions available yet. Please try again later.
-        </p>
+        <p className="mt-4 text-slate-600">{message}</p>
         <Link href="/mock-tests" className="mt-6 inline-flex rounded-lg bg-black px-5 py-3 font-medium text-white">
           Back to Mock Tests
         </Link>
@@ -82,14 +86,17 @@ export default async function TakeMockTestPage({ params }: PageProps<"/mock-test
     | { session_id: string; expires_at: string }
     | undefined;
 
-  if (sessionError || !session) return <TestNotReady title={mockTest.title} />;
+  if (sessionError || !session) {
+    const noActiveQuestions = /no active questions/i.test(sessionError?.message ?? "");
+    return <TestNotReady title={mockTest.title} message={noActiveQuestions ? "This mock test does not have active questions available yet. Please try again later." : "This mock test could not be started. Its administrator needs to review the test setup."} />;
+  }
 
   const { data, error } = await supabase.rpc("get_mock_test_session_payload", {
     requested_session_id: session.session_id,
   });
 
   const questions = (data ?? []) as TestQuestion[];
-  if (error || questions.length === 0) return <TestNotReady title={mockTest.title} />;
+  if (error || questions.length === 0) return <TestNotReady title={mockTest.title} message="This mock test does not have active questions available yet. Please try again later." />;
 
   return <StudentTestRunner title={mockTest.title} sessionId={session.session_id} expiresAt={session.expires_at} questions={questions} />;
 }

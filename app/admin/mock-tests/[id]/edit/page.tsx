@@ -29,7 +29,7 @@ export default async function EditMockTestPage({ params }: { params: Promise<{ i
   const specializations = new Map((specializationsResult.data ?? []).map((item) => [item.id, item.name]));
   const subjectById = new Map(subjects.map((item) => [item.id, item]));
   const questionById = new Map((questionsResult.data ?? []).map((item) => [item.id, item]));
-  const assignments = (assignmentsResult.data ?? []).map((item) => ({ ...item, question_text: questionById.get(item.question_id)?.question_text ?? "Question unavailable" }));
+  const assignments = (assignmentsResult.data ?? []).map((item) => ({ ...item, question_text: questionById.get(item.question_id)?.question_text ?? "Question unavailable", is_active: questionById.get(item.question_id)?.is_active ?? false }));
   const assignedIds = new Set(assignments.map((item) => item.question_id));
   const today = new Date().toISOString().slice(0, 10);
   const availableQuestions = (questionsResult.data ?? []).filter((question) => {
