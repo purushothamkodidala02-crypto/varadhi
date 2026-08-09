@@ -4,7 +4,7 @@ import { ExistingMockTestsTable } from "./ExistingMockTestsTable";
 
 export default async function MockTestsPage() {
   const supabase = await createClient();
-  const [testsResult, subjectsResult, papersResult, groupsResult, categoriesResult] =
+  const [testsResult, subjectsResult, papersResult, groupsResult, categoriesResult, specializationsResult] =
     await Promise.all([
       supabase
         .from("mock_tests")
@@ -15,10 +15,11 @@ export default async function MockTestsPage() {
       supabase.from("subjects").select("id, paper_id, name"),
       supabase
         .from("papers")
-        .select("id, exam_group_id, name, duration_minutes")
+        .select("id, exam_group_id, specialization_id, name, duration_minutes")
         .order("display_order"),
       supabase.from("exam_groups").select("id, exam_id, name").order("display_order"),
       supabase.from("exams").select("id, name").order("display_order"),
+      supabase.from("exam_specializations").select("id, name"),
     ]);
 
   const categories = categoriesResult.data ?? [];
@@ -26,6 +27,7 @@ export default async function MockTestsPage() {
   const papers = papersResult.data ?? [];
   const subjects = subjectsResult.data ?? [];
   const tests = testsResult.data ?? [];
+  const specializationById = new Map((specializationsResult.data ?? []).map((item) => [item.id, item.name]));
   const paperById = new Map(papers.map((paper) => [paper.id, paper]));
   const examById = new Map(exams.map((exam) => [exam.id, exam]));
   const subjectById = new Map(subjects.map((subject) => [subject.id, subject]));
@@ -53,7 +55,7 @@ export default async function MockTestsPage() {
         papers={papers.map((item) => ({
           id: item.id,
           examId: item.exam_group_id,
-          name: item.name,
+          name: `${item.specialization_id ? `${specializationById.get(item.specialization_id) ?? "Unknown Specialisation"} → ` : ""}${item.name}`,
           duration: item.duration_minutes,
         }))}
         subjects={subjects.map((item) => ({
@@ -93,7 +95,7 @@ export default async function MockTestsPage() {
               examId: exam?.id ?? "",
               paperId: paper?.id ?? "",
               examName: exam?.name ?? "Unknown Exam",
-              paperName: paper?.name ?? "Unknown Paper",
+              paperName: paper ? `${paper.specialization_id ? `${specializationById.get(paper.specialization_id) ?? "Unknown Specialisation"} → ` : ""}${paper.name}` : "Unknown Paper",
               title: test.title,
               slug: test.slug,
               durationMinutes: test.duration_minutes,

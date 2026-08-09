@@ -3,6 +3,8 @@ import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import type { ExamGroup } from "@/types/group";
 import { EditGroupForm } from "./EditGroupForm";
+import { SpecializationForm } from "@/app/admin/specializations/SpecializationForm";
+import { ExistingSpecializationsTable } from "@/app/admin/specializations/ExistingSpecializationsTable";
 
 type EditGroupPageProps = {
   params: Promise<{
@@ -16,7 +18,7 @@ export default async function EditGroupPage({
   const { id } = await params;
   const supabase = await createClient();
 
-  const [groupResult, examsResult, papersResult] = await Promise.all([
+  const [groupResult, examsResult, papersResult, specializationsResult] = await Promise.all([
     supabase
       .from("exam_groups")
       .select(
@@ -33,6 +35,12 @@ export default async function EditGroupPage({
     supabase
       .from("papers")
       .select("id, name, duration_minutes, question_count, is_active, display_order")
+      .eq("exam_group_id", id)
+      .order("display_order", { ascending: true }),
+
+    supabase
+      .from("exam_specializations")
+      .select("id, exam_group_id, name, slug, is_active, display_order")
       .eq("exam_group_id", id)
       .order("display_order", { ascending: true }),
   ]);
@@ -64,6 +72,18 @@ export default async function EditGroupPage({
       </div>
 
       <EditGroupForm group={group} exams={exams} papers={papersResult.data ?? []} />
+
+      <SpecializationForm exams={[{ id: group.id, label: group.name }]} />
+      <ExistingSpecializationsTable
+        exams={[{ id: group.id, label: group.name }]}
+        specializations={(specializationsResult.data ?? []).map((item) => ({
+          id: item.id,
+          examId: item.exam_group_id,
+          name: item.name,
+          slug: item.slug,
+          isActive: item.is_active,
+        }))}
+      />
     </main>
   );
 }

@@ -1,0 +1,15 @@
+"use client";
+
+import { useMemo, useState } from "react";
+import { SearchableSelect } from "@/components/admin/SearchableSelect";
+import { DeleteSpecializationButton } from "./DeleteSpecializationButton";
+
+type Exam = { id: string; label: string };
+type Specialization = { id: string; examId: string; name: string; slug: string; isActive: boolean };
+
+export function ExistingSpecializationsTable({ exams, specializations }: { exams: Exam[]; specializations: Specialization[] }) {
+  const [examId, setExamId] = useState(exams.length === 1 ? exams[0].id : ""); const [search, setSearch] = useState("");
+  const filtered = useMemo(() => { const query = search.trim().toLowerCase(); return specializations.filter((item) => item.examId === examId && (!query || `${item.name} ${item.slug}`.toLowerCase().includes(query))); }, [examId, search, specializations]);
+  const fixedExam = exams.length === 1;
+  return <section className="mt-8 overflow-hidden rounded-2xl border bg-white"><div className="border-b px-6 py-5"><h2 className="font-bold">Specialisations in this Exam</h2><p className="mt-1 text-sm text-slate-600">Create branches only when this Exam needs them, such as Civil, Electrical, or Mechanical for AEE.</p></div><div className="grid gap-3 border-b bg-slate-50 px-6 py-5 md:grid-cols-2">{fixedExam ? <div className="text-sm font-bold">Exam<p className="mt-2 rounded-xl border bg-white px-4 py-3 font-normal">{exams[0].label}</p></div> : <label className="block text-sm font-bold">Exam<SearchableSelect value={examId} onChange={setExamId} options={exams.map((exam) => ({ value: exam.id, label: exam.label }))} placeholder="Choose an Exam" /></label>}<label className="block text-sm font-bold">Search specialisations<input type="search" value={search} onChange={(event) => setSearch(event.target.value)} disabled={!examId} placeholder="For example: Civil" className="mt-2 w-full rounded-xl border px-4 py-3 font-normal disabled:cursor-not-allowed disabled:bg-slate-100" /></label></div>{!examId ? <p className="p-6 text-sm text-slate-600">Choose an Exam above to see its Specialisations.</p> : filtered.length === 0 ? <p className="p-6 text-sm text-slate-600">No Specialisations exist in this Exam yet.</p> : <div className="overflow-x-auto"><table className="w-full text-left text-sm"><thead className="bg-slate-50 text-xs uppercase tracking-wide text-slate-500"><tr><th className="px-5 py-3">Specialisation</th><th className="px-5 py-3">Status</th><th className="px-5 py-3 text-right">Actions</th></tr></thead><tbody className="divide-y">{filtered.map((item) => <tr key={item.id}><td className="px-5 py-4"><p className="font-bold">{item.name}</p><p className="text-xs text-slate-500">{item.slug}</p></td><td className="px-5 py-4"><span className={`rounded-full px-2.5 py-1 text-xs font-bold ${item.isActive ? "bg-emerald-100 text-emerald-800" : "bg-slate-100 text-slate-600"}`}>{item.isActive ? "Active" : "Inactive"}</span></td><td className="px-5 py-4"><div className="flex justify-end"><DeleteSpecializationButton specializationId={item.id} name={item.name} /></div></td></tr>)}</tbody></table></div>}</section>;
+}

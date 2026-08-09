@@ -30,7 +30,7 @@ export function CreateGroupForm({
       <h2 className="text-xl font-bold">Add Exam</h2>
       <p className="mt-1 text-sm text-slate-600">
         Choose the Exam Category, enter the Exam name, then add its actual Papers.
-        For branch-based recruitment, create each branch as its own Exam, such as AEE Civil Engineering. Nothing is pre-defined.
+        For branch-based recruitment such as AEE, add its branches from the Edit Exam page after creating the main Exam. Nothing is pre-defined.
       </p>
 
       <form action={formAction} className="mt-6 space-y-5">
@@ -53,7 +53,7 @@ export function CreateGroupForm({
               name="name"
               type="text"
               required
-              placeholder="For example: AEE Civil Engineering"
+              placeholder="For example: AEE"
               className="mt-2 w-full rounded-lg border px-4 py-3 font-normal"
             />
           </label>
@@ -65,7 +65,7 @@ export function CreateGroupForm({
               type="text"
               required
               pattern="[a-z0-9-]+"
-              placeholder="For example: aee-civil-engineering"
+              placeholder="For example: aee"
               className="mt-2 w-full rounded-lg border px-4 py-3 font-normal"
             />
             <span className="mt-1 block text-xs font-normal text-slate-500">
