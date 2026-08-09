@@ -18,6 +18,7 @@ type AssignedQuestion = {
   negative_marks: number;
   question_text: string;
   is_active: boolean;
+  is_score_valid: boolean;
 };
 type QuestionAssignmentsProps = {
   mockTestId: string;
@@ -100,6 +101,9 @@ export function QuestionAssignments({
   const selectedQuestion = availableQuestions.find(
     (question) => question.id === selectedQuestionId,
   );
+  const readyQuestionCount = assignedQuestions.filter(
+    (question) => question.is_active && question.is_score_valid,
+  ).length;
 
   return (
     <section className="mt-8 overflow-hidden rounded-3xl border bg-white shadow-sm">
@@ -117,7 +121,7 @@ export function QuestionAssignments({
           </p>
         </div>
         <span className="rounded-full bg-slate-200 px-3 py-1.5 text-xs font-bold text-slate-700">
-          {assignedQuestions.filter((question) => question.is_active).length} active of {assignedQuestions.length} assigned
+          {readyQuestionCount} ready of {assignedQuestions.length} assigned
         </span>
       </div>
 
@@ -278,10 +282,11 @@ export function QuestionAssignments({
                     {assignment.question_text}
                   </td>
                   <td className="px-6 py-5 text-sm">
-                    <span className={`rounded-full px-2.5 py-1 text-xs font-bold ${assignment.is_active ? "bg-emerald-100 text-emerald-800" : "bg-red-100 text-red-800"}`}>
-                      {assignment.is_active ? "Active" : "Inactive"}
+                    <span className={`rounded-full px-2.5 py-1 text-xs font-bold ${assignment.is_active && assignment.is_score_valid ? "bg-emerald-100 text-emerald-800" : "bg-red-100 text-red-800"}`}>
+                      {assignment.is_active && assignment.is_score_valid ? "Student ready" : assignment.is_active ? "Invalid scoring" : "Inactive"}
                     </span>
                     {!assignment.is_active && <p className="mt-2 max-w-40 text-xs leading-5 text-red-700">Activate this Question in the Question Bank before students can take the test.</p>}
+                    {assignment.is_active && !assignment.is_score_valid && <p className="mt-2 max-w-40 text-xs leading-5 text-red-700">Correct marks must be greater than zero. Remove and add this Question again with valid scoring.</p>}
                   </td>
                   <td className="px-6 py-5 text-sm">
                     <p className="font-bold text-slate-800">
