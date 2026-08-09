@@ -111,7 +111,6 @@ export function CreateSubjectForm({
               placeholder="Search and choose a Paper"
               disabled={!examId}
               emptyMessage="No Papers in this Exam."
-              showOptionsOnEmpty={false}
             />
           </label>
         </div>
