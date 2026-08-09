@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { readPaperInputs, toPaperRows } from "./paper-inputs";
+import { readSpecializationInputs } from "./specialization-inputs";
 
 export type CreateGroupState = {
   success: boolean;
@@ -87,12 +88,24 @@ export async function createGroup(
     };
   }
 
-  const paperInput = readPaperInputs(formData.get("papers_json"), 1);
+  const specializationInput = readSpecializationInputs(formData.get("specializations_json"));
+  if (specializationInput.error || !specializationInput.specializations) {
+    return { success: false, message: specializationInput.error ?? "Check the Specialisations." };
+  }
+
+  const paperInput = readPaperInputs(formData.get("papers_json"), 0);
 
   if (paperInput.error || !paperInput.papers) {
     return {
       success: false,
-      message: paperInput.error ?? "Add the Papers for this Exam.",
+      message: paperInput.error ?? "Check the Papers for this Exam.",
+    };
+  }
+
+  if (paperInput.papers.length === 0 && specializationInput.specializations.length === 0) {
+    return {
+      success: false,
+      message: "Add at least one direct Paper or one Specialisation for this Exam.",
     };
   }
 
@@ -160,9 +173,29 @@ export async function createGroup(
     };
   }
 
-  const { error: papersError } = await supabase
-    .from("papers")
-    .insert(toPaperRows(group.id, paperInput.papers));
+  if (specializationInput.specializations.length > 0) {
+    const { error: specializationsError } = await supabase.from("exam_specializations").insert(
+      specializationInput.specializations.map((specialization) => ({
+        exam_group_id: group.id,
+        name: specialization.name,
+        slug: specialization.slug,
+        display_order: specialization.display_order,
+        is_active: isActive,
+      })),
+    );
+
+    if (specializationsError) {
+      await supabase.from("exam_groups").delete().eq("id", group.id);
+      return {
+        success: false,
+        message: `The Exam could not be created because its Specialisations could not be saved: ${specializationsError.message}`,
+      };
+    }
+  }
+
+  const { error: papersError } = paperInput.papers.length > 0
+    ? await supabase.from("papers").insert(toPaperRows(group.id, paperInput.papers))
+    : { error: null };
 
   if (papersError) {
     await supabase.from("exam_groups").delete().eq("id", group.id);
@@ -173,6 +206,7 @@ export async function createGroup(
   }
 
   revalidatePath("/admin/groups");
+  revalidatePath(`/admin/groups/${group.id}/edit`);
   revalidatePath("/admin/papers");
   revalidatePath("/admin/subjects");
   revalidatePath("/admin/mock-tests");
@@ -181,6 +215,6 @@ export async function createGroup(
 
   return {
     success: true,
-    message: `Exam created with ${paperInput.papers.length} ${paperInput.papers.length === 1 ? "Paper" : "Papers"}.`,
+    message: `Exam created with ${specializationInput.specializations.length ? `${specializationInput.specializations.length} ${specializationInput.specializations.length === 1 ? "Specialisation" : "Specialisations"}` : "no Specialisations"}${paperInput.papers.length ? ` and ${paperInput.papers.length} ${paperInput.papers.length === 1 ? "direct Paper" : "direct Papers"}` : ""}.`,
   };
 }

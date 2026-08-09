@@ -19,12 +19,14 @@ const pageSize = 20;
 export function ExistingSubjectsTable({
   categoryName,
   examName,
+  specializationName,
   paperId,
   paperName,
   subjects,
 }: {
   categoryName: string | null;
   examName: string | null;
+  specializationName: string | null;
   paperId: string;
   paperName: string | null;
   subjects: ExistingSubject[];
@@ -58,7 +60,7 @@ export function ExistingSubjectsTable({
       <div className="border-b px-6 py-5">
         <div className="flex flex-wrap items-center gap-2">
           <h2 className="font-bold">Existing Subjects</h2>
-          {[categoryName, examName, paperName].filter(Boolean).map((name) => (
+          {[categoryName, examName, specializationName, paperName].filter(Boolean).map((name) => (
             <span
               key={name}
               className="rounded-full bg-teal-50 px-3 py-1 text-xs font-bold text-teal-800"

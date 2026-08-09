@@ -6,9 +6,11 @@ import { SearchableSelect } from "@/components/admin/SearchableSelect";
 import { DeletePaperButton } from "./DeletePaperButton";
 
 type Exam = { id: string; label: string };
+type Specialization = { id: string; examId: string; name: string };
 type ExistingPaper = {
   id: string;
   examId: string;
+  specializationId: string | null;
   specializationName: string | null;
   name: string;
   slug: string;
@@ -19,21 +21,29 @@ type ExistingPaper = {
 
 export function ExistingPapersTable({
   exams,
+  specializations,
   papers,
 }: {
   exams: Exam[];
+  specializations: Specialization[];
   papers: ExistingPaper[];
 }) {
   const [examId, setExamId] = useState("");
+  const [specializationId, setSpecializationId] = useState("");
   const [search, setSearch] = useState("");
+  const availableSpecializations = useMemo(
+    () => specializations.filter((specialization) => specialization.examId === examId),
+    [examId, specializations],
+  );
   const filtered = useMemo(() => {
     const query = search.trim().toLowerCase();
     return papers.filter(
       (paper) =>
         paper.examId === examId &&
+        (!specializationId || paper.specializationId === specializationId) &&
         (!query || `${paper.name} ${paper.slug}`.toLowerCase().includes(query)),
     );
-  }, [examId, papers, search]);
+  }, [examId, papers, search, specializationId]);
 
   return (
     <section className="mt-8 overflow-hidden rounded-2xl border bg-white">
@@ -43,14 +53,28 @@ export function ExistingPapersTable({
           Choose an Exam to browse only its Papers.
         </p>
       </div>
-      <div className="grid gap-3 border-b bg-slate-50 px-6 py-5 md:grid-cols-2">
+      <div className="grid gap-3 border-b bg-slate-50 px-6 py-5 md:grid-cols-3">
         <label className="block text-sm font-bold">
           Exam
           <SearchableSelect
             value={examId}
-            onChange={setExamId}
+            onChange={(value) => { setExamId(value); setSpecializationId(""); }}
             options={exams.map((exam) => ({ value: exam.id, label: exam.label }))}
             placeholder="Search and choose an Exam"
+          />
+        </label>
+        <label className="block text-sm font-bold">
+          Specialisation <span className="font-normal text-slate-500">(optional)</span>
+          <SearchableSelect
+            value={specializationId}
+            onChange={setSpecializationId}
+            options={[
+              { value: "", label: availableSpecializations.length ? "All Specialisations and direct Papers" : "No specialisation" },
+              ...availableSpecializations.map((specialization) => ({ value: specialization.id, label: specialization.name })),
+            ]}
+            placeholder="Choose a Specialisation"
+            disabled={!examId}
+            emptyMessage="No Specialisations in this Exam."
           />
         </label>
         <label className="block text-sm font-bold">

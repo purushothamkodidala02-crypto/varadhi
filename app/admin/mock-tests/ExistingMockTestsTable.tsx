@@ -8,6 +8,7 @@ import {
   type LocationExam,
   type LocationFilterValue,
   type LocationPaper,
+  type LocationSpecialization,
 } from "@/components/admin/LocationFilters";
 import type { MockTestStatus } from "@/types/mock-test";
 import { MockTestManagementButtons } from "./MockTestManagementButtons";
@@ -16,6 +17,7 @@ type ExistingMockTest = {
   id: string;
   categoryId: string;
   examId: string;
+  specializationId: string;
   paperId: string;
   examName: string;
   paperName: string;
@@ -33,6 +35,7 @@ type ExistingMockTest = {
 const emptyLocation: LocationFilterValue = {
   categoryId: "",
   examId: "",
+  specializationId: "",
   paperId: "",
   subjectId: "",
 };
@@ -40,11 +43,13 @@ const emptyLocation: LocationFilterValue = {
 export function ExistingMockTestsTable({
   categories,
   exams,
+  specializations,
   papers,
   tests,
 }: {
   categories: LocationCategory[];
   exams: LocationExam[];
+  specializations: LocationSpecialization[];
   papers: LocationPaper[];
   tests: ExistingMockTest[];
 }) {
@@ -56,6 +61,7 @@ export function ExistingMockTestsTable({
       (test) =>
         test.categoryId === location.categoryId &&
         (!location.examId || test.examId === location.examId) &&
+        (!location.specializationId || test.specializationId === location.specializationId) &&
         (!location.paperId || test.paperId === location.paperId) &&
         (!query || `${test.title} ${test.slug}`.toLowerCase().includes(query)),
     );
@@ -73,6 +79,7 @@ export function ExistingMockTestsTable({
         <LocationFilters
           categories={categories}
           exams={exams}
+          specializations={specializations}
           papers={papers}
           value={location}
           onChange={setLocation}

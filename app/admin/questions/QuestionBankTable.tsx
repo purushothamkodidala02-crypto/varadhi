@@ -8,6 +8,7 @@ import {
   type LocationExam,
   type LocationFilterValue,
   type LocationPaper,
+  type LocationSpecialization,
   type LocationSubject,
 } from "@/components/admin/LocationFilters";
 import type { QuestionLifecycle } from "@/types/question";
@@ -23,6 +24,7 @@ export type QuestionBankRow = {
   expiresOn: string | null;
   categoryId: string;
   examId: string;
+  specializationId: string;
   paperId: string;
   subjectId: string;
   examName: string;
@@ -33,6 +35,7 @@ export type QuestionBankRow = {
 const emptyLocation: LocationFilterValue = {
   categoryId: "",
   examId: "",
+  specializationId: "",
   paperId: "",
   subjectId: "",
 };
@@ -71,12 +74,14 @@ function statusOf(question: QuestionBankRow) {
 export function QuestionBankTable({
   categories,
   exams,
+  specializations,
   papers,
   subjects,
   questions,
 }: {
   categories: LocationCategory[];
   exams: LocationExam[];
+  specializations: LocationSpecialization[];
   papers: LocationPaper[];
   subjects: LocationSubject[];
   questions: QuestionBankRow[];
@@ -89,6 +94,7 @@ export function QuestionBankTable({
       (question) =>
         question.categoryId === location.categoryId &&
         (!location.examId || question.examId === location.examId) &&
+        (!location.specializationId || question.specializationId === location.specializationId) &&
         (!location.paperId || question.paperId === location.paperId) &&
         (!location.subjectId || question.subjectId === location.subjectId) &&
         (!query ||
@@ -110,6 +116,7 @@ export function QuestionBankTable({
         <LocationFilters
           categories={categories}
           exams={exams}
+          specializations={specializations}
           papers={papers}
           subjects={subjects}
           value={location}
