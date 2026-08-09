@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useMemo, useState } from "react";
+import { useActionState, useEffect, useMemo, useRef, useState } from "react";
 import { SearchableSelect } from "@/components/admin/SearchableSelect";
 import { createGroup, type CreateGroupState } from "./actions";
 import { PaperListInput } from "./PaperListInput";
@@ -15,6 +15,8 @@ export function CreateGroupForm({ categories, existingExams, onExamCategoryChang
   const [state, formAction, pending] = useActionState(createGroup, initialState);
   const [examId, setExamId] = useState("");
   const [name, setName] = useState("");
+  const [showExistingNames, setShowExistingNames] = useState(false);
+  const nameAreaRef = useRef<HTMLDivElement>(null);
   const categoryName = useMemo(() => categories.find((category) => category.id === examId)?.name ?? "", [categories, examId]);
   const categoryExams = useMemo(() => existingExams.filter((exam) => exam.categoryId === examId), [examId, existingExams]);
   const matchingExams = useMemo(() => { const query = name.trim().toLowerCase(); return categoryExams.filter((exam) => !query || exam.name.toLowerCase().includes(query)); }, [categoryExams, name]);
@@ -23,8 +25,19 @@ export function CreateGroupForm({ categories, existingExams, onExamCategoryChang
   function chooseExamCategory(nextExamId: string) {
     setExamId(nextExamId);
     setName("");
+    setShowExistingNames(false);
     onExamCategoryChange?.(nextExamId);
   }
+
+  useEffect(() => {
+    function closeWhenClickingAway(event: MouseEvent) {
+      if (nameAreaRef.current && !nameAreaRef.current.contains(event.target as Node)) {
+        setShowExistingNames(false);
+      }
+    }
+    document.addEventListener("mousedown", closeWhenClickingAway);
+    return () => document.removeEventListener("mousedown", closeWhenClickingAway);
+  }, []);
 
   return (
     <section className="mt-8 rounded-2xl border bg-white p-6 shadow-sm">
@@ -37,12 +50,12 @@ export function CreateGroupForm({ categories, existingExams, onExamCategoryChang
         </label>
 
         <div className="grid gap-5 md:grid-cols-2">
-          <div>
+          <div ref={nameAreaRef}>
             <label className="block text-sm font-bold">
               Exam name
-              <input id="name" name="name" type="text" required value={name} onChange={(event) => setName(event.target.value)} disabled={!examId} placeholder="For example: AEE" className="mt-2 w-full rounded-lg border px-4 py-3 font-normal disabled:cursor-not-allowed disabled:bg-slate-100" />
+              <input id="name" name="name" type="text" required value={name} onFocus={() => setShowExistingNames(true)} onChange={(event) => { setName(event.target.value); setShowExistingNames(true); }} disabled={!examId} placeholder="For example: AEE" className="mt-2 w-full rounded-lg border px-4 py-3 font-normal disabled:cursor-not-allowed disabled:bg-slate-100" />
             </label>
-            {categoryName && (
+            {categoryName && showExistingNames && (
               <div className="mt-3 overflow-hidden rounded-xl border">
                 {matchingExams.length === 0 ? (
                   <p className="bg-slate-50 px-3 py-3 text-sm text-slate-600">{categoryExams.length === 0 ? "No Exams in this category yet. Enter a new Exam name." : "No matching Exam names. You can create this new name."}</p>
