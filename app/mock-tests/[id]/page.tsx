@@ -23,6 +23,25 @@ type TestQuestion = {
   option_d_te: string | null;
 };
 
+function TestNotReady({ title }: { title: string }) {
+  return (
+    <main className="mx-auto max-w-2xl px-6 py-16">
+      <section className="rounded-2xl border bg-white p-8 text-center shadow-sm">
+        <p className="text-sm font-semibold uppercase tracking-wide text-amber-700">
+          Test being prepared
+        </p>
+        <h1 className="mt-2 text-3xl font-bold text-slate-950">{title}</h1>
+        <p className="mt-4 text-slate-600">
+          This mock test does not have active questions available yet. Please try again later.
+        </p>
+        <Link href="/mock-tests" className="mt-6 inline-flex rounded-lg bg-black px-5 py-3 font-medium text-white">
+          Back to Mock Tests
+        </Link>
+      </section>
+    </main>
+  );
+}
+
 export default async function TakeMockTestPage({ params }: PageProps<"/mock-tests/[id]">) {
   const { id } = await params;
   const supabase = await createClient();
@@ -63,14 +82,14 @@ export default async function TakeMockTestPage({ params }: PageProps<"/mock-test
     | { session_id: string; expires_at: string }
     | undefined;
 
-  if (sessionError || !session) notFound();
+  if (sessionError || !session) return <TestNotReady title={mockTest.title} />;
 
   const { data, error } = await supabase.rpc("get_mock_test_session_payload", {
     requested_session_id: session.session_id,
   });
 
   const questions = (data ?? []) as TestQuestion[];
-  if (error || questions.length === 0) notFound();
+  if (error || questions.length === 0) return <TestNotReady title={mockTest.title} />;
 
   return <StudentTestRunner title={mockTest.title} sessionId={session.session_id} expiresAt={session.expires_at} questions={questions} />;
 }
