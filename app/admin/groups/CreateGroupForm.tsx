@@ -4,7 +4,7 @@ import { useActionState, useState } from "react";
 import { SearchableSelect } from "@/components/admin/SearchableSelect";
 import { createGroup, type CreateGroupState } from "./actions";
 import { PaperListInput } from "./PaperListInput";
-import { SpecializationListInput } from "./SpecializationListInput";
+import { SpecializationPapersInput } from "./SpecializationPapersInput";
 
 type ExamOption = { id: string; name: string };
 type CreateGroupFormProps = {
@@ -30,7 +30,7 @@ export function CreateGroupForm({
     <section className="mt-8 rounded-2xl border bg-white p-6 shadow-sm">
       <h2 className="text-xl font-bold">Add Exam</h2>
       <p className="mt-1 text-sm text-slate-600">
-        Choose the Exam Category, enter the Exam name, then add any branches and Papers it needs. Nothing is pre-defined.
+        Create the Exam, then add optional Specialisations and the Papers under each one. Nothing is pre-defined.
       </p>
 
       <form action={formAction} className="mt-6 space-y-5">
@@ -101,13 +101,13 @@ export function CreateGroupForm({
           </label>
         </div>
 
-        <SpecializationListInput />
+        <SpecializationPapersInput />
 
         <PaperListInput
           inputName="papers_json"
           initialRows={0}
-          title="Direct Papers"
-          description="Add Papers that belong directly to this Exam. For branch-based Exams, create the Exam first, then add Papers under each Specialisation in the Papers section."
+          title="Direct / common Papers"
+          description="Add Papers that belong directly to this Exam. Use this for Group 1, Group 2, and Group 4, or for a Paper shared by every Specialisation."
         />
 
         <label className="flex items-center gap-3">

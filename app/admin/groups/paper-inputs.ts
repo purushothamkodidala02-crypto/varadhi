@@ -26,14 +26,7 @@ function readDecimal(value: unknown, label: string, minimum: number): number | s
   return Number.isFinite(number) && number >= minimum ? number : `${label} must be ${minimum === 0 ? "zero or more" : "greater than zero"}.`;
 }
 
-export function readPaperInputs(rawValue: FormDataEntryValue | null, minimum: number): { papers?: PaperInput[]; error?: string } {
-  let rawPapers: unknown;
-  try {
-    rawPapers = JSON.parse(String(rawValue ?? "[]"));
-  } catch {
-    return { error: "Paper details could not be read. Please try again." };
-  }
-
+export function validatePaperInputArray(rawPapers: unknown, minimum: number): { papers?: PaperInput[]; error?: string } {
   if (!Array.isArray(rawPapers)) return { error: "Paper details are invalid." };
   if (rawPapers.length < minimum) return { error: minimum === 1 ? "Add at least one Paper for this Exam." : "Add valid Papers or remove the empty row." };
   if (rawPapers.length > 20) return { error: "You can add up to 20 Papers at one time." };
@@ -58,6 +51,16 @@ export function readPaperInputs(rawValue: FormDataEntryValue | null, minimum: nu
   const names = new Set(papers.map((paper) => paper.name.toLocaleLowerCase()));
   if (names.size !== papers.length) return { error: "Each Paper needs a different name." };
   return { papers };
+}
+
+export function readPaperInputs(rawValue: FormDataEntryValue | null, minimum: number): { papers?: PaperInput[]; error?: string } {
+  let rawPapers: unknown;
+  try {
+    rawPapers = JSON.parse(String(rawValue ?? "[]"));
+  } catch {
+    return { error: "Paper details could not be read. Please try again." };
+  }
+  return validatePaperInputArray(rawPapers, minimum);
 }
 
 function paperSlugBase(name: string, index: number): string {

@@ -173,28 +173,40 @@ export async function createGroup(
     };
   }
 
-  if (specializationInput.specializations.length > 0) {
-    const { error: specializationsError } = await supabase.from("exam_specializations").insert(
-      specializationInput.specializations.map((specialization) => ({
+  const allPaperRows = toPaperRows(group.id, paperInput.papers);
+  const usedSlugs = allPaperRows.map((paper) => paper.slug);
+  let nextDisplayOrder = allPaperRows.length + 1;
+
+  for (const specialization of specializationInput.specializations) {
+    const { data: savedSpecialization, error: specializationError } = await supabase
+      .from("exam_specializations")
+      .insert({
         exam_group_id: group.id,
         name: specialization.name,
         slug: specialization.slug,
         display_order: specialization.display_order,
         is_active: isActive,
-      })),
-    );
+      })
+      .select("id")
+      .single();
 
-    if (specializationsError) {
+    if (specializationError || !savedSpecialization) {
       await supabase.from("exam_groups").delete().eq("id", group.id);
       return {
         success: false,
-        message: `The Exam could not be created because its Specialisations could not be saved: ${specializationsError.message}`,
+        message: `The Exam could not be created because its Specialisations could not be saved: ${specializationError?.message ?? "Unknown error"}`,
       };
     }
+
+    const specializationPaperRows = toPaperRows(group.id, specialization.papers, usedSlugs, nextDisplayOrder)
+      .map((paper) => ({ ...paper, specialization_id: savedSpecialization.id }));
+    allPaperRows.push(...specializationPaperRows);
+    usedSlugs.push(...specializationPaperRows.map((paper) => paper.slug));
+    nextDisplayOrder += specializationPaperRows.length;
   }
 
-  const { error: papersError } = paperInput.papers.length > 0
-    ? await supabase.from("papers").insert(toPaperRows(group.id, paperInput.papers))
+  const { error: papersError } = allPaperRows.length > 0
+    ? await supabase.from("papers").insert(allPaperRows)
     : { error: null };
 
   if (papersError) {
@@ -215,6 +227,6 @@ export async function createGroup(
 
   return {
     success: true,
-    message: `Exam created with ${specializationInput.specializations.length ? `${specializationInput.specializations.length} ${specializationInput.specializations.length === 1 ? "Specialisation" : "Specialisations"}` : "no Specialisations"}${paperInput.papers.length ? ` and ${paperInput.papers.length} ${paperInput.papers.length === 1 ? "direct Paper" : "direct Papers"}` : ""}.`,
+    message: `Exam created with ${specializationInput.specializations.length ? `${specializationInput.specializations.length} ${specializationInput.specializations.length === 1 ? "Specialisation" : "Specialisations"}` : "no Specialisations"} and ${allPaperRows.length} ${allPaperRows.length === 1 ? "Paper" : "Papers"}.`,
   };
 }
