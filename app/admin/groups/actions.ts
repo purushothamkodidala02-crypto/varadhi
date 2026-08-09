@@ -109,6 +109,30 @@ export async function createGroup(
     };
   }
 
+  const { data: existingExams, error: existingExamsError } = await supabase
+    .from("exam_groups")
+    .select("id, name")
+    .eq("exam_id", examId);
+
+  if (existingExamsError) {
+    return {
+      success: false,
+      message: existingExamsError.message,
+    };
+  }
+
+  if (
+    (existingExams ?? []).some(
+      (existingExam) =>
+        existingExam.name.trim().toLowerCase() === name.toLowerCase(),
+    )
+  ) {
+    return {
+      success: false,
+      message: `An Exam named "${name}" already exists in this Exam Category. Names are not case-sensitive.`,
+    };
+  }
+
   const { data: group, error: insertError } = await supabase
     .from("exam_groups")
     .insert({

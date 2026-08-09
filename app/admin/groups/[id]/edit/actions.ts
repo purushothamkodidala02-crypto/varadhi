@@ -110,6 +110,31 @@ export async function updateGroup(
     };
   }
 
+  const { data: existingExams, error: existingExamsError } = await supabase
+    .from("exam_groups")
+    .select("id, name")
+    .eq("exam_id", examId)
+    .neq("id", groupId);
+
+  if (existingExamsError) {
+    return {
+      success: false,
+      message: existingExamsError.message,
+    };
+  }
+
+  if (
+    (existingExams ?? []).some(
+      (existingExam) =>
+        existingExam.name.trim().toLowerCase() === name.toLowerCase(),
+    )
+  ) {
+    return {
+      success: false,
+      message: `An Exam named "${name}" already exists in this Exam Category. Names are not case-sensitive.`,
+    };
+  }
+
   const { error: updateError } = await supabase
     .from("exam_groups")
     .update({
