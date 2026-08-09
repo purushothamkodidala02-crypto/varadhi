@@ -5,6 +5,7 @@ import type { ExamGroup } from "@/types/group";
 import { EditGroupForm } from "./EditGroupForm";
 import { SpecializationForm } from "@/app/admin/specializations/SpecializationForm";
 import { ExistingSpecializationsTable } from "@/app/admin/specializations/ExistingSpecializationsTable";
+import { ExamPaperManager } from "./ExamPaperManager";
 
 type EditGroupPageProps = {
   params: Promise<{
@@ -34,7 +35,7 @@ export default async function EditGroupPage({
 
     supabase
       .from("papers")
-      .select("id, name, duration_minutes, question_count, is_active, display_order")
+      .select("id, specialization_id, name, slug, duration_minutes, question_count, is_active, display_order")
       .eq("exam_group_id", id)
       .order("display_order", { ascending: true }),
 
@@ -67,11 +68,11 @@ export default async function EditGroupPage({
         </h1>
 
         <p className="mt-2 text-gray-600">
-          Update the Exam details and add its Papers when needed.
+          Set up Specialisations and their Papers from this one Exam workspace.
         </p>
       </div>
 
-      <EditGroupForm group={group} exams={exams} papers={papersResult.data ?? []} />
+      <EditGroupForm group={group} exams={exams} />
 
       <SpecializationForm exams={[{ id: group.id, label: group.name }]} />
       <ExistingSpecializationsTable
@@ -82,6 +83,20 @@ export default async function EditGroupPage({
           name: item.name,
           slug: item.slug,
           isActive: item.is_active,
+        }))}
+      />
+      <ExamPaperManager
+        examId={group.id}
+        examName={group.name}
+        specializations={(specializationsResult.data ?? []).map((item) => ({ id: item.id, name: item.name }))}
+        papers={(papersResult.data ?? []).map((paper) => ({
+          id: paper.id,
+          specializationId: paper.specialization_id,
+          name: paper.name,
+          slug: paper.slug,
+          durationMinutes: paper.duration_minutes,
+          questionCount: paper.question_count,
+          isActive: paper.is_active,
         }))}
       />
     </main>

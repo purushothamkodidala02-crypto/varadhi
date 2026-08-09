@@ -2,7 +2,6 @@
 
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
-import { readPaperInputs, toPaperRows } from "../../paper-inputs";
 
 export type UpdateGroupState = {
   success: boolean;
@@ -88,15 +87,6 @@ export async function updateGroup(
     };
   }
 
-  const newPaperInput = readPaperInputs(formData.get("new_papers_json"), 0);
-
-  if (newPaperInput.error || !newPaperInput.papers) {
-    return {
-      success: false,
-      message: newPaperInput.error ?? "Check the new Paper details.",
-    };
-  }
-
   const { data: exam, error: examError } = await supabase
     .from("exams")
     .select("id")
@@ -163,26 +153,6 @@ export async function updateGroup(
     };
   }
 
-  if (newPaperInput.papers.length > 0) {
-    const { data: existingPapers, error: existingPapersError } = await supabase
-      .from("papers")
-      .select("slug, display_order")
-      .eq("exam_group_id", groupId);
-
-    if (existingPapersError) {
-      return { success: false, message: existingPapersError.message };
-    }
-
-    const nextDisplayOrder = Math.max(0, ...(existingPapers ?? []).map((paper) => paper.display_order)) + 1;
-    const { error: papersError } = await supabase
-      .from("papers")
-      .insert(toPaperRows(groupId, newPaperInput.papers, (existingPapers ?? []).map((paper) => paper.slug), nextDisplayOrder));
-
-    if (papersError) {
-      return { success: false, message: `Exam details were saved, but the new Papers could not be added: ${papersError.message}` };
-    }
-  }
-
   revalidatePath("/admin/groups");
   revalidatePath("/admin/papers");
   revalidatePath("/admin/subjects");
@@ -193,6 +163,6 @@ export async function updateGroup(
 
   return {
     success: true,
-    message: newPaperInput.papers.length > 0 ? `Exam updated and ${newPaperInput.papers.length} ${newPaperInput.papers.length === 1 ? "Paper" : "Papers"} added.` : "Exam updated successfully.",
+    message: "Exam details updated successfully.",
   };
 }

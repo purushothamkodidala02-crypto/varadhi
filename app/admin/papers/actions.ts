@@ -53,7 +53,7 @@ export async function createPaper(_previous: PaperActionState, formData: FormDat
   const { error } = await result.supabase.from("papers").insert(parsed.value);
   if (error?.code === "23505") return { success: false, message: "A Paper with this slug already exists under the selected Exam." };
   if (error) return { success: false, message: error.message };
-  revalidatePath("/admin/papers"); revalidatePath("/admin/subjects"); revalidatePath("/admin/mock-tests"); revalidatePath("/admin/questions");
+  revalidatePath("/admin/papers"); revalidatePath(`/admin/groups/${parsed.value.exam_group_id}/edit`); revalidatePath("/admin/subjects"); revalidatePath("/admin/mock-tests"); revalidatePath("/admin/questions");
   return { success: true, message: "Paper created successfully." };
 }
 
@@ -67,7 +67,7 @@ export async function updatePaper(_previous: PaperActionState, formData: FormDat
   const { error } = await result.supabase.from("papers").update(parsed.value).eq("id", paperId);
   if (error?.code === "23505") return { success: false, message: "A Paper with this slug already exists under the selected Exam." };
   if (error) return { success: false, message: error.message };
-  revalidatePath("/admin/papers"); revalidatePath(`/admin/papers/${paperId}/edit`); revalidatePath("/admin/subjects"); revalidatePath("/admin/mock-tests"); revalidatePath("/admin/questions");
+  revalidatePath("/admin/papers"); revalidatePath(`/admin/papers/${paperId}/edit`); revalidatePath(`/admin/groups/${parsed.value.exam_group_id}/edit`); revalidatePath("/admin/subjects"); revalidatePath("/admin/mock-tests"); revalidatePath("/admin/questions");
   return { success: true, message: "Paper updated successfully." };
 }
 
