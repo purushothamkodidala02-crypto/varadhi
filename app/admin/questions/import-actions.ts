@@ -13,6 +13,13 @@ type QuestionLanguageValues = {
   options: [string, string, string, string];
   explanation: string | null;
 };
+type MockImportTarget = {
+  id: string;
+  paper_id: string;
+  subject_id: string | null;
+  test_scope: "paper" | "subject";
+  status: string;
+};
 
 const requiredHeaders = [
   "import_key", "subject", "question_en", "option_a_en", "option_b_en", "option_c_en", "option_d_en",
@@ -21,6 +28,12 @@ const requiredHeaders = [
 const answers: CorrectAnswer[] = ["A", "B", "C", "D"];
 const lifecycles: QuestionLifecycle[] = ["permanent", "review", "expires"];
 const validDate = (value: string) => /^\d{4}-\d{2}-\d{2}$/.test(value) && !Number.isNaN(Date.parse(`${value}T00:00:00Z`));
+const optionalNumber = (value: string) => {
+  const normalized = value.trim();
+  if (!normalized) return null;
+  const number = Number(normalized);
+  return Number.isFinite(number) ? number : Number.NaN;
+};
 
 function parseCsv(source: string): CsvRow[] {
   const rows: string[][] = [];
@@ -93,25 +106,55 @@ export async function importQuestionsFromCsv(
   _previous: ImportQuestionsState,
   formData: FormData,
 ): Promise<ImportQuestionsState> {
+  return importQuestions(formData);
+}
+
+export async function importQuestionsIntoMockTest(
+  mockTestId: string,
+  _previous: ImportQuestionsState,
+  formData: FormData,
+): Promise<ImportQuestionsState> {
+  return importQuestions(formData, mockTestId);
+}
+
+async function importQuestions(
+  formData: FormData,
+  mockTestId?: string,
+): Promise<ImportQuestionsState> {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return { success: false, message: "You must be logged in." };
   const { data: profile } = await supabase.from("profiles").select("role").eq("id", user.id).single();
   if (profile?.role !== "admin") return { success: false, message: "You are not authorized to import Questions." };
 
-  const categoryId = String(formData.get("import_exam_id") ?? "").trim();
-  const examId = String(formData.get("import_exam_group_id") ?? "").trim();
-  const paperId = String(formData.get("import_paper_id") ?? "").trim();
+  let categoryId = String(formData.get("import_exam_id") ?? "").trim();
+  let examId = String(formData.get("import_exam_group_id") ?? "").trim();
+  let paperId = String(formData.get("import_paper_id") ?? "").trim();
   const file = formData.get("questions_csv");
-  if (!categoryId || !examId || !paperId) return { success: false, message: "Choose an Exam Category, Exam, and Paper before importing." };
+  let mockTest: MockImportTarget | null = null;
+  if (mockTestId) {
+    const { data } = await supabase
+      .from("mock_tests")
+      .select("id, paper_id, subject_id, test_scope, status")
+      .eq("id", mockTestId)
+      .maybeSingle();
+    mockTest = data as MockImportTarget | null;
+    if (!mockTest) return { success: false, message: "Mock Test not found." };
+    if (mockTest.status !== "draft") return { success: false, message: "Only draft Mock Tests can receive a CSV import." };
+    paperId = mockTest.paper_id;
+  } else if (!categoryId || !examId || !paperId) {
+    return { success: false, message: "Choose an Exam Category, Exam, and Paper before importing." };
+  }
   if (!(file instanceof File) || !file.size) return { success: false, message: "Choose a CSV file to import." };
   if (file.size > 2_500_000) return { success: false, message: "This CSV is too large. Import up to 2.5 MB at a time." };
 
   const [{ data: paper }, { data: exam }] = await Promise.all([
-    supabase.from("papers").select("id, exam_group_id").eq("id", paperId).maybeSingle(),
-    supabase.from("exam_groups").select("id, exam_id").eq("id", examId).maybeSingle(),
+    supabase.from("papers").select("id, exam_group_id, default_correct_marks, default_negative_marks").eq("id", paperId).maybeSingle(),
+    mockTest
+      ? Promise.resolve({ data: null })
+      : supabase.from("exam_groups").select("id, exam_id").eq("id", examId).maybeSingle(),
   ]);
-  if (!paper || !exam || paper.exam_group_id !== exam.id || exam.exam_id !== categoryId) {
+  if (!paper || (!mockTest && (!exam || paper.exam_group_id !== exam.id || exam.exam_id !== categoryId))) {
     return { success: false, message: "The selected Exam Category, Exam, and Paper do not belong together." };
   }
 
@@ -132,6 +175,7 @@ export async function importQuestionsFromCsv(
   const importKeys = new Set<string>();
   const errors: string[] = [];
   const importRows: Record<string, unknown>[] = [];
+  const assignmentPreferences: Array<{ key: string; rowNumber: number; questionOrder: number | null; marks: number | null; negativeMarks: number | null }> = [];
 
   rows.forEach((row, index) => {
     const rowNumber = index + 2;
@@ -145,6 +189,9 @@ export async function importQuestionsFromCsv(
     const isActive = activeValue(row.is_active ?? "");
     const english = languageValues(row, "en");
     const telugu = languageValues(row, "te");
+    const questionOrder = optionalNumber(row.question_order ?? "");
+    const marks = optionalNumber(row.marks ?? "");
+    const negativeMarks = optionalNumber(row.negative_marks ?? "");
 
     if (!importKey) errors.push(`Row ${rowNumber}: import_key is required.`);
     if (!subject) errors.push(`Row ${rowNumber}: Subject "${row.subject || "(blank)"}" does not exist in the chosen Paper.`);
@@ -154,6 +201,9 @@ export async function importQuestionsFromCsv(
     if (!lifecycles.includes(lifecycle) || (lifecycle === "review" && !validDate(reviewOn)) || (lifecycle === "expires" && !validDate(expiresOn))) errors.push(`Row ${rowNumber}: check content_lifecycle and its date.`);
     if (sourceExamDate && !validDate(sourceExamDate)) errors.push(`Row ${rowNumber}: source_exam_date must use YYYY-MM-DD.`);
     if (isActive === null) errors.push(`Row ${rowNumber}: is_active must be true or false.`);
+    if (mockTest && questionOrder !== null && (!Number.isInteger(questionOrder) || questionOrder < 1)) errors.push(`Row ${rowNumber}: question_order must be a whole number greater than zero.`);
+    if (mockTest && marks !== null && (!Number.isFinite(marks) || marks <= 0)) errors.push(`Row ${rowNumber}: marks must be a number greater than zero.`);
+    if (mockTest && negativeMarks !== null && (!Number.isFinite(negativeMarks) || negativeMarks < 0)) errors.push(`Row ${rowNumber}: negative_marks must be zero or a positive number.`);
 
     const languageMode = subject?.content_language_mode as SubjectContentLanguageMode | undefined;
     if (languageMode === "bilingual") {
@@ -169,7 +219,10 @@ export async function importQuestionsFromCsv(
       if (teluguError) errors.push(teluguError);
     }
 
-    if (!subject || !importKey || !answers.includes(correctAnswer) || !lifecycles.includes(lifecycle) || isActive === null) return;
+    if (mockTest?.test_scope === "subject" && subject && subject.id !== mockTest.subject_id) {
+      errors.push(`Row ${rowNumber}: this subject-wise Mock Test only accepts Questions for its selected Subject.`);
+    }
+    if (!subject || !importKey || !answers.includes(correctAnswer) || !lifecycles.includes(lifecycle) || isActive === null || (mockTest?.test_scope === "subject" && subject.id !== mockTest.subject_id)) return;
     const canonical = languageMode === "telugu" ? telugu : english;
     importRows.push({
       subject_id: subject.id,
@@ -196,6 +249,7 @@ export async function importQuestionsFromCsv(
       review_on: lifecycle === "review" ? reviewOn : null,
       expires_on: lifecycle === "expires" ? expiresOn : null,
     });
+    assignmentPreferences.push({ key: `${subject.id}:${importKey}`, rowNumber, questionOrder, marks, negativeMarks });
   });
 
   if (errors.length) {
@@ -212,15 +266,82 @@ export async function importQuestionsFromCsv(
     .in("import_key", keys);
   if (existingError) return { success: false, message: existingError.message };
   const existingKeys = new Set((existing ?? []).map((question) => `${question.subject_id}:${question.import_key}`));
+  const existingQuestionByKey = new Map((existing ?? []).map((question) => [`${question.subject_id}:${question.import_key}`, question.id]));
 
-  const { error } = await supabase
+  let existingAssignments: Array<{ question_id: string; question_order: number }> = [];
+  if (mockTest) {
+    const { data, error: assignmentsError } = await supabase
+      .from("mock_test_questions")
+      .select("question_id, question_order")
+      .eq("mock_test_id", mockTest.id);
+    if (assignmentsError) return { success: false, message: assignmentsError.message };
+    existingAssignments = data ?? [];
+    const assignedQuestionIds = new Set(existingAssignments.map((assignment) => assignment.question_id));
+    const occupiedOrders = new Set(existingAssignments.map((assignment) => assignment.question_order));
+    const explicitOrders = new Set<number>();
+    for (const preference of assignmentPreferences) {
+      const existingQuestionId = existingQuestionByKey.get(preference.key);
+      if (existingQuestionId && assignedQuestionIds.has(existingQuestionId)) continue;
+      if (preference.questionOrder === null) continue;
+      if (explicitOrders.has(preference.questionOrder) || occupiedOrders.has(preference.questionOrder)) {
+        return { success: false, message: `Nothing was imported. Question order ${preference.questionOrder} is already used in this draft Mock Test.` };
+      }
+      explicitOrders.add(preference.questionOrder);
+    }
+  }
+
+  const { data: savedQuestions, error } = await supabase
     .from("questions")
-    .upsert(importRows, { onConflict: "subject_id,import_key" });
+    .upsert(importRows, { onConflict: "subject_id,import_key" })
+    .select("id, subject_id, import_key");
   if (error) return { success: false, message: error.message };
+
+  let assigned = 0;
+  let alreadyAssigned = 0;
+  if (mockTest) {
+    const savedQuestionByKey = new Map((savedQuestions ?? []).map((question) => [`${question.subject_id}:${question.import_key}`, question.id]));
+    const assignedQuestionIds = new Set(existingAssignments.map((assignment) => assignment.question_id));
+    const occupiedOrders = new Set(existingAssignments.map((assignment) => assignment.question_order));
+    const explicitOrders = new Set(assignmentPreferences.map((preference) => preference.questionOrder).filter((order): order is number => order !== null));
+    let nextOrder = Math.max(0, ...existingAssignments.map((assignment) => assignment.question_order)) + 1;
+    const assignmentRows: Array<{ mock_test_id: string; question_id: string; question_order: number; marks: number; negative_marks: number }> = [];
+
+    for (const preference of assignmentPreferences) {
+      const questionId = savedQuestionByKey.get(preference.key);
+      if (!questionId) continue;
+      if (assignedQuestionIds.has(questionId)) {
+        alreadyAssigned += 1;
+        continue;
+      }
+      let order = preference.questionOrder;
+      if (order === null) {
+        while (occupiedOrders.has(nextOrder) || explicitOrders.has(nextOrder)) nextOrder += 1;
+        order = nextOrder;
+        nextOrder += 1;
+      }
+      occupiedOrders.add(order);
+      assignmentRows.push({
+        mock_test_id: mockTest.id,
+        question_id: questionId,
+        question_order: order,
+        marks: preference.marks ?? paper.default_correct_marks ?? 1,
+        negative_marks: preference.negativeMarks ?? paper.default_negative_marks ?? 0,
+      });
+    }
+    if (assignmentRows.length) {
+      const { error: assignmentError } = await supabase.from("mock_test_questions").insert(assignmentRows);
+      if (assignmentError) return { success: false, message: `Questions were saved in the Question Bank, but could not be added to this Mock Test: ${assignmentError.message}` };
+      assigned = assignmentRows.length;
+    }
+  }
 
   const updated = importRows.filter((row) => existingKeys.has(`${row.subject_id}:${row.import_key}`)).length;
   const added = importRows.length - updated;
   revalidatePath("/admin/questions");
   revalidatePath("/admin/mock-tests");
+  if (mockTest) {
+    revalidatePath(`/admin/mock-tests/${mockTest.id}/edit`);
+    return { success: true, message: `${added} Question${added === 1 ? "" : "s"} added, ${updated} updated, and ${assigned} assigned to this Mock Test from ${file.name}.${alreadyAssigned ? ` ${alreadyAssigned} already assigned Question${alreadyAssigned === 1 ? " was" : "s were"} kept.` : ""}` };
+  }
   return { success: true, message: `${added} Question${added === 1 ? "" : "s"} added and ${updated} updated from ${file.name}.` };
 }
