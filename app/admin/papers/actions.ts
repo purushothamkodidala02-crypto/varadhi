@@ -74,11 +74,24 @@ export async function updatePaper(_previous: PaperActionState, formData: FormDat
 export async function deletePaper(paperId: string): Promise<PaperActionState> {
   const result = await requireAdmin();
   if (result.error) return { success: false, message: result.error };
+  const { data: paper, error: paperError } = await result.supabase
+    .from("papers")
+    .select("exam_group_id")
+    .eq("id", paperId)
+    .maybeSingle();
+  if (paperError || !paper) return { success: false, message: paperError?.message ?? "This Paper could not be found." };
   const { count, error: countError } = await result.supabase.from("subjects").select("id", { count: "exact", head: true }).eq("paper_id", paperId);
   if (countError) return { success: false, message: countError.message };
   if ((count ?? 0) > 0) return { success: false, message: "This Paper has Subjects. Deactivate it instead." };
+  const { count: mockTestCount, error: mockTestError } = await result.supabase.from("mock_tests").select("id", { count: "exact", head: true }).eq("paper_id", paperId);
+  if (mockTestError) return { success: false, message: mockTestError.message };
+  if ((mockTestCount ?? 0) > 0) return { success: false, message: "This Paper is used by Mock Tests. Archive those tests or deactivate this Paper instead." };
   const { error } = await result.supabase.from("papers").delete().eq("id", paperId);
   if (error) return { success: false, message: error.message };
   revalidatePath("/admin/papers");
+  revalidatePath(`/admin/groups/${paper.exam_group_id}/edit`);
+  revalidatePath("/admin/subjects");
+  revalidatePath("/admin/mock-tests");
+  revalidatePath("/admin/questions");
   return { success: true, message: "Paper deleted." };
 }
