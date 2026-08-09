@@ -42,7 +42,6 @@ export function CreateGroupForm({
             onChange={chooseExamCategory}
             options={exams.map((exam) => ({ value: exam.id, label: exam.name }))}
             placeholder="Search and choose an Exam Category"
-            showOptionsOnEmpty={false}
           />
         </label>
 

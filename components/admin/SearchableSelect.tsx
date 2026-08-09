@@ -12,7 +12,6 @@ type SearchableSelectProps = {
   placeholder: string;
   disabled?: boolean;
   emptyMessage?: string;
-  showOptionsOnEmpty?: boolean;
 };
 
 export function SearchableSelect({
@@ -23,7 +22,6 @@ export function SearchableSelect({
   placeholder,
   disabled = false,
   emptyMessage = "No matching options.",
-  showOptionsOnEmpty = true,
 }: SearchableSelectProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -39,7 +37,7 @@ export function SearchableSelect({
       (option) => !normalized || option.label.toLowerCase().includes(normalized),
     );
   }, [options, query]);
-  const showList = open && !disabled && (showOptionsOnEmpty || Boolean(query.trim()));
+  const showList = open && !disabled;
 
   function closeList() {
     setOpen(false);
@@ -115,7 +113,6 @@ export function SearchableSelect({
               setOpen(true);
               setQuery("");
             }
-            if (!showOptionsOnEmpty && !query.trim()) return;
             if (matches.length === 0) return;
             setActiveIndex((current) => {
               if (event.key === "ArrowDown") {
@@ -171,32 +168,41 @@ export function SearchableSelect({
           ref={listRef}
           id={listboxId}
           role="listbox"
-          className="absolute z-30 mt-1 max-h-64 w-full overflow-y-auto overscroll-contain rounded-xl border bg-white p-1 shadow-xl shadow-slate-950/10"
+          className="absolute z-30 mt-1 w-full overflow-hidden rounded-xl border bg-white shadow-xl shadow-slate-950/10"
         >
           {matches.length === 0 ? (
             <p className="px-3 py-3 text-sm text-slate-500">{emptyMessage}</p>
           ) : (
-            matches.map((option, index) => (
-              <button
-                key={option.value}
-                id={`${listboxId}-option-${index}`}
-                data-option-index={index}
-                type="button"
-                role="option"
-                aria-selected={option.value === value}
-                onMouseDown={(event) => event.preventDefault()}
-                onClick={() => selectOption(option)}
-                className={`block w-full rounded-lg px-3 py-2.5 text-left text-sm transition ${
-                  activeIndex === index
-                    ? "bg-teal-100 font-bold text-teal-900"
-                    : option.value === value
-                      ? "bg-teal-50 font-bold text-teal-800"
-                      : "text-slate-700 hover:bg-slate-100"
-                }`}
-              >
-                {option.label}
-              </button>
-            ))
+            <>
+              <div ref={listRef} className="max-h-52 overflow-y-auto overscroll-contain p-1">
+                {matches.map((option, index) => (
+                  <button
+                    key={option.value}
+                    id={`${listboxId}-option-${index}`}
+                    data-option-index={index}
+                    type="button"
+                    role="option"
+                    aria-selected={option.value === value}
+                    onMouseDown={(event) => event.preventDefault()}
+                    onClick={() => selectOption(option)}
+                    className={`block w-full rounded-lg px-3 py-2.5 text-left text-sm transition ${
+                      activeIndex === index
+                        ? "bg-teal-100 font-bold text-teal-900"
+                        : option.value === value
+                          ? "bg-teal-50 font-bold text-teal-800"
+                          : "text-slate-700 hover:bg-slate-100"
+                    }`}
+                  >
+                    {option.label}
+                  </button>
+                ))}
+              </div>
+              <p className="border-t bg-slate-50 px-3 py-2 text-xs font-semibold text-slate-600">
+                {matches.length === options.length
+                  ? `${options.length} total ${options.length === 1 ? "value" : "values"}`
+                  : `${matches.length} of ${options.length} matching values`}
+              </p>
+            </>
           )}
         </div>
       )}

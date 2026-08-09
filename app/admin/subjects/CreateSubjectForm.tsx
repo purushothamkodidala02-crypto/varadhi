@@ -79,7 +79,6 @@ export function CreateSubjectForm({
                 label: category.name,
               }))}
               placeholder="Search and choose a category"
-              showOptionsOnEmpty={false}
             />
           </label>
           <label className="block text-sm font-bold">
@@ -95,7 +94,6 @@ export function CreateSubjectForm({
               placeholder="Search and choose an Exam"
               disabled={!categoryId}
               emptyMessage="No Exams in this category."
-              showOptionsOnEmpty={false}
             />
           </label>
           <label className="block text-sm font-bold">
