@@ -29,7 +29,11 @@ export function ExamsWorkspace({
 
   return (
     <>
-      <CreateGroupForm exams={categories} onExamCategoryChange={setCategoryId} />
+      <CreateGroupForm
+        categories={categories}
+        existingExams={exams.map((exam) => ({ id: exam.id, categoryId: exam.categoryId, name: exam.name, slug: exam.slug }))}
+        onExamCategoryChange={setCategoryId}
+      />
       <ExistingExamsTable
         categoryId={categoryId}
         categoryName={categoryName}
