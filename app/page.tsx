@@ -31,6 +31,8 @@ export default async function Home() {
     <main className="min-h-screen bg-white text-slate-950">
       <PublicHeader />
 
+      {publishedTests.length > 0 && <section className="border-b bg-slate-50"><div className="mx-auto max-w-6xl px-5 py-14 sm:px-8"><div className="flex flex-wrap items-end justify-between gap-4"><div><p className="text-xs font-bold uppercase tracking-[0.14em] text-teal-700">Available mock tests</p><h1 className="mt-2 text-3xl font-black tracking-tight">Choose a test and start practising</h1><p className="mt-3 max-w-2xl text-sm leading-6 text-slate-600">See the test, duration, and syllabus focus first. Open any test to review its full details before starting.</p></div><Link href="/mock-tests" className="text-sm font-bold text-teal-700 hover:text-teal-800">View all mock tests →</Link></div><div className="mt-7 grid gap-4 lg:grid-cols-3">{publishedTests.map((test) => <article key={test.id} className="flex flex-col rounded-2xl border bg-white p-6 shadow-sm"><div className="flex items-center justify-between gap-3"><span className="rounded-full bg-emerald-100 px-3 py-1 text-xs font-bold text-emerald-800">Free</span><span className="text-xs font-bold text-slate-500">{test.test_scope === "paper" ? "Full-length" : "Subject test"}</span></div><h2 className="mt-5 text-lg font-black">{test.title}</h2><p className="mt-2 flex-1 text-sm leading-6 text-slate-600">{test.description ?? "Focused practice designed for serious exam preparation."}</p><div className="mt-6 flex items-center justify-between border-t pt-4"><span className="text-sm font-semibold text-slate-500">{test.duration_minutes} minutes</span><Link href={`/mock-tests/${test.id}`} className="text-sm font-bold text-teal-700">View test →</Link></div></article>)}</div></div></section>}
+
       <section className="relative overflow-hidden bg-slate-950 text-white">
         <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-teal-300/60 to-transparent" />
         <div className="absolute -right-32 top-16 h-80 w-80 rounded-full bg-teal-400/10 blur-3xl" />
@@ -40,9 +42,9 @@ export default async function Home() {
               <span className="h-1.5 w-1.5 rounded-full bg-teal-300" />
               Built for Telangana aspirants
             </p>
-            <h1 className="mt-7 max-w-3xl text-4xl font-black leading-[1.08] tracking-tight sm:text-6xl">
+            <h2 className="mt-7 max-w-3xl text-4xl font-black leading-[1.08] tracking-tight sm:text-6xl">
               Practise with purpose. Improve with every mock test.
-            </h1>
+            </h2>
             <p className="mt-6 max-w-2xl text-lg leading-8 text-slate-300">
               Take focused mock tests, practise in a real exam-style environment, and turn every result into a clearer study plan.
             </p>
@@ -74,8 +76,6 @@ export default async function Home() {
           </aside>
         </div>
       </section>
-
-      {publishedTests.length > 0 && <section className="border-b bg-slate-50"><div className="mx-auto max-w-6xl px-5 py-14 sm:px-8"><div className="flex flex-wrap items-end justify-between gap-4"><div><p className="text-xs font-bold uppercase tracking-[0.14em] text-teal-700">Available now</p><h2 className="mt-2 text-3xl font-black tracking-tight">Start with a free test</h2></div><Link href="/mock-tests" className="text-sm font-bold text-teal-700 hover:text-teal-800">View all mock tests →</Link></div><div className="mt-7 grid gap-4 lg:grid-cols-3">{publishedTests.map((test) => <article key={test.id} className="flex flex-col rounded-2xl border bg-white p-6 shadow-sm"><div className="flex items-center justify-between gap-3"><span className="rounded-full bg-emerald-100 px-3 py-1 text-xs font-bold text-emerald-800">Free</span><span className="text-xs font-bold text-slate-500">{test.test_scope === "paper" ? "Full-length" : "Subject test"}</span></div><h3 className="mt-5 text-lg font-black">{test.title}</h3><p className="mt-2 flex-1 text-sm leading-6 text-slate-600">{test.description ?? "Focused practice designed for serious exam preparation."}</p><div className="mt-6 flex items-center justify-between border-t pt-4"><span className="text-sm font-semibold text-slate-500">{test.duration_minutes} minutes</span><Link href={`/mock-tests/${test.id}`} className="text-sm font-bold text-teal-700">Start test →</Link></div></article>)}</div></div></section>}
 
       <section className="mx-auto max-w-6xl px-5 py-16 sm:px-8 sm:py-24">
         <div className="max-w-2xl"><p className="text-xs font-bold uppercase tracking-[0.14em] text-teal-700">Purposeful practice</p><h2 className="mt-3 text-3xl font-black tracking-tight sm:text-4xl">Everything you need to improve—without the distractions.</h2><p className="mt-4 leading-7 text-slate-600">Varadhi keeps preparation focused on practising, reviewing, and deciding what to study next.</p></div>
