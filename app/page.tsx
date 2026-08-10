@@ -1,5 +1,9 @@
+import type { Metadata } from "next";
 import Link from "next/link";
+import { JsonLd } from "@/components/seo/JsonLd";
 import { PublicHeader } from "@/components/site/PublicHeader";
+import { buildPaperDisplayMap, type OrderedPaper } from "@/lib/papers";
+import { absoluteUrl, SITE_DESCRIPTION } from "@/lib/site";
 import { createClient } from "@/lib/supabase/server";
 
 type PublishedTest = {
@@ -17,6 +21,23 @@ const benefits = [
   { number: "03", title: "Learn from every attempt", description: "Review answers, explanations, scores, and Subject accuracy after completing a test." },
 ];
 
+export const metadata: Metadata = {
+  title: "Free TGPSC Mock Tests in English & Telugu | Varadhi",
+  description: SITE_DESCRIPTION,
+  alternates: { canonical: "/" },
+  openGraph: {
+    title: "Free TGPSC Mock Tests in English & Telugu | Varadhi",
+    description: SITE_DESCRIPTION,
+    url: "/",
+    type: "website",
+  },
+  twitter: {
+    card: "summary",
+    title: "Free TGPSC Mock Tests in English & Telugu | Varadhi",
+    description: SITE_DESCRIPTION,
+  },
+};
+
 export default async function Home() {
   const supabase = await createClient();
   const [testsResult, papersResult] = await Promise.all([
@@ -27,18 +48,31 @@ export default async function Home() {
       .eq("access_type", "free")
       .order("display_order")
       .limit(3),
-    supabase.from("papers").select("id, name").eq("is_active", true),
+    supabase
+      .from("papers")
+      .select("id, exam_group_id, specialization_id, name, display_order")
+      .eq("is_active", true),
   ]);
   const publishedTests = (testsResult.data ?? []) as PublishedTest[];
-  const paperNameById = new Map(
-    (papersResult.data ?? []).map((paper) => [paper.id, paper.name]),
+  const paperDisplayById = buildPaperDisplayMap(
+    (papersResult.data ?? []) as OrderedPaper[],
   );
+  const websiteJsonLd = {
+    "@context": "https://schema.org",
+    "@type": "WebSite",
+    name: "Varadhi",
+    alternateName: "Varadhi Exam Practice",
+    url: absoluteUrl("/"),
+    description: SITE_DESCRIPTION,
+    inLanguage: ["en-IN", "te-IN"],
+  };
 
   return (
     <main className="min-h-screen bg-white text-slate-950">
+      <JsonLd data={websiteJsonLd} />
       <PublicHeader />
 
-      {publishedTests.length > 0 && <section className="border-b bg-slate-50"><div className="mx-auto max-w-6xl px-5 py-14 sm:px-8"><div className="flex flex-wrap items-end justify-between gap-4"><div><p className="text-xs font-bold uppercase tracking-[0.14em] text-teal-700">Available mock tests</p><h1 className="mt-2 text-3xl font-black tracking-tight">Choose a test and start practising</h1><p className="mt-3 max-w-2xl text-sm leading-6 text-slate-600">See the test, duration, and syllabus focus first. Open any test to review its full details before starting.</p></div><Link href="/mock-tests" className="text-sm font-bold text-teal-700 hover:text-teal-800">View all mock tests →</Link></div><div className="mt-7 grid gap-4 lg:grid-cols-3">{publishedTests.map((test) => <article key={test.id} className="flex flex-col rounded-2xl border bg-white p-6 shadow-sm"><div className="flex items-center justify-between gap-3"><span className="rounded-full bg-emerald-100 px-3 py-1 text-xs font-bold text-emerald-800">Free</span><span className="text-xs font-bold text-slate-500">{test.test_scope === "paper" ? "Full-length" : "Subject test"}</span></div><p className="mt-5 flex items-start gap-2 text-xs font-bold uppercase tracking-[0.1em] text-teal-700"><span className="grid h-6 w-6 shrink-0 place-items-center rounded-lg bg-teal-50 text-[10px] font-black">P</span><span className="min-w-0 pt-1 leading-5">{paperNameById.get(test.paper_id) ?? "Paper"}</span></p><h2 className="mt-3 text-lg font-black">{test.title}</h2><p className="mt-2 flex-1 text-sm leading-6 text-slate-600">{test.description ?? "Focused practice designed for serious exam preparation."}</p><div className="mt-6 flex items-center justify-between border-t pt-4"><span className="text-sm font-semibold text-slate-500">{test.duration_minutes} minutes</span><Link href={`/mock-tests/${test.id}`} className="text-sm font-bold text-teal-700">View test →</Link></div></article>)}</div></div></section>}
+      {publishedTests.length > 0 && <section className="border-b bg-slate-50"><div className="mx-auto max-w-6xl px-5 py-14 sm:px-8"><div className="flex flex-wrap items-end justify-between gap-4"><div><p className="text-xs font-bold uppercase tracking-[0.14em] text-teal-700">Available mock tests</p><h1 className="mt-2 text-3xl font-black tracking-tight">Choose a TGPSC mock test and start practising</h1><p className="mt-3 max-w-2xl text-sm leading-6 text-slate-600">See the exam, Paper number, duration, and syllabus focus first. Practise in English or Telugu and review the full details before starting.</p></div><Link href="/mock-tests" className="text-sm font-bold text-teal-700 hover:text-teal-800">View all mock tests →</Link></div><div className="mt-7 grid gap-4 lg:grid-cols-3">{publishedTests.map((test) => { const paperDisplay = paperDisplayById.get(test.paper_id); return <article key={test.id} className="flex flex-col rounded-2xl border bg-white p-6 shadow-sm"><div className="flex items-center justify-between gap-3"><span className="rounded-full bg-emerald-100 px-3 py-1 text-xs font-bold text-emerald-800">Free</span><span className="text-xs font-bold text-slate-500">{test.test_scope === "paper" ? "Full-length" : "Subject test"}</span></div><p className="mt-5 flex items-start gap-2 text-xs font-bold uppercase tracking-[0.1em] text-teal-700"><span className="grid h-6 min-w-6 shrink-0 place-items-center rounded-lg bg-teal-50 px-1 text-[10px] font-black">P{paperDisplay?.number ?? ""}</span><span className="min-w-0 pt-1 leading-5">{paperDisplay?.label ?? "Paper"}</span></p><h2 className="mt-3 text-lg font-black">{test.title}</h2><p className="mt-2 flex-1 text-sm leading-6 text-slate-600">{test.description ?? "Focused practice designed for serious exam preparation."}</p><div className="mt-6 flex items-center justify-between border-t pt-4"><span className="text-sm font-semibold text-slate-500">{test.duration_minutes} minutes</span><Link href={`/mock-tests/${test.id}`} className="text-sm font-bold text-teal-700">View test →</Link></div></article>; })}</div></div></section>}
 
       <section className="relative overflow-hidden bg-slate-950 text-white">
         <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-teal-300/60 to-transparent" />

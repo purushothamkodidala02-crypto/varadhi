@@ -1,6 +1,12 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import { PublicHeader } from "@/components/site/PublicHeader";
 import { LoginForm } from "./LoginForm";
+
+export const metadata: Metadata = {
+  title: "Student Login",
+  robots: { index: false, follow: true },
+};
 
 export default async function LoginPage({
   searchParams,

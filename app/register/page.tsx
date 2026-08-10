@@ -1,5 +1,11 @@
+import type { Metadata } from "next";
 import { PublicHeader } from "@/components/site/PublicHeader";
 import { RegisterForm } from "./RegisterForm";
+
+export const metadata: Metadata = {
+  title: "Create a Free Account",
+  robots: { index: false, follow: true },
+};
 
 export default function RegisterPage() {
   return (

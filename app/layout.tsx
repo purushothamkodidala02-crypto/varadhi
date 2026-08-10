@@ -1,9 +1,41 @@
 import type { Metadata } from "next";
+import { SITE_DESCRIPTION, SITE_NAME, SITE_URL } from "@/lib/site";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "Varadhi - TGPSC Mock Tests",
-  description: "Online mock tests for TGPSC and competitive examinations.",
+  metadataBase: new URL(SITE_URL),
+  title: {
+    default: "Varadhi: Free TGPSC Mock Tests",
+    template: "%s | Varadhi",
+  },
+  description: SITE_DESCRIPTION,
+  applicationName: SITE_NAME,
+  category: "education",
+  openGraph: {
+    type: "website",
+    locale: "en_IN",
+    alternateLocale: ["te_IN"],
+    siteName: SITE_NAME,
+    title: "Varadhi: Free TGPSC Mock Tests",
+    description: SITE_DESCRIPTION,
+    url: "/",
+  },
+  twitter: {
+    card: "summary",
+    title: "Varadhi: Free TGPSC Mock Tests",
+    description: SITE_DESCRIPTION,
+  },
+  robots: {
+    index: true,
+    follow: true,
+    googleBot: {
+      index: true,
+      follow: true,
+      "max-image-preview": "large",
+      "max-snippet": -1,
+      "max-video-preview": -1,
+    },
+  },
 };
 
 export default function RootLayout({

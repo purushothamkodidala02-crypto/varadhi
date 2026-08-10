@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { PublicHeader } from "@/components/site/PublicHeader";
+import { buildPaperDisplayMap, type OrderedPaper } from "@/lib/papers";
 import { createClient } from "@/lib/supabase/server";
 
 type Attempt = {
@@ -16,6 +17,7 @@ type Attempt = {
 
 type AvailableMockTest = {
   id: string;
+  paper_id: string;
   title: string;
   duration_minutes: number;
 };
@@ -38,6 +40,7 @@ export default async function Dashboard() {
     subjectAnalyticsResult,
     availableTestsResult,
     allTestsResult,
+    papersResult,
   ] = await Promise.all([
     supabase
       .from("test_attempts")
@@ -48,16 +51,23 @@ export default async function Dashboard() {
     supabase.rpc("get_student_subject_analytics"),
     supabase
       .from("mock_tests")
-      .select("id, title, duration_minutes")
+      .select("id, paper_id, title, duration_minutes")
       .eq("status", "published")
       .eq("access_type", "free")
       .order("display_order", { ascending: true }),
     supabase.from("mock_tests").select("id, title"),
+    supabase
+      .from("papers")
+      .select("id, exam_group_id, specialization_id, name, display_order")
+      .eq("is_active", true),
   ]);
 
   const attempts = (attemptsResult.data ?? []) as Attempt[];
   const subjectAnalytics = (subjectAnalyticsResult.data ?? []) as SubjectAnalytics[];
   const availableTests = (availableTestsResult.data ?? []) as AvailableMockTest[];
+  const paperDisplayById = buildPaperDisplayMap(
+    (papersResult.data ?? []) as OrderedPaper[],
+  );
   const testTitles = new Map(
     (allTestsResult.data ?? []).map((test) => [test.id, test.title]),
   );
@@ -174,6 +184,9 @@ export default async function Dashboard() {
                   <h3 className="mt-5 text-lg font-black leading-7 text-slate-950">
                     {test.title}
                   </h3>
+                  <p className="mt-2 text-xs font-bold uppercase tracking-wide text-teal-700">
+                    {paperDisplayById.get(test.paper_id)?.label ?? "Paper"}
+                  </p>
                   <div className="mt-6 flex items-center justify-between border-t border-slate-100 pt-4">
                     <span className="text-sm font-semibold text-slate-500">
                       {test.duration_minutes} minutes

@@ -1,9 +1,71 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { JsonLd } from "@/components/seo/JsonLd";
 import { PublicHeader } from "@/components/site/PublicHeader";
+import { buildPaperDisplayMap, type OrderedPaper } from "@/lib/papers";
+import { absoluteUrl } from "@/lib/site";
+import { createPublicClient } from "@/lib/supabase/public";
 import { createClient } from "@/lib/supabase/server";
 
-export default async function MockTestDetailsPage({ params }: { params: Promise<{ id: string }> }) {
+type MockTestDetailsProps = { params: Promise<{ id: string }> };
+
+export async function generateMetadata({ params }: MockTestDetailsProps): Promise<Metadata> {
+  const { id } = await params;
+  const supabase = createPublicClient();
+  const { data: test } = await supabase
+    .from("mock_tests")
+    .select("id, paper_id, title, duration_minutes")
+    .eq("id", id)
+    .eq("status", "published")
+    .eq("access_type", "free")
+    .maybeSingle();
+
+  if (!test) {
+    return {
+      title: "Mock Test Not Found",
+      robots: { index: false, follow: false },
+    };
+  }
+
+  const { data: paper } = await supabase
+    .from("papers")
+    .select("id, exam_group_id, specialization_id, name, display_order")
+    .eq("id", test.paper_id)
+    .maybeSingle();
+  const { data: siblingPapers } = paper
+    ? await supabase
+        .from("papers")
+        .select("id, exam_group_id, specialization_id, name, display_order")
+        .eq("exam_group_id", paper.exam_group_id)
+        .eq("is_active", true)
+    : { data: [] };
+  const paperDisplay = paper
+    ? buildPaperDisplayMap((siblingPapers ?? []) as OrderedPaper[]).get(paper.id)
+    : undefined;
+  const paperLabel = paperDisplay?.shortLabel ?? "TGPSC";
+  const title = `${test.title} ${paperLabel} Mock Test`;
+  const description = `Take the free ${test.title} ${paperLabel} mock test${paper ? ` covering ${paper.name}` : ""}. ${test.duration_minutes}-minute timed TGPSC practice on Varadhi.`;
+
+  return {
+    title,
+    description,
+    alternates: { canonical: `/mock-tests/${id}` },
+    openGraph: {
+      title,
+      description,
+      url: `/mock-tests/${id}`,
+      type: "website",
+    },
+    twitter: {
+      card: "summary",
+      title,
+      description,
+    },
+  };
+}
+
+export default async function MockTestDetailsPage({ params }: MockTestDetailsProps) {
   const { id } = await params;
   const supabase = await createClient();
   const [testResult, assignmentsResult, authResult] = await Promise.all([
@@ -15,15 +77,19 @@ export default async function MockTestDetailsPage({ params }: { params: Promise<
   if (!test) notFound();
 
   const [paperResult, subjectResult] = await Promise.all([
-    supabase.from("papers").select("id, exam_group_id, specialization_id, name").eq("id", test.paper_id).maybeSingle(),
+    supabase.from("papers").select("id, exam_group_id, specialization_id, name, display_order").eq("id", test.paper_id).maybeSingle(),
     test.subject_id ? supabase.from("subjects").select("id, name, content_language_mode").eq("id", test.subject_id).maybeSingle() : Promise.resolve({ data: null }),
   ]);
   const paper = paperResult.data;
-  const [examResult, specializationResult] = await Promise.all([
+  const [examResult, specializationResult, siblingPapersResult] = await Promise.all([
     paper ? supabase.from("exam_groups").select("id, exam_id, name").eq("id", paper.exam_group_id).maybeSingle() : Promise.resolve({ data: null }),
     paper?.specialization_id ? supabase.from("exam_specializations").select("id, name").eq("id", paper.specialization_id).maybeSingle() : Promise.resolve({ data: null }),
+    paper ? supabase.from("papers").select("id, exam_group_id, specialization_id, name, display_order").eq("exam_group_id", paper.exam_group_id).eq("is_active", true) : Promise.resolve({ data: [] }),
   ]);
   const exam = examResult.data;
+  const paperDisplay = paper
+    ? buildPaperDisplayMap((siblingPapersResult.data ?? []) as OrderedPaper[]).get(paper.id)
+    : undefined;
   const categoryResult = exam ? await supabase.from("exams").select("id, name").eq("id", exam.exam_id).maybeSingle() : { data: null };
   const assignments = assignmentsResult.data ?? [];
   const questionCount = assignments.length;
@@ -33,9 +99,47 @@ export default async function MockTestDetailsPage({ params }: { params: Promise<
   const languageLabel = languageMode === "bilingual" ? "English + Telugu" : languageMode === "telugu" ? "Telugu" : "English";
   const isLoggedIn = Boolean(authResult.data.user);
   const canStart = questionCount > 0;
+  const resourceName = `${test.title} ${paperDisplay?.shortLabel ?? "TGPSC"} Mock Test`;
+  const resourceDescription =
+    test.description ??
+    `A free, timed ${resourceName} for focused competitive-exam preparation.`;
+  const jsonLd = [
+    {
+      "@context": "https://schema.org",
+      "@type": "Quiz",
+      name: resourceName,
+      description: resourceDescription,
+      url: absoluteUrl(`/mock-tests/${id}`),
+      isAccessibleForFree: true,
+      educationalUse: "Practice",
+      learningResourceType: "Mock test",
+      timeRequired: `PT${test.duration_minutes}M`,
+      inLanguage:
+        languageMode === "bilingual"
+          ? ["en-IN", "te-IN"]
+          : languageMode === "telugu"
+            ? "te-IN"
+            : "en-IN",
+      provider: {
+        "@type": "Organization",
+        name: "Varadhi",
+        url: absoluteUrl("/"),
+      },
+    },
+    {
+      "@context": "https://schema.org",
+      "@type": "BreadcrumbList",
+      itemListElement: [
+        { "@type": "ListItem", position: 1, name: "Home", item: absoluteUrl("/") },
+        { "@type": "ListItem", position: 2, name: "Mock tests", item: absoluteUrl("/mock-tests") },
+        { "@type": "ListItem", position: 3, name: resourceName, item: absoluteUrl(`/mock-tests/${id}`) },
+      ],
+    },
+  ];
 
   return (
     <main className="min-h-screen bg-slate-50">
+      <JsonLd data={jsonLd} />
       <PublicHeader />
       <div className="mx-auto max-w-6xl px-5 py-10 sm:px-8 sm:py-14">
         <Link href="/mock-tests" className="text-sm font-bold text-teal-700 hover:text-teal-800">← Back to mock tests</Link>
@@ -45,7 +149,7 @@ export default async function MockTestDetailsPage({ params }: { params: Promise<
             <p className="mt-6 text-xs font-bold uppercase tracking-[0.14em] text-teal-700">{categoryResult.data?.name ?? "TGPSC"} · {exam?.name ?? "Exam"}</p>
             <h1 className="mt-3 text-4xl font-black leading-tight tracking-tight text-slate-950 sm:text-5xl">{test.title}</h1>
             <p className="mt-5 max-w-3xl text-lg leading-8 text-slate-600">{test.description ?? "A focused Varadhi mock test designed to strengthen your exam preparation."}</p>
-            <div className="mt-7 flex flex-wrap gap-2 text-sm font-semibold text-slate-600">{specializationResult.data && <span className="rounded-lg border bg-white px-3 py-2">{specializationResult.data.name}</span>}<span className="rounded-lg border bg-white px-3 py-2">{paper?.name ?? "Paper"}</span>{subjectResult.data && <span className="rounded-lg border bg-white px-3 py-2">{subjectResult.data.name}</span>}</div>
+            <div className="mt-7 flex flex-wrap gap-2 text-sm font-semibold text-slate-600">{specializationResult.data && <span className="rounded-lg border bg-white px-3 py-2">{specializationResult.data.name}</span>}<span className="rounded-lg border bg-white px-3 py-2">{paperDisplay?.label ?? paper?.name ?? "Paper"}</span>{subjectResult.data && <span className="rounded-lg border bg-white px-3 py-2">{subjectResult.data.name}</span>}</div>
 
             <section className="mt-10 rounded-3xl border bg-white p-6 shadow-sm sm:p-8"><h2 className="text-2xl font-black">Before you begin</h2><p className="mt-2 text-sm leading-6 text-slate-600">Review the test rules now. The timer starts only after you select the start button.</p><div className="mt-7 grid gap-4 sm:grid-cols-2">{[["Questions", String(questionCount)], ["Duration", `${test.duration_minutes} minutes`], ["Total marks", totalMarks.toFixed(2).replace(/\.00$/, "")], ["Negative marking", negativeMarks > 0 ? `Up to ${negativeMarks} per wrong answer` : "No negative marking"], ["Language", languageLabel], ["Progress", "Saved during the attempt"]].map(([label, value]) => <div key={label} className="rounded-2xl bg-slate-50 p-4"><p className="text-xs font-bold uppercase tracking-wide text-slate-500">{label}</p><p className="mt-2 font-black text-slate-950">{value}</p></div>)}</div></section>
 
