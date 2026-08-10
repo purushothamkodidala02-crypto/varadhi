@@ -24,5 +24,6 @@ export async function deleteGroup(groupId: string): Promise<DeleteGroupResult> {
   if (deleteError) return { success: false, message: deleteError.message };
 
   revalidatePath("/admin/groups");
+  revalidatePath("/admin/exams");
   return { success: true, message: `“${group.name}” was deleted successfully.` };
 }

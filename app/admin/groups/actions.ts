@@ -218,6 +218,7 @@ export async function createGroup(
   }
 
   revalidatePath("/admin/groups");
+  revalidatePath("/admin/exams");
   revalidatePath(`/admin/groups/${group.id}/edit`);
   revalidatePath("/admin/papers");
   revalidatePath("/admin/subjects");

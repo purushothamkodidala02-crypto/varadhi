@@ -36,7 +36,7 @@ export async function createSpecialization(_previous: SpecializationActionState,
   const { error } = await result.supabase.from("exam_specializations").insert(parsed.value);
   if (error?.code === "23505") return { success: false, message: "This Specialisation already exists for the selected Exam." };
   if (error) return { success: false, message: error.message };
-  revalidatePath("/admin/groups"); revalidatePath(`/admin/groups/${parsed.value.exam_group_id}/edit`); revalidatePath("/admin/papers"); revalidatePath("/mock-tests");
+  revalidatePath("/admin/groups"); revalidatePath("/admin/exams"); revalidatePath(`/admin/groups/${parsed.value.exam_group_id}/edit`); revalidatePath("/admin/papers"); revalidatePath("/mock-tests");
   return { success: true, message: "Specialisation created successfully." };
 }
 
@@ -50,7 +50,7 @@ export async function updateSpecialization(_previous: SpecializationActionState,
   if ((existing ?? []).some((item) => item.name.trim().toLowerCase() === parsed.value!.name.toLowerCase())) return { success: false, message: `"${parsed.value.name}" already exists for this Exam.` };
   const { error } = await result.supabase.from("exam_specializations").update(parsed.value).eq("id", specializationId);
   if (error) return { success: false, message: error.message };
-  revalidatePath("/admin/groups"); revalidatePath(`/admin/groups/${parsed.value.exam_group_id}/edit`); revalidatePath("/admin/papers"); revalidatePath("/mock-tests");
+  revalidatePath("/admin/groups"); revalidatePath("/admin/exams"); revalidatePath(`/admin/groups/${parsed.value.exam_group_id}/edit`); revalidatePath("/admin/papers"); revalidatePath("/mock-tests");
   return { success: true, message: "Specialisation updated successfully." };
 }
 
@@ -68,6 +68,6 @@ export async function deleteSpecialization(specializationId: string): Promise<Sp
   if ((count ?? 0) > 0) return { success: false, message: "This Specialisation has Papers. Deactivate it instead." };
   const { error } = await result.supabase.from("exam_specializations").delete().eq("id", specializationId);
   if (error) return { success: false, message: error.message };
-  revalidatePath("/admin/groups"); revalidatePath(`/admin/groups/${specialization.exam_group_id}/edit`); revalidatePath("/admin/papers"); revalidatePath("/mock-tests");
+  revalidatePath("/admin/groups"); revalidatePath("/admin/exams"); revalidatePath(`/admin/groups/${specialization.exam_group_id}/edit`); revalidatePath("/admin/papers"); revalidatePath("/mock-tests");
   return { success: true, message: "Specialisation deleted." };
 }

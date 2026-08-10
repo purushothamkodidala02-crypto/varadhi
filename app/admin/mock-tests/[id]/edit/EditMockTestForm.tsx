@@ -2,7 +2,7 @@
 
 import { useActionState, useMemo, useState } from "react";
 import { SearchableSelect } from "@/components/admin/SearchableSelect";
-import type { MockTest, MockTestAccessType, MockTestStatus } from "@/types/mock-test";
+import type { MockTest, MockTestAccessType } from "@/types/mock-test";
 import { updateMockTest, type UpdateMockTestState } from "./actions";
 
 type Paper = { id: string; label: string; duration: number | null };
@@ -26,7 +26,6 @@ export function EditMockTestForm({
   const [paperId, setPaperId] = useState(mockTest.paper_id);
   const [subjectId, setSubjectId] = useState(mockTest.subject_id ?? "");
   const [scope, setScope] = useState(mockTest.test_scope);
-  const [status, setStatus] = useState<MockTestStatus>(mockTest.status);
   const [accessType, setAccessType] = useState<MockTestAccessType>(
     mockTest.access_type,
   );
@@ -142,20 +141,7 @@ export function EditMockTestForm({
             className="mt-2 w-full rounded-xl border px-4 py-3 font-normal"
           />
         </label>
-        <label className="block text-sm font-bold">
-          Status
-          <SearchableSelect
-            name="status"
-            value={status}
-            onChange={(value) => setStatus(value as MockTestStatus)}
-            options={[
-              { value: "draft", label: "Draft" },
-              { value: "published", label: "Published" },
-              { value: "archived", label: "Archived" },
-            ]}
-            placeholder="Search a status"
-          />
-        </label>
+        <input type="hidden" name="status" value={mockTest.status} />
         <label className="block text-sm font-bold">
           Student access
           <SearchableSelect

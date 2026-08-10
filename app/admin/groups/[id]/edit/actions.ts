@@ -154,6 +154,7 @@ export async function updateGroup(
   }
 
   revalidatePath("/admin/groups");
+  revalidatePath("/admin/exams");
   revalidatePath("/admin/papers");
   revalidatePath("/admin/subjects");
   revalidatePath("/admin/mock-tests");

@@ -1,40 +1,76 @@
 import Link from "next/link";
 import { PublicHeader } from "@/components/site/PublicHeader";
 import { createClient } from "@/lib/supabase/server";
+import { MockTestFilters } from "./MockTestFilters";
 
-type Params = { category?: string; exam?: string; specialization?: string; paper?: string; subject?: string };
+type Filters = { q?: string; category?: string; exam?: string; paper?: string; subject?: string; type?: string };
 
-export default async function MockTestsPage({ searchParams }: { searchParams: Promise<Params> }) {
-  const selected = await searchParams; const supabase = await createClient();
-  const [categoriesResult, groupsResult, specializationsResult, papersResult, subjectsResult, testsResult] = await Promise.all([
-    supabase.from("exams").select("id, name, description").eq("is_active", true).order("display_order"),
-    supabase.from("exam_groups").select("id, exam_id, name, description").eq("is_active", true).order("display_order"),
-    supabase.from("exam_specializations").select("id, exam_group_id, name, description").eq("is_active", true).order("display_order"),
-    supabase.from("papers").select("id, exam_group_id, specialization_id, name, description, duration_minutes").eq("is_active", true).order("display_order"),
+export default async function MockTestsPage({ searchParams }: { searchParams: Promise<Filters> }) {
+  const filters = await searchParams;
+  const supabase = await createClient();
+  const [categoriesResult, examsResult, specializationsResult, papersResult, subjectsResult, testsResult, assignmentsResult] = await Promise.all([
+    supabase.from("exams").select("id, name").eq("is_active", true).order("display_order"),
+    supabase.from("exam_groups").select("id, exam_id, name").eq("is_active", true).order("display_order"),
+    supabase.from("exam_specializations").select("id, name").eq("is_active", true).order("display_order"),
+    supabase.from("papers").select("id, exam_group_id, specialization_id, name").eq("is_active", true).order("display_order"),
     supabase.from("subjects").select("id, paper_id, name").eq("is_active", true).order("display_order"),
-    supabase.from("mock_tests").select("id, paper_id, subject_id, test_scope, title, description, duration_minutes, access_type, price_inr").eq("status", "published").order("display_order"),
+    supabase.from("mock_tests").select("id, paper_id, subject_id, test_scope, title, description, duration_minutes").eq("status", "published").eq("access_type", "free").order("display_order"),
+    supabase.from("mock_test_questions").select("mock_test_id, marks"),
   ]);
-  const categories = categoriesResult.data ?? []; const groups = groupsResult.data ?? []; const specializations = specializationsResult.data ?? []; const papers = papersResult.data ?? []; const subjects = subjectsResult.data ?? []; const tests = testsResult.data ?? [];
-  const category = categories.find((item) => item.id === selected.category);
-  const exam = groups.find((item) => item.id === selected.exam && (!category || item.exam_id === category.id));
-  const specialization = specializations.find((item) => item.id === selected.specialization && (!exam || item.exam_group_id === exam.id));
-  const paper = papers.find((item) => item.id === selected.paper && (!exam || item.exam_group_id === exam.id) && (!specialization || item.specialization_id === specialization.id));
-  const subject = subjects.find((item) => item.id === selected.subject && (!paper || item.paper_id === paper.id));
-  const href = (values: Params) => `/mock-tests?${new URLSearchParams(Object.entries(values).filter(([, value]) => value).map(([key, value]) => [key, value as string])).toString()}`;
-  const crumbs = <div className="mb-7 flex flex-wrap gap-2 text-sm font-semibold text-slate-500"><Link href="/mock-tests" className="hover:text-teal-700">Mock tests</Link>{category && <><span>→</span><Link href={href({ category: category.id })} className="hover:text-teal-700">{category.name}</Link></>}{exam && <><span>→</span><Link href={href({ category: category?.id, exam: exam.id })} className="hover:text-teal-700">{exam.name}</Link></>}{specialization && <><span>→</span><Link href={href({ category: category?.id, exam: exam?.id, specialization: specialization.id })} className="hover:text-teal-700">{specialization.name}</Link></>}{paper && <><span>→</span><Link href={href({ category: category?.id, exam: exam?.id, specialization: specialization?.id, paper: paper.id })} className="hover:text-teal-700">{paper.name}</Link></>}{subject && <><span>→</span><span className="text-slate-900">{subject.name}</span></>}</div>;
-  const Card = ({ test }: { test: (typeof tests)[number] }) => <article className="rounded-2xl border bg-white p-6 shadow-sm"><div className="flex items-start justify-between gap-4"><h3 className="text-xl font-bold">{test.title}</h3><span className={`rounded-full px-3 py-1 text-xs font-bold ${test.access_type === "paid" ? "bg-amber-100 text-amber-800" : "bg-emerald-100 text-emerald-800"}`}>{test.access_type === "paid" ? `₹${test.price_inr}` : "Free"}</span></div><p className="mt-3 min-h-10 text-sm leading-6 text-slate-600">{test.description ?? "A Varadhi practice mock test."}</p><div className="mt-5 flex items-center justify-between border-t pt-4"><span className="text-sm font-semibold text-slate-600">{test.duration_minutes} minutes</span><Link href={`/mock-tests/${test.id}`} className="rounded-xl bg-slate-950 px-4 py-2.5 text-sm font-bold text-white">{test.access_type === "paid" ? "View access" : "Start test"}</Link></div></article>;
 
-  if (!category) return <main className="min-h-screen bg-slate-50"><PublicHeader /><div className="mx-auto max-w-6xl px-5 py-12 sm:px-8 sm:py-16"><p className="text-sm font-bold uppercase tracking-[0.15em] text-teal-700">Practice library</p><h1 className="mt-3 text-4xl font-black">Choose your exam category</h1><p className="mt-4 text-slate-600">Start with TGPSC, TET, or any category you add in the admin workspace.</p><div className="mt-10 grid gap-5 md:grid-cols-2">{categories.map((item) => <Link key={item.id} href={href({ category: item.id })} className="rounded-3xl border bg-white p-7 shadow-sm transition hover:-translate-y-0.5 hover:border-teal-300"><p className="text-xs font-bold uppercase tracking-wide text-teal-700">Exam category</p><h2 className="mt-3 text-2xl font-black">{item.name}</h2><p className="mt-3 text-sm leading-6 text-slate-600">{item.description ?? "Browse the available Exams and their Papers."}</p><span className="mt-6 inline-block text-sm font-bold text-teal-700">Choose {item.name} →</span></Link>)}</div></div></main>;
+  const categories = categoriesResult.data ?? [];
+  const exams = examsResult.data ?? [];
+  const specializations = specializationsResult.data ?? [];
+  const papers = papersResult.data ?? [];
+  const subjects = subjectsResult.data ?? [];
+  const categoryById = new Map(categories.map((item) => [item.id, item]));
+  const examById = new Map(exams.map((item) => [item.id, item]));
+  const specializationById = new Map(specializations.map((item) => [item.id, item]));
+  const paperById = new Map(papers.map((item) => [item.id, item]));
+  const subjectById = new Map(subjects.map((item) => [item.id, item]));
+  const statsByTest = new Map<string, { questions: number; marks: number }>();
+  for (const assignment of assignmentsResult.data ?? []) {
+    const current = statsByTest.get(assignment.mock_test_id) ?? { questions: 0, marks: 0 };
+    current.questions += 1;
+    current.marks += Number(assignment.marks);
+    statsByTest.set(assignment.mock_test_id, current);
+  }
 
-  if (!exam) { const entries = groups.filter((item) => item.exam_id === category.id); return <main className="min-h-screen bg-slate-50"><PublicHeader /><div className="mx-auto max-w-6xl px-5 py-12 sm:px-8 sm:py-16">{crumbs}<h1 className="text-4xl font-black">{category.name} Exams</h1><p className="mt-4 text-slate-600">Choose the exam you are preparing for.</p><div className="mt-10 grid gap-5 md:grid-cols-2">{entries.map((item) => <Link key={item.id} href={href({ category: category.id, exam: item.id })} className="rounded-3xl border bg-white p-7 shadow-sm transition hover:-translate-y-0.5 hover:border-teal-300"><p className="text-xs font-bold uppercase tracking-wide text-teal-700">Exam</p><h2 className="mt-3 text-2xl font-black">{item.name}</h2><p className="mt-3 text-sm text-slate-600">{item.description ?? "See Papers and published mock tests."}</p><span className="mt-6 inline-block text-sm font-bold text-teal-700">Continue →</span></Link>)}</div></div></main>; }
+  const query = filters.q?.trim().toLowerCase() ?? "";
+  const tests = (testsResult.data ?? []).map((test) => {
+    const paper = paperById.get(test.paper_id);
+    const exam = paper ? examById.get(paper.exam_group_id) : undefined;
+    const category = exam ? categoryById.get(exam.exam_id) : undefined;
+    const specialization = paper?.specialization_id ? specializationById.get(paper.specialization_id) : undefined;
+    const subject = test.subject_id ? subjectById.get(test.subject_id) : undefined;
+    return { ...test, paper, exam, category, specialization, subject, stats: statsByTest.get(test.id) ?? { questions: 0, marks: 0 } };
+  }).filter((test) =>
+    (!filters.category || test.category?.id === filters.category) &&
+    (!filters.exam || test.exam?.id === filters.exam) &&
+    (!filters.paper || test.paper?.id === filters.paper) &&
+    (!filters.subject || test.subject?.id === filters.subject) &&
+    (!filters.type || filters.type === "all" || test.test_scope === filters.type) &&
+    (!query || `${test.title} ${test.description ?? ""} ${test.exam?.name ?? ""} ${test.paper?.name ?? ""} ${test.subject?.name ?? ""}`.toLowerCase().includes(query)),
+  );
 
-  const examSpecializations = specializations.filter((item) => item.exam_group_id === exam.id);
-  if (!specialization && examSpecializations.length > 0) return <main className="min-h-screen bg-slate-50"><PublicHeader /><div className="mx-auto max-w-6xl px-5 py-12 sm:px-8 sm:py-16">{crumbs}<p className="text-sm font-bold uppercase tracking-[0.15em] text-teal-700">Choose your branch</p><h1 className="mt-3 text-4xl font-black">{exam.name} Specialisations</h1><p className="mt-4 text-slate-600">Choose the engineering branch that matches your recruitment notification.</p><div className="mt-10 grid gap-5 md:grid-cols-2">{examSpecializations.map((item) => <Link key={item.id} href={href({ category: category.id, exam: exam.id, specialization: item.id })} className="rounded-3xl border bg-white p-7 shadow-sm transition hover:-translate-y-0.5 hover:border-teal-300"><p className="text-xs font-bold uppercase tracking-wide text-teal-700">Specialisation</p><h2 className="mt-3 text-2xl font-black">{item.name}</h2><p className="mt-3 text-sm leading-6 text-slate-600">{item.description ?? `Papers and mock tests for ${exam.name} ${item.name}.`}</p><span className="mt-6 inline-block text-sm font-bold text-teal-700">View Papers →</span></Link>)}</div></div></main>;
+  return (
+    <main className="min-h-screen bg-slate-50">
+      <PublicHeader />
+      <section className="border-b bg-slate-950 text-white">
+        <div className="mx-auto max-w-6xl px-5 py-14 sm:px-8 sm:py-18">
+          <p className="text-xs font-bold uppercase tracking-[0.16em] text-teal-200">Practice library</p>
+          <h1 className="mt-4 max-w-3xl text-4xl font-black tracking-tight sm:text-5xl">Find the right mock test for today&apos;s preparation.</h1>
+          <p className="mt-5 max-w-2xl text-lg leading-8 text-slate-300">Browse every available free test in one place. Filter by Exam, Paper, Subject, or practice type.</p>
+        </div>
+      </section>
 
-  if (!paper) { const examPapers = papers.filter((item) => item.exam_group_id === exam.id && (specialization ? item.specialization_id === specialization.id : !item.specialization_id)); return <main className="min-h-screen bg-slate-50"><PublicHeader /><div className="mx-auto max-w-6xl px-5 py-12 sm:px-8 sm:py-16">{crumbs}<h1 className="text-4xl font-black">{specialization ? `${specialization.name} Papers` : `${exam.name} Papers`}</h1><p className="mt-4 text-slate-600">Each Paper is practised separately, matching the actual exam structure.</p><div className="mt-10 grid gap-5 md:grid-cols-2">{examPapers.map((item) => <Link key={item.id} href={href({ category: category.id, exam: exam.id, specialization: specialization?.id, paper: item.id })} className="rounded-3xl border bg-white p-7 shadow-sm transition hover:-translate-y-0.5 hover:border-teal-300"><p className="text-xs font-bold uppercase tracking-wide text-teal-700">Paper</p><h2 className="mt-3 text-2xl font-black">{item.name}</h2><p className="mt-3 text-sm text-slate-600">{item.description ?? "Full-length and subject-wise practice."}</p>{item.duration_minutes && <p className="mt-4 text-sm font-bold text-slate-500">{item.duration_minutes} minutes</p>}</Link>)}</div>{examPapers.length === 0 && <p className="mt-10 rounded-2xl border border-dashed bg-white p-8 text-slate-600">No Papers are available for this selection yet.</p>}</div></main>; }
+      <div className="mx-auto max-w-6xl px-5 py-10 sm:px-8 sm:py-14">
+        <MockTestFilters categories={categories.map((item) => ({ id: item.id, name: item.name }))} exams={exams.map((item) => ({ id: item.id, name: item.name, categoryId: item.exam_id }))} papers={papers.map((item) => ({ id: item.id, name: item.name, examId: item.exam_group_id }))} subjects={subjects.map((item) => ({ id: item.id, name: item.name, paperId: item.paper_id }))} initial={filters} />
 
-  const paperTests = tests.filter((test) => test.paper_id === paper.id && test.test_scope === "paper"); const subjectTests = tests.filter((test) => test.paper_id === paper.id && test.test_scope === "subject");
-  if (subject) { const relevant = subjectTests.filter((test) => test.subject_id === subject.id); return <main className="min-h-screen bg-slate-50"><PublicHeader /><div className="mx-auto max-w-6xl px-5 py-12 sm:px-8 sm:py-16">{crumbs}<h1 className="text-4xl font-black">{subject.name} Mock Tests</h1><div className="mt-10 grid gap-5 md:grid-cols-2">{relevant.length ? relevant.map((test) => <Card key={test.id} test={test} />) : <p className="rounded-2xl border border-dashed bg-white p-8 text-slate-600">No published {subject.name} tests yet.</p>}</div></div></main>; }
-  const activeSubjects = subjects.filter((item) => item.paper_id === paper.id && subjectTests.some((test) => test.subject_id === item.id));
-  return <main className="min-h-screen bg-slate-50"><PublicHeader /><div className="mx-auto max-w-6xl px-5 py-12 sm:px-8 sm:py-16">{crumbs}<h1 className="text-4xl font-black">{paper.name}</h1><p className="mt-4 text-slate-600">Choose a full-length Paper mock or practise a Subject separately.</p>{paperTests.length > 0 && <section className="mt-10"><h2 className="text-2xl font-black">Full-length Mock Tests</h2><div className="mt-5 grid gap-5 md:grid-cols-2">{paperTests.map((test) => <Card key={test.id} test={test} />)}</div></section>}{activeSubjects.length > 0 && <section className="mt-10"><h2 className="text-2xl font-black">Subject-wise Tests</h2><div className="mt-5 grid gap-4 md:grid-cols-3">{activeSubjects.map((item) => <Link key={item.id} href={href({ category: category.id, exam: exam.id, specialization: specialization?.id, paper: paper.id, subject: item.id })} className="rounded-2xl border bg-white p-5 font-bold transition hover:border-teal-300 hover:text-teal-700">{item.name}<span className="mt-2 block text-sm font-semibold text-slate-500">{subjectTests.filter((test) => test.subject_id === item.id).length} mock test(s)</span></Link>)}</div></section>}{paperTests.length === 0 && activeSubjects.length === 0 && <div className="mt-10 rounded-2xl border border-dashed bg-white p-10 text-center text-slate-600">No published tests for this Paper yet.</div>}</div></main>;
+        <div className="mt-9 flex flex-wrap items-end justify-between gap-3"><div><p className="text-xs font-bold uppercase tracking-[0.14em] text-teal-700">Available now</p><h2 className="mt-2 text-2xl font-black">{tests.length} mock test{tests.length === 1 ? "" : "s"}</h2></div><p className="text-sm text-slate-500">All displayed tests are free to attempt.</p></div>
+
+        {testsResult.error ? <p className="mt-6 rounded-2xl border border-red-200 bg-red-50 p-5 text-red-700">Unable to load mock tests right now.</p> : tests.length === 0 ? <section className="mt-6 rounded-3xl border border-dashed bg-white p-12 text-center"><h3 className="text-xl font-black">No mock tests match these filters</h3><p className="mt-2 text-sm text-slate-600">Clear one or more filters to see other available tests.</p><Link href="/mock-tests" className="mt-6 inline-flex rounded-xl bg-slate-950 px-5 py-3 text-sm font-bold text-white">View all tests</Link></section> : <div className="mt-6 grid gap-5 md:grid-cols-2 lg:grid-cols-3">{tests.map((test) => <article key={test.id} className="flex flex-col rounded-3xl border bg-white p-6 shadow-sm transition hover:-translate-y-0.5 hover:border-teal-200 hover:shadow-lg hover:shadow-slate-950/5"><div className="flex flex-wrap items-center justify-between gap-2"><span className="rounded-full bg-emerald-100 px-3 py-1 text-xs font-bold text-emerald-800">Free</span><span className="text-xs font-bold text-slate-500">{test.test_scope === "paper" ? "Full-length" : "Subject test"}</span></div><p className="mt-5 text-xs font-bold uppercase tracking-wide text-teal-700">{test.exam?.name ?? "TGPSC"}{test.specialization ? ` · ${test.specialization.name}` : ""}</p><h3 className="mt-2 text-xl font-black leading-7">{test.title}</h3><p className="mt-3 flex-1 text-sm leading-6 text-slate-600">{test.description ?? "Focused mock-test practice for serious preparation."}</p><div className="mt-6 grid grid-cols-3 gap-2 border-y py-4 text-center"><div><strong className="block text-sm text-slate-950">{test.stats.questions}</strong><span className="text-xs text-slate-500">Questions</span></div><div><strong className="block text-sm text-slate-950">{test.duration_minutes}</strong><span className="text-xs text-slate-500">Minutes</span></div><div><strong className="block text-sm text-slate-950">{test.stats.marks.toFixed(2).replace(/\.00$/, "")}</strong><span className="text-xs text-slate-500">Marks</span></div></div><p className="mt-4 truncate text-xs font-semibold text-slate-500">{test.paper?.name ?? "Paper"}{test.subject ? ` → ${test.subject.name}` : ""}</p><Link href={`/mock-tests/${test.id}`} className="mt-5 rounded-xl bg-slate-950 px-4 py-3 text-center text-sm font-bold text-white hover:bg-slate-800">View test details</Link></article>)}</div>}
+      </div>
+    </main>
+  );
 }

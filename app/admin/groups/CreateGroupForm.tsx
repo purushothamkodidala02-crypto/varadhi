@@ -8,12 +8,12 @@ import { SpecializationPapersInput } from "./SpecializationPapersInput";
 
 type CategoryOption = { id: string; name: string };
 type ExistingExam = { id: string; categoryId: string; name: string; slug: string };
-type CreateGroupFormProps = { categories: CategoryOption[]; existingExams: ExistingExam[]; onExamCategoryChange?: (examId: string) => void };
+type CreateGroupFormProps = { categories: CategoryOption[]; existingExams: ExistingExam[]; initialCategoryId?: string; onExamCategoryChange?: (examId: string) => void };
 const initialState: CreateGroupState = { success: false, message: "" };
 
-export function CreateGroupForm({ categories, existingExams, onExamCategoryChange }: CreateGroupFormProps) {
+export function CreateGroupForm({ categories, existingExams, initialCategoryId = "", onExamCategoryChange }: CreateGroupFormProps) {
   const [state, formAction, pending] = useActionState(createGroup, initialState);
-  const [examId, setExamId] = useState("");
+  const [examId, setExamId] = useState(initialCategoryId);
   const [name, setName] = useState("");
   const [showExistingNames, setShowExistingNames] = useState(false);
   const nameAreaRef = useRef<HTMLDivElement>(null);

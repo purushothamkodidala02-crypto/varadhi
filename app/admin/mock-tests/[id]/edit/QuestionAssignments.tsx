@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useActionState, useMemo, useState } from "react";
 import { SearchableSelect } from "@/components/admin/SearchableSelect";
+import { FormattedQuestionText } from "@/components/questions/FormattedQuestionText";
 import {
   assignQuestion,
   removeAssignedQuestion,
@@ -175,9 +176,10 @@ export function QuestionAssignments({
               />
             </label>
             {selectedQuestion && (
-              <p className="rounded-xl bg-teal-50 px-4 py-3 text-sm leading-6 text-teal-900 md:col-span-6">
-                <span className="font-black">Selected question:</span> {selectedQuestion.text}
-              </p>
+              <div className="rounded-xl bg-teal-50 px-4 py-3 text-sm leading-6 text-teal-900 md:col-span-6">
+                <span className="font-black">Selected question:</span>
+                <FormattedQuestionText text={selectedQuestion.text} className="mt-1" />
+              </div>
             )}
             <label className="block text-sm font-bold text-slate-800 md:col-span-2">
               Order
@@ -279,7 +281,7 @@ export function QuestionAssignments({
                     </span>
                   </td>
                   <td className="max-w-xl px-6 py-5 text-sm font-semibold leading-6 text-slate-900">
-                    {assignment.question_text}
+                    <FormattedQuestionText text={assignment.question_text} />
                   </td>
                   <td className="px-6 py-5 text-sm">
                     <span className={`rounded-full px-2.5 py-1 text-xs font-bold ${assignment.is_active && assignment.is_score_valid ? "bg-emerald-100 text-emerald-800" : "bg-red-100 text-red-800"}`}>

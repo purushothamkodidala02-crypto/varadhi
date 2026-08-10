@@ -8,6 +8,7 @@ type Answer = "A" | "B" | "C" | "D";
 export type SubmitAttemptResult = {
   success: boolean;
   message: string;
+  attemptId?: string;
   score?: number;
   totalMarks?: number;
   correctAnswers?: number;
@@ -85,6 +86,7 @@ export async function submitAttempt(
   return {
     success: true,
     message: "Attempt submitted successfully.",
+    attemptId: String(result.attempt_id),
     score: Number(result.score),
     totalMarks: Number(result.total_marks),
     correctAnswers: Number(result.correct_answers),

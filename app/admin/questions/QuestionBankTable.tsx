@@ -11,6 +11,7 @@ import {
   type LocationSpecialization,
   type LocationSubject,
 } from "@/components/admin/LocationFilters";
+import { FormattedQuestionText } from "@/components/questions/FormattedQuestionText";
 import type { QuestionLifecycle } from "@/types/question";
 import { DeleteQuestionButton } from "./DeleteQuestionButton";
 
@@ -44,7 +45,7 @@ function statusOf(question: QuestionBankRow) {
   const today = new Date().toISOString().slice(0, 10);
 
   if (!question.isActive) {
-    return { label: "Inactive", className: "bg-slate-200 text-slate-700" };
+    return { label: "Unavailable", className: "bg-slate-200 text-slate-700" };
   }
   if (question.expiresOn && question.expiresOn < today) {
     return { label: "Expired", className: "bg-rose-100 text-rose-800" };
@@ -60,7 +61,7 @@ function statusOf(question: QuestionBankRow) {
   return {
     label:
       question.contentLifecycle === "permanent"
-        ? "Permanent"
+        ? "Available"
         : question.contentLifecycle === "review"
           ? `Review ${question.reviewOn}`
           : `Expires ${question.expiresOn}`,
@@ -180,7 +181,7 @@ export function QuestionBankTable({
                       </td>
                     )}
                     <td className="max-w-xl px-5 py-5 font-semibold leading-6">
-                      {question.questionText}
+                      <FormattedQuestionText text={question.questionText} />
                     </td>
                     <td className="px-5 py-5">
                       <span

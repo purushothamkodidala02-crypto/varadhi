@@ -1,42 +1,144 @@
 import { createClient } from "@/lib/supabase/server";
-import type { Exam } from "@/types/exam";
-import { CreateExamForm } from "./CreateExamForm";
-import { ExistingExamCategoriesTable } from "./ExistingExamCategoriesTable";
+import { ExamStructureWorkspace } from "./ExamStructureWorkspace";
 
-export default async function AdminExamsPage() {
+export default async function AdminExamStructurePage() {
   const supabase = await createClient();
-  const { data, error } = await supabase
-    .from("exams")
-    .select("id, name, slug, description, is_active, display_order, created_at, updated_at")
-    .order("display_order", { ascending: true })
-    .order("created_at", { ascending: true });
-  const exams = (data ?? []) as Exam[];
+  const [
+    categoriesResult,
+    examsResult,
+    specializationsResult,
+    papersResult,
+    subjectsResult,
+  ] = await Promise.all([
+    supabase
+      .from("exams")
+      .select("id, name, slug, is_active, display_order")
+      .order("display_order")
+      .order("name"),
+    supabase
+      .from("exam_groups")
+      .select("id, exam_id, name, slug, is_active, display_order")
+      .order("display_order")
+      .order("name"),
+    supabase
+      .from("exam_specializations")
+      .select("id, exam_group_id, name, is_active, display_order")
+      .order("display_order")
+      .order("name"),
+    supabase
+      .from("papers")
+      .select("id, exam_group_id, specialization_id, name, is_active, display_order")
+      .order("display_order")
+      .order("name"),
+    supabase
+      .from("subjects")
+      .select("id, paper_id, name, is_active, display_order")
+      .order("display_order")
+      .order("name"),
+  ]);
+
+  const errors = [
+    categoriesResult.error,
+    examsResult.error,
+    specializationsResult.error,
+    papersResult.error,
+    subjectsResult.error,
+  ].filter(Boolean);
+  const categories = categoriesResult.data ?? [];
+  const exams = examsResult.data ?? [];
+  const papers = papersResult.data ?? [];
+  const subjects = subjectsResult.data ?? [];
 
   return (
     <main>
-      <div>
-        <h1 className="text-3xl font-bold">Exam Categories</h1>
-        <p className="mt-2 text-gray-600">
-          Create and manage categories such as TGPSC, TET, or DSC.
-        </p>
-      </div>
-
-      <CreateExamForm
-        existingCategories={exams.map((exam) => ({ id: exam.id, name: exam.name }))}
-      />
-
-      {error ? (
-        <div className="mt-6 rounded-lg border border-red-200 bg-red-50 p-4">
-          <p className="font-medium text-red-700">Unable to load Exam Categories</p>
-          <p className="mt-1 text-sm text-red-600">{error.message}</p>
+      <section className="relative overflow-hidden rounded-[2rem] bg-slate-950 p-7 text-white shadow-2xl shadow-slate-950/15 sm:p-9">
+        <div className="absolute -right-20 -top-24 h-72 w-72 rounded-full bg-teal-300/15 blur-3xl" />
+        <div className="relative flex flex-wrap items-end justify-between gap-6">
+          <div>
+            <p className="inline-flex items-center gap-2 rounded-full border border-teal-300/20 bg-teal-300/10 px-3 py-1.5 text-xs font-bold uppercase tracking-[0.15em] text-teal-200">
+              <span className="h-1.5 w-1.5 rounded-full bg-teal-300" />
+              Central structure manager
+            </p>
+            <h1 className="mt-5 text-3xl font-black tracking-tight sm:text-4xl">
+              Exam Structure
+            </h1>
+            <p className="mt-3 max-w-2xl leading-7 text-slate-300">
+              Manage TGPSC, DSC, and every other category from one hierarchy:
+              Exams, Specialisations, Papers, and Subjects.
+            </p>
+          </div>
+          <div className="grid grid-cols-3 gap-2 text-center text-xs font-semibold">
+            <SummaryCount value={categories.length} label="Categories" tone="teal" />
+            <SummaryCount value={exams.length} label="Exams" tone="amber" />
+            <SummaryCount value={papers.length + subjects.length} label="Content levels" tone="slate" />
+          </div>
         </div>
-      ) : exams.length === 0 ? (
-        <div className="mt-8 rounded-xl border border-dashed p-8 text-center">
-          <h2 className="text-lg font-semibold">No Exam Categories added yet</h2>
+      </section>
+
+      {errors.length > 0 && (
+        <div className="mt-6 rounded-xl border border-red-200 bg-red-50 p-4 text-sm font-semibold text-red-700">
+          Some Exam Structure data could not be loaded. {errors[0]?.message}
         </div>
-      ) : (
-        <ExistingExamCategoriesTable exams={exams} />
       )}
+
+      <ExamStructureWorkspace
+        categories={categories.map((category) => ({
+          id: category.id,
+          name: category.name,
+          slug: category.slug,
+          isActive: category.is_active,
+          displayOrder: category.display_order,
+        }))}
+        exams={exams.map((exam) => ({
+          id: exam.id,
+          categoryId: exam.exam_id,
+          name: exam.name,
+          slug: exam.slug,
+          isActive: exam.is_active,
+          displayOrder: exam.display_order,
+        }))}
+        specializations={(specializationsResult.data ?? []).map((item) => ({
+          id: item.id,
+          examId: item.exam_group_id,
+          name: item.name,
+          isActive: item.is_active,
+        }))}
+        papers={papers.map((paper) => ({
+          id: paper.id,
+          examId: paper.exam_group_id,
+          specializationId: paper.specialization_id,
+          name: paper.name,
+          isActive: paper.is_active,
+        }))}
+        subjects={subjects.map((subject) => ({
+          id: subject.id,
+          paperId: subject.paper_id,
+          name: subject.name,
+          isActive: subject.is_active,
+        }))}
+      />
     </main>
+  );
+}
+
+function SummaryCount({
+  value,
+  label,
+  tone,
+}: {
+  value: number;
+  label: string;
+  tone: "teal" | "amber" | "slate";
+}) {
+  const styles = {
+    teal: "bg-teal-300/10 text-teal-200",
+    amber: "bg-amber-300/10 text-amber-200",
+    slate: "bg-white/5 text-slate-300",
+  };
+  return (
+    <div className={`min-w-24 rounded-xl px-3 py-3 ${styles[tone]}`}>
+      <strong className="block text-lg text-white">{value}</strong>
+      {label}
+    </div>
   );
 }

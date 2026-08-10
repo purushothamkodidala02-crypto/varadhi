@@ -23,6 +23,6 @@ export async function updateSubject(subjectId: string, _previous: UpdateSubjectS
   const { error } = await supabase.from("subjects").update({ paper_id: paperId, name, slug, description: String(formData.get("description") ?? "").trim() || null, content_language_mode: languageMode, is_active: formData.get("is_active") === "on", display_order: displayOrder }).eq("id", subjectId);
   if (error?.code === "23505") return { success: false, message: "A Subject with this slug already exists in the selected Paper." };
   if (error) return { success: false, message: error.message };
-  revalidatePath("/admin/subjects"); revalidatePath(`/admin/subjects/${subjectId}/edit`); revalidatePath("/admin/questions"); revalidatePath("/admin/mock-tests");
+  revalidatePath("/admin/subjects"); revalidatePath("/admin/exams"); revalidatePath(`/admin/subjects/${subjectId}/edit`); revalidatePath("/admin/questions"); revalidatePath("/admin/mock-tests");
   return { success: true, message: "Subject updated successfully." };
 }

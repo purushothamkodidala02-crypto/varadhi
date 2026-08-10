@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { DeleteSubjectButton } from "./DeleteSubjectButton";
 import type { SubjectContentLanguageMode } from "@/types/subject";
 
@@ -45,18 +45,10 @@ export function ExistingSubjectsTable({
     );
   }, [paperId, search, subjects]);
   const pageCount = Math.max(1, Math.ceil(filtered.length / pageSize));
-  const visibleSubjects = filtered.slice((page - 1) * pageSize, page * pageSize);
-  const firstEntry = filtered.length === 0 ? 0 : (page - 1) * pageSize + 1;
-  const lastEntry = Math.min(page * pageSize, filtered.length);
-
-  useEffect(() => {
-    setSearch("");
-    setPage(1);
-  }, [paperId]);
-
-  useEffect(() => {
-    setPage(1);
-  }, [search]);
+  const currentPage = Math.min(page, pageCount);
+  const visibleSubjects = filtered.slice((currentPage - 1) * pageSize, currentPage * pageSize);
+  const firstEntry = filtered.length === 0 ? 0 : (currentPage - 1) * pageSize + 1;
+  const lastEntry = Math.min(currentPage * pageSize, filtered.length);
 
   return (
     <section className="mt-8 overflow-hidden rounded-2xl border bg-white">
@@ -83,7 +75,7 @@ export function ExistingSubjectsTable({
           <input
             type="search"
             value={search}
-            onChange={(event) => setSearch(event.target.value)}
+            onChange={(event) => { setSearch(event.target.value); setPage(1); }}
             placeholder="For example: History or General Studies"
             disabled={!paperId}
             className="mt-2 w-full rounded-xl border px-4 py-3 font-normal disabled:cursor-not-allowed disabled:bg-slate-100"
@@ -125,7 +117,7 @@ export function ExistingSubjectsTable({
                       <span
                         className={`rounded-full px-2.5 py-1 text-xs font-bold ${subject.isActive ? "bg-emerald-100 text-emerald-800" : "bg-slate-100 text-slate-600"}`}
                       >
-                        {subject.isActive ? "Active" : "Inactive"}
+                        {subject.isActive ? "Available" : "Unavailable"}
                       </span>
                     </td>
                     <td className="px-5 py-4">
@@ -152,18 +144,18 @@ export function ExistingSubjectsTable({
               <button
                 type="button"
                 onClick={() => setPage((current) => Math.max(1, current - 1))}
-                disabled={page === 1}
+                disabled={currentPage === 1}
                 className="rounded-lg border bg-white px-3 py-2 font-bold disabled:cursor-not-allowed disabled:opacity-40"
               >
                 Previous
               </button>
               <span className="px-2 font-semibold text-slate-600">
-                Page {page} of {pageCount}
+                Page {currentPage} of {pageCount}
               </span>
               <button
                 type="button"
                 onClick={() => setPage((current) => Math.min(pageCount, current + 1))}
-                disabled={page === pageCount}
+                disabled={currentPage === pageCount}
                 className="rounded-lg border bg-white px-3 py-2 font-bold disabled:cursor-not-allowed disabled:opacity-40"
               >
                 Next

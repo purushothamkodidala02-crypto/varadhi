@@ -102,6 +102,7 @@ export async function deleteSubject(
   }
 
   revalidatePath("/admin/subjects");
+  revalidatePath("/admin/exams");
 
   return {
     success: true,
