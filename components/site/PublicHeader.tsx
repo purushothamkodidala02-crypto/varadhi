@@ -32,7 +32,7 @@ export async function PublicHeader({ compact = false }: PublicHeaderProps) {
           </span>
         </Link>
 
-        <nav aria-label="Primary navigation" className="hidden items-center gap-1 rounded-2xl border border-slate-200/80 bg-slate-50/90 p-1 text-sm font-semibold text-slate-600 shadow-inner shadow-slate-950/[0.02] md:flex">
+        <nav aria-label="Primary navigation" className="font-brand hidden items-center gap-1 rounded-2xl border border-slate-200/80 bg-slate-50/90 p-1 text-[15px] font-bold tracking-[-0.01em] text-slate-600 shadow-inner shadow-slate-950/[0.02] md:flex">
           <Link href="/mock-tests" className="rounded-xl px-4 py-2.5 transition hover:bg-white hover:text-slate-950 hover:shadow-sm">
             Mock tests
           </Link>
