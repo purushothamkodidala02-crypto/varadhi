@@ -13,7 +13,11 @@ export const metadata: Metadata = {
 export default async function LoginPage({
   searchParams,
 }: {
-  searchParams: Promise<{ next?: string | string[]; confirmed?: string | string[] }>;
+  searchParams: Promise<{
+    next?: string | string[];
+    confirmed?: string | string[];
+    reset?: string | string[];
+  }>;
 }) {
   const params = await searchParams;
   const requestedPath = typeof params.next === "string" ? params.next : undefined;
@@ -34,7 +38,9 @@ export default async function LoginPage({
     redirect(profile?.role === "admin" ? "/admin" : nextPath);
   }
   const initialMessage =
-    params.confirmed === "1"
+    params.reset === "1"
+      ? "Password updated. Sign in with your new password to continue."
+      : params.confirmed === "1"
       ? "Email confirmed. Sign in to continue to your mock test."
       : undefined;
 

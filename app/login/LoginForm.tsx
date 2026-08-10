@@ -31,6 +31,7 @@ export function LoginForm({
   const [loading, setLoading] = useState(false);
   const [resending, setResending] = useState(false);
   const registerHref = `/register?next=${encodeURIComponent(nextPath)}`;
+  const forgotPasswordHref = `/forgot-password?next=${encodeURIComponent(nextPath)}`;
 
   function confirmationRedirectUrl() {
     const redirectUrl = new URL("/login", window.location.origin);
@@ -135,10 +136,20 @@ export function LoginForm({
           Email
           <input id="login_email" type="email" required autoComplete="email" value={email} onChange={(event) => setEmail(event.target.value)} placeholder="you@example.com" className="mt-2 w-full rounded-xl border px-4 py-3 font-normal" />
         </label>
-        <label htmlFor="current_password" className="block text-sm font-bold text-slate-800">
-          Password
+        <div>
+          <div className="flex items-center justify-between gap-4">
+            <label htmlFor="current_password" className="text-sm font-bold text-slate-800">
+              Password
+            </label>
+            <Link
+              href={forgotPasswordHref}
+              className="text-xs font-bold text-teal-700 hover:text-teal-800"
+            >
+              Forgot password?
+            </Link>
+          </div>
           <input id="current_password" type="password" required autoComplete="current-password" value={password} onChange={(event) => setPassword(event.target.value)} placeholder="Enter your password" className="mt-2 w-full rounded-xl border px-4 py-3 font-normal" />
-        </label>
+        </div>
         <button type="submit" disabled={loading} className="w-full rounded-xl bg-slate-950 px-4 py-3 font-bold text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-50">
           {loading ? "Signing in…" : "Sign in and continue"}
         </button>
