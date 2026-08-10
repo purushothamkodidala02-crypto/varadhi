@@ -68,16 +68,15 @@ export async function generateMetadata({ params }: MockTestDetailsProps): Promis
 export default async function MockTestDetailsPage({ params }: MockTestDetailsProps) {
   const { id } = await params;
   const supabase = await createClient();
-  const [testResult, assignmentsResult, authResult] = await Promise.all([
+  const [testResult, authResult] = await Promise.all([
     supabase.from("mock_tests").select("id, paper_id, subject_id, test_scope, title, description, instructions, duration_minutes, status, access_type").eq("id", id).eq("status", "published").eq("access_type", "free").maybeSingle(),
-    supabase.from("mock_test_questions").select("marks, negative_marks").eq("mock_test_id", id),
     supabase.auth.getUser(),
   ]);
   const test = testResult.data;
   if (!test) notFound();
 
   const [paperResult, subjectResult] = await Promise.all([
-    supabase.from("papers").select("id, exam_group_id, specialization_id, name, display_order").eq("id", test.paper_id).maybeSingle(),
+    supabase.from("papers").select("id, exam_group_id, specialization_id, name, display_order, question_count, default_correct_marks, default_negative_marks").eq("id", test.paper_id).maybeSingle(),
     test.subject_id ? supabase.from("subjects").select("id, name, content_language_mode").eq("id", test.subject_id).maybeSingle() : Promise.resolve({ data: null }),
   ]);
   const paper = paperResult.data;
@@ -91,14 +90,22 @@ export default async function MockTestDetailsPage({ params }: MockTestDetailsPro
     ? buildPaperDisplayMap((siblingPapersResult.data ?? []) as OrderedPaper[]).get(paper.id)
     : undefined;
   const categoryResult = exam ? await supabase.from("exams").select("id, name").eq("id", exam.exam_id).maybeSingle() : { data: null };
-  const assignments = assignmentsResult.data ?? [];
-  const questionCount = assignments.length;
-  const totalMarks = assignments.reduce((total, item) => total + Number(item.marks), 0);
-  const negativeMarks = assignments.length ? Math.max(...assignments.map((item) => Number(item.negative_marks))) : 0;
+  const configuredQuestionCount = Number(paper?.question_count ?? 0);
+  const questionCount =
+    test.test_scope === "paper" && configuredQuestionCount > 0
+      ? configuredQuestionCount
+      : null;
+  const totalMarks = questionCount
+    ? questionCount * Number(paper?.default_correct_marks ?? 0)
+    : null;
+  const negativeMarks = Number(paper?.default_negative_marks ?? 0);
+  const questionCountLabel = questionCount ? String(questionCount) : "Shown when started";
+  const totalMarksLabel = totalMarks
+    ? totalMarks.toFixed(2).replace(/\.00$/, "")
+    : "Shown when started";
   const languageMode = subjectResult.data?.content_language_mode ?? "bilingual";
   const languageLabel = languageMode === "bilingual" ? "English + Telugu" : languageMode === "telugu" ? "Telugu" : "English";
   const isLoggedIn = Boolean(authResult.data.user);
-  const canStart = questionCount > 0;
   const resourceName = `${test.title} ${paperDisplay?.shortLabel ?? "TGPSC"} Mock Test`;
   const resourceDescription =
     test.description ??
@@ -151,12 +158,12 @@ export default async function MockTestDetailsPage({ params }: MockTestDetailsPro
             <p className="mt-5 max-w-3xl text-lg leading-8 text-slate-600">{test.description ?? "A focused Varadhi mock test designed to strengthen your exam preparation."}</p>
             <div className="mt-7 flex flex-wrap gap-2 text-sm font-semibold text-slate-600">{specializationResult.data && <span className="rounded-lg border bg-white px-3 py-2">{specializationResult.data.name}</span>}<span className="rounded-lg border bg-white px-3 py-2">{paperDisplay?.label ?? paper?.name ?? "Paper"}</span>{subjectResult.data && <span className="rounded-lg border bg-white px-3 py-2">{subjectResult.data.name}</span>}</div>
 
-            <section className="mt-10 rounded-3xl border bg-white p-6 shadow-sm sm:p-8"><h2 className="text-2xl font-black">Before you begin</h2><p className="mt-2 text-sm leading-6 text-slate-600">Review the test rules now. The timer starts only after you select the start button.</p><div className="mt-7 grid gap-4 sm:grid-cols-2">{[["Questions", String(questionCount)], ["Duration", `${test.duration_minutes} minutes`], ["Total marks", totalMarks.toFixed(2).replace(/\.00$/, "")], ["Negative marking", negativeMarks > 0 ? `Up to ${negativeMarks} per wrong answer` : "No negative marking"], ["Language", languageLabel], ["Progress", "Saved during the attempt"]].map(([label, value]) => <div key={label} className="rounded-2xl bg-slate-50 p-4"><p className="text-xs font-bold uppercase tracking-wide text-slate-500">{label}</p><p className="mt-2 font-black text-slate-950">{value}</p></div>)}</div></section>
+            <section className="mt-10 rounded-3xl border bg-white p-6 shadow-sm sm:p-8"><h2 className="text-2xl font-black">Before you begin</h2><p className="mt-2 text-sm leading-6 text-slate-600">Review the test rules now. The timer starts only after you select the start button.</p><div className="mt-7 grid gap-4 sm:grid-cols-2">{[["Questions", questionCountLabel], ["Duration", `${test.duration_minutes} minutes`], ["Total marks", totalMarksLabel], ["Negative marking", negativeMarks > 0 ? `Up to ${negativeMarks} per wrong answer` : "No negative marking"], ["Language", languageLabel], ["Progress", "Saved during the attempt"]].map(([label, value]) => <div key={label} className="rounded-2xl bg-slate-50 p-4"><p className="text-xs font-bold uppercase tracking-wide text-slate-500">{label}</p><p className="mt-2 font-black text-slate-950">{value}</p></div>)}</div></section>
 
             <section className="mt-6 rounded-3xl border bg-white p-6 shadow-sm sm:p-8"><h2 className="text-2xl font-black">Instructions</h2>{test.instructions ? <div className="mt-5 whitespace-pre-line text-sm leading-7 text-slate-700">{test.instructions}</div> : <ul className="mt-5 space-y-3 text-sm leading-6 text-slate-700"><li className="flex gap-3"><span className="font-black text-teal-700">01</span>Answer each question before moving on, or return to it later during the attempt.</li><li className="flex gap-3"><span className="font-black text-teal-700">02</span>Your answers are saved as you progress. Avoid closing the browser while the test is active.</li><li className="flex gap-3"><span className="font-black text-teal-700">03</span>The test submits automatically when the timer reaches zero.</li><li className="flex gap-3"><span className="font-black text-teal-700">04</span>Review your score and answers from the student dashboard after submission.</li></ul>}</section>
           </section>
 
-          <aside className="rounded-3xl bg-slate-950 p-6 text-white shadow-xl lg:sticky lg:top-6"><p className="text-xs font-bold uppercase tracking-[0.14em] text-teal-200">Ready to practise?</p><h2 className="mt-3 text-2xl font-black">Start when you are prepared.</h2><p className="mt-3 text-sm leading-6 text-slate-300">Once started, the test timer continues until submission or expiry.</p><div className="mt-6 space-y-3 border-y border-slate-700 py-5 text-sm"><p className="flex justify-between gap-3"><span className="text-slate-400">Questions</span><strong>{questionCount}</strong></p><p className="flex justify-between gap-3"><span className="text-slate-400">Duration</span><strong>{test.duration_minutes} min</strong></p><p className="flex justify-between gap-3"><span className="text-slate-400">Access</span><strong>Free</strong></p></div>{canStart ? <Link href={`/mock-tests/${id}/attempt`} className="mt-6 block rounded-xl bg-teal-300 px-5 py-3.5 text-center font-black text-slate-950 hover:bg-teal-200">{isLoggedIn ? "Start mock test" : "Sign in to start"}</Link> : <p className="mt-6 rounded-xl bg-amber-400/10 px-4 py-3 text-sm font-semibold text-amber-200">This test is not ready to start yet.</p>}<p className="mt-4 text-center text-xs leading-5 text-slate-400">Your attempt and results are stored securely in your account.</p></aside>
+          <aside className="rounded-3xl bg-slate-950 p-6 text-white shadow-xl lg:sticky lg:top-6"><p className="text-xs font-bold uppercase tracking-[0.14em] text-teal-200">Ready to practise?</p><h2 className="mt-3 text-2xl font-black">Start when you are prepared.</h2><p className="mt-3 text-sm leading-6 text-slate-300">Once started, the test timer continues until submission or expiry.</p><div className="mt-6 space-y-3 border-y border-slate-700 py-5 text-sm"><p className="flex justify-between gap-3"><span className="text-slate-400">Questions</span><strong>{questionCount ?? "—"}</strong></p><p className="flex justify-between gap-3"><span className="text-slate-400">Duration</span><strong>{test.duration_minutes} min</strong></p><p className="flex justify-between gap-3"><span className="text-slate-400">Access</span><strong>Free</strong></p></div><Link href={`/mock-tests/${id}/attempt`} className="mt-6 block rounded-xl bg-teal-300 px-5 py-3.5 text-center font-black text-slate-950 hover:bg-teal-200">{isLoggedIn ? "Start mock test" : "Sign in to start"}</Link><p className="mt-4 text-center text-xs leading-5 text-slate-400">{isLoggedIn ? "The secure test check runs when you start." : "Sign in or create an account, then return directly to this test."}</p></aside>
         </div>
       </div>
     </main>

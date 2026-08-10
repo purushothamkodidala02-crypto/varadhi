@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { redirect } from "next/navigation";
 import { PublicHeader } from "@/components/site/PublicHeader";
+import { createClient } from "@/lib/supabase/server";
 import { LoginForm } from "./LoginForm";
 
 export const metadata: Metadata = {
@@ -11,7 +13,7 @@ export const metadata: Metadata = {
 export default async function LoginPage({
   searchParams,
 }: {
-  searchParams: Promise<{ next?: string | string[] }>;
+  searchParams: Promise<{ next?: string | string[]; confirmed?: string | string[] }>;
 }) {
   const params = await searchParams;
   const requestedPath = typeof params.next === "string" ? params.next : undefined;
@@ -19,6 +21,22 @@ export default async function LoginPage({
     requestedPath?.startsWith("/") && !requestedPath.startsWith("//")
       ? requestedPath
       : "/dashboard";
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (user) {
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("role")
+      .eq("id", user.id)
+      .maybeSingle();
+    redirect(profile?.role === "admin" ? "/admin" : nextPath);
+  }
+  const initialMessage =
+    params.confirmed === "1"
+      ? "Email confirmed. Sign in to continue to your mock test."
+      : undefined;
 
   return (
     <main className="min-h-screen bg-slate-50">
@@ -42,7 +60,7 @@ export default async function LoginPage({
             Browse available tests →
           </Link>
         </aside>
-        <LoginForm nextPath={nextPath} />
+        <LoginForm nextPath={nextPath} initialMessage={initialMessage} />
       </div>
     </main>
   );

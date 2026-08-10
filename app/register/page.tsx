@@ -1,5 +1,7 @@
 import type { Metadata } from "next";
+import { redirect } from "next/navigation";
 import { PublicHeader } from "@/components/site/PublicHeader";
+import { createClient } from "@/lib/supabase/server";
 import { RegisterForm } from "./RegisterForm";
 
 export const metadata: Metadata = {
@@ -7,7 +9,23 @@ export const metadata: Metadata = {
   robots: { index: false, follow: true },
 };
 
-export default function RegisterPage() {
+export default async function RegisterPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ next?: string | string[] }>;
+}) {
+  const params = await searchParams;
+  const requestedPath = typeof params.next === "string" ? params.next : undefined;
+  const nextPath =
+    requestedPath?.startsWith("/") && !requestedPath.startsWith("//")
+      ? requestedPath
+      : "/dashboard";
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (user) redirect(nextPath);
+
   return (
     <main className="min-h-screen bg-slate-50">
       <PublicHeader compact />
@@ -25,7 +43,7 @@ export default function RegisterPage() {
             <li>• Review attempts and subject accuracy</li>
           </ul>
         </aside>
-        <RegisterForm />
+        <RegisterForm nextPath={nextPath} />
       </div>
     </main>
   );

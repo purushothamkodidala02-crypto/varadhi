@@ -4,27 +4,67 @@ import Link from "next/link";
 import { useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 
-export function LoginForm({ nextPath }: { nextPath: string }) {
+type Notice = {
+  tone: "error" | "success" | "info";
+  message: string;
+};
+
+const noticeStyles = {
+  error: "border-red-200 bg-red-50 text-red-700",
+  success: "border-emerald-200 bg-emerald-50 text-emerald-800",
+  info: "border-sky-200 bg-sky-50 text-sky-800",
+};
+
+export function LoginForm({
+  nextPath,
+  initialMessage,
+}: {
+  nextPath: string;
+  initialMessage?: string;
+}) {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [message, setMessage] = useState("");
+  const [notice, setNotice] = useState<Notice | null>(
+    initialMessage ? { tone: "success", message: initialMessage } : null,
+  );
+  const [needsConfirmation, setNeedsConfirmation] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [resending, setResending] = useState(false);
+  const registerHref = `/register?next=${encodeURIComponent(nextPath)}`;
+
+  function confirmationRedirectUrl() {
+    const redirectUrl = new URL("/login", window.location.origin);
+    redirectUrl.searchParams.set("next", nextPath);
+    redirectUrl.searchParams.set("confirmed", "1");
+    return redirectUrl.toString();
+  }
 
   async function handleLogin(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setLoading(true);
-    setMessage("");
+    setNeedsConfirmation(false);
+    setNotice(null);
     const supabase = createClient();
-    const { data: { user }, error: loginError } = await supabase.auth.signInWithPassword({
-      email,
+    const normalizedEmail = email.trim().toLowerCase();
+    const {
+      data: { user },
+      error: loginError,
+    } = await supabase.auth.signInWithPassword({
+      email: normalizedEmail,
       password,
     });
 
     if (loginError || !user) {
-      setMessage(
-        loginError?.message ??
-          "Unable to log in. Please check your email and password.",
-      );
+      const emailNotConfirmed = loginError?.code === "email_not_confirmed";
+      setNeedsConfirmation(emailNotConfirmed);
+      setNotice({
+        tone: emailNotConfirmed ? "info" : "error",
+        message: emailNotConfirmed
+          ? "Your account exists, but the email is not confirmed yet. Confirm it or request a new email below."
+          : loginError?.code === "over_request_rate_limit"
+            ? "Too many sign-in attempts. Wait a few minutes, then try again."
+            : "The email or password is incorrect. Check both fields and try again.",
+      });
       setLoading(false);
       return;
     }
@@ -36,14 +76,47 @@ export function LoginForm({ nextPath }: { nextPath: string }) {
       .single();
 
     if (profileError || !profile) {
-      setMessage(
-        "Login succeeded, but we could not find your account profile. Please contact Varadhi support.",
-      );
+      setNotice({
+        tone: "error",
+        message:
+          "You are signed in, but the student profile could not be loaded. Please sign out and try once more.",
+      });
       setLoading(false);
       return;
     }
 
     window.location.replace(profile.role === "admin" ? "/admin" : nextPath);
+  }
+
+  async function resendConfirmation() {
+    if (!email.trim()) {
+      setNotice({ tone: "error", message: "Enter your email address first." });
+      return;
+    }
+
+    setResending(true);
+    const supabase = createClient();
+    const { error } = await supabase.auth.resend({
+      type: "signup",
+      email: email.trim().toLowerCase(),
+      options: { emailRedirectTo: confirmationRedirectUrl() },
+    });
+
+    setNotice(
+      error
+        ? {
+            tone: "error",
+            message:
+              error.code === "over_email_send_rate_limit"
+                ? "Please wait a few minutes before requesting another email."
+                : "We could not resend the confirmation email. Please try again shortly.",
+          }
+        : {
+            tone: "success",
+            message: "A new confirmation email was requested. Check your inbox and spam folder.",
+          },
+    );
+    setResending(false);
   }
 
   return (
@@ -52,60 +125,45 @@ export function LoginForm({ nextPath }: { nextPath: string }) {
         Student login
       </p>
       <h2 className="mt-2 text-3xl font-black tracking-tight text-slate-950">
-        Sign in to Varadhi
+        Sign in to continue
       </h2>
       <p className="mt-3 text-sm leading-6 text-slate-600">
-        Use the email and password you chose when registering.
+        Use the same email and password you entered during registration.
       </p>
       <form onSubmit={handleLogin} className="mt-7 space-y-5">
-        <label htmlFor="email" className="block text-sm font-bold text-slate-800">
+        <label htmlFor="login_email" className="block text-sm font-bold text-slate-800">
           Email
-          <input
-            id="email"
-            type="email"
-            required
-            autoComplete="email"
-            value={email}
-            onChange={(event) => setEmail(event.target.value)}
-            placeholder="you@example.com"
-            className="mt-2 w-full rounded-xl border px-4 py-3 font-normal"
-          />
+          <input id="login_email" type="email" required autoComplete="email" value={email} onChange={(event) => setEmail(event.target.value)} placeholder="you@example.com" className="mt-2 w-full rounded-xl border px-4 py-3 font-normal" />
         </label>
-        <label htmlFor="password" className="block text-sm font-bold text-slate-800">
+        <label htmlFor="current_password" className="block text-sm font-bold text-slate-800">
           Password
-          <input
-            id="password"
-            type="password"
-            required
-            autoComplete="current-password"
-            value={password}
-            onChange={(event) => setPassword(event.target.value)}
-            placeholder="Enter your password"
-            className="mt-2 w-full rounded-xl border px-4 py-3 font-normal"
-          />
+          <input id="current_password" type="password" required autoComplete="current-password" value={password} onChange={(event) => setPassword(event.target.value)} placeholder="Enter your password" className="mt-2 w-full rounded-xl border px-4 py-3 font-normal" />
         </label>
-        <button
-          type="submit"
-          disabled={loading}
-          className="w-full rounded-xl bg-slate-950 px-4 py-3 font-bold text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-50"
-        >
-          {loading ? "Signing in…" : "Sign in"}
+        <button type="submit" disabled={loading} className="w-full rounded-xl bg-slate-950 px-4 py-3 font-bold text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-50">
+          {loading ? "Signing in…" : "Sign in and continue"}
         </button>
-        {message && (
-          <p
-            aria-live="polite"
-            className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-medium text-red-700"
-          >
-            {message}
+        {notice && (
+          <p aria-live="polite" className={`rounded-xl border px-4 py-3 text-sm font-medium ${noticeStyles[notice.tone]}`}>
+            {notice.message}
           </p>
         )}
+        {needsConfirmation && (
+          <button type="button" onClick={resendConfirmation} disabled={resending} className="w-full rounded-xl border border-teal-200 bg-teal-50 px-4 py-3 text-sm font-bold text-teal-800 hover:bg-teal-100 disabled:opacity-50">
+            {resending ? "Requesting confirmation…" : "Resend confirmation email"}
+          </button>
+        )}
       </form>
-      <p className="mt-6 border-t border-slate-100 pt-5 text-sm text-slate-600">
-        New to Varadhi?{" "}
-        <Link href="/register" className="font-bold text-teal-700 hover:text-teal-800">
-          Create your free account
-        </Link>
-      </p>
+      <div className="mt-6 border-t border-slate-100 pt-5">
+        <p className="text-sm text-slate-600">
+          New to Varadhi?{" "}
+          <Link href={registerHref} className="font-bold text-teal-700 hover:text-teal-800">
+            Create a free account
+          </Link>
+        </p>
+        <p className="mt-2 text-xs leading-5 text-slate-500">
+          After signing in, you will return to the mock test you selected.
+        </p>
+      </div>
     </section>
   );
 }
