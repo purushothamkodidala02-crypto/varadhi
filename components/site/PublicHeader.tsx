@@ -23,16 +23,16 @@ export async function PublicHeader({ compact = false }: PublicHeaderProps) {
             <span className="relative">V</span>
           </span>
           <span className="leading-none">
-            <span className="block text-xl font-black tracking-[-0.03em] text-slate-950">
+            <span className="font-brand block text-[1.35rem] font-bold tracking-[-0.025em] text-slate-950">
               Varadhi
             </span>
-            <span className="mt-1.5 hidden text-[10px] font-black uppercase tracking-[0.2em] text-teal-700 sm:block">
+            <span className="mt-1.5 hidden text-[10px] font-bold uppercase tracking-[0.2em] text-teal-700 sm:block">
               Exam practice
             </span>
           </span>
         </Link>
 
-        <nav aria-label="Primary navigation" className="hidden items-center gap-1 rounded-2xl border border-slate-200/80 bg-slate-50/90 p-1 text-sm font-bold text-slate-600 shadow-inner shadow-slate-950/[0.02] md:flex">
+        <nav aria-label="Primary navigation" className="hidden items-center gap-1 rounded-2xl border border-slate-200/80 bg-slate-50/90 p-1 text-sm font-semibold text-slate-600 shadow-inner shadow-slate-950/[0.02] md:flex">
           <Link href="/mock-tests" className="rounded-xl px-4 py-2.5 transition hover:bg-white hover:text-slate-950 hover:shadow-sm">
             Mock tests
           </Link>
@@ -58,13 +58,13 @@ export async function PublicHeader({ compact = false }: PublicHeaderProps) {
             <>
               <Link
                 href="/login"
-                className="hidden rounded-xl px-3.5 py-2.5 text-sm font-bold text-slate-700 transition hover:bg-slate-100 hover:text-slate-950 sm:inline-flex"
+                className="hidden rounded-xl px-3.5 py-2.5 text-sm font-semibold text-slate-700 transition hover:bg-slate-100 hover:text-slate-950 sm:inline-flex"
               >
                 Login
               </Link>
               <Link
                 href="/register"
-                className="group/button inline-flex items-center gap-2 rounded-xl bg-slate-950 py-2 pl-4 pr-2 text-sm font-bold text-white shadow-lg shadow-slate-950/10 transition hover:-translate-y-0.5 hover:bg-slate-800 hover:shadow-xl"
+                className="group/button inline-flex items-center gap-2 rounded-xl bg-slate-950 py-2 pl-4 pr-2 text-sm font-semibold text-white shadow-lg shadow-slate-950/10 transition hover:-translate-y-0.5 hover:bg-slate-800 hover:shadow-xl"
               >
                 Start free
                 <span className="grid h-7 w-7 place-items-center rounded-lg bg-teal-300 text-slate-950 transition group-hover/button:translate-x-0.5" aria-hidden="true">→</span>
