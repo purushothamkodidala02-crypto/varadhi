@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { buildMockTestTitle, toCatalogSlug } from "@/lib/exam-catalog";
 import { buildPaperDisplayMap, type OrderedPaper } from "@/lib/papers";
 import { createClient } from "@/lib/supabase/server";
-import type { MockTestAccessType, MockTestScope, MockTestStatus } from "@/types/mock-test";
+import type { MockTestScope, MockTestStatus } from "@/types/mock-test";
 
 export type UpdateMockTestState = { success: boolean; message: string };
 
@@ -16,17 +16,15 @@ export async function updateMockTest(mockTestId: string, _previous: UpdateMockTe
   if (profile?.role !== "admin") return { success: false, message: "You are not authorized to update mock tests." };
   const { data: current } = await supabase.from("mock_tests").select("status, series_number").eq("id", mockTestId).maybeSingle();
   if (!current) return { success: false, message: "Mock test not found." };
+  if (current.status !== "draft") return { success: false, message: "Only draft Mock Tests can be edited. Archive a published test, then restore it as a draft before changing it." };
 
   const paperId = String(formData.get("paper_id") ?? "").trim();
   const scope = String(formData.get("test_scope") ?? "paper") as MockTestScope;
   const subjectId = String(formData.get("subject_id") ?? "").trim() || null;
   const duration = Number(formData.get("duration_minutes") ?? 0);
   const status = String(formData.get("status") ?? "draft") as MockTestStatus;
-  const accessType = String(formData.get("access_type") ?? "free") as MockTestAccessType;
-  const priceValue = String(formData.get("price_inr") ?? "").trim();
-  const price = priceValue ? Number(priceValue) : null;
   if (!paperId || !Number.isInteger(duration) || duration <= 0) return { success: false, message: "Choose a paper and enter a valid duration." };
-  if ((scope !== "paper" && scope !== "subject") || (scope === "subject" && !subjectId) || !["draft", "published", "archived"].includes(status) || !["free", "paid"].includes(accessType) || (accessType === "paid" && (!price || price <= 0))) return { success: false, message: "Check the mock type, access and status." };
+  if ((scope !== "paper" && scope !== "subject") || (scope === "subject" && !subjectId) || status !== "draft") return { success: false, message: "Check the mock type and draft status." };
 
   const paperResult = await supabase.from("papers").select("id, exam_group_id, specialization_id, name, display_order").eq("id", paperId).maybeSingle();
   const paper = paperResult.data;
@@ -47,17 +45,6 @@ export async function updateMockTest(mockTestId: string, _previous: UpdateMockTe
   const title = buildMockTestTitle({ stateCode: stateResult.data.code, examName: group.name, paperNumber, subjectName: subject?.name, seriesNumber });
   const slug = toCatalogSlug(title);
 
-  if (status === "published") {
-    const { data: assignments, error: assignmentsError } = await supabase.from("mock_test_questions").select("question_id, marks, negative_marks").eq("mock_test_id", mockTestId);
-    if (assignmentsError) return { success: false, message: assignmentsError.message };
-    const questionIds = (assignments ?? []).map((assignment) => assignment.question_id);
-    if (!questionIds.length) return { success: false, message: "Add at least one question before publishing." };
-    if ((assignments ?? []).some((assignment) => Number(assignment.marks) <= 0 || Number(assignment.negative_marks) < 0)) return { success: false, message: "Every assigned question needs valid marks before publishing." };
-    const { count: activeCount, error: activeQuestionsError } = await supabase.from("questions").select("id", { count: "exact", head: true }).in("id", questionIds).eq("is_active", true);
-    if (activeQuestionsError) return { success: false, message: activeQuestionsError.message };
-    if (!activeCount) return { success: false, message: "Activate at least one assigned question before publishing." };
-  }
-
   const { error } = await supabase.from("mock_tests").update({
     paper_id: paperId,
     test_scope: scope,
@@ -69,9 +56,9 @@ export async function updateMockTest(mockTestId: string, _previous: UpdateMockTe
     duration_minutes: duration,
     display_order: seriesNumber,
     status,
-    published_at: status === "published" ? new Date().toISOString() : null,
-    access_type: accessType,
-    price_inr: accessType === "paid" ? price : null,
+    published_at: null,
+    access_type: "free",
+    price_inr: null,
   }).eq("id", mockTestId);
   if (error?.code === "23505") return { success: false, message: "That paper already has this mock-test number." };
   if (error) return { success: false, message: error.message };

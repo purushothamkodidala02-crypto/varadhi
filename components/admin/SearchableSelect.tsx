@@ -41,6 +41,7 @@ export function SearchableSelect({
 
   function closeList() {
     setOpen(false);
+    setQuery(selected?.label ?? "");
     setActiveIndex(-1);
   }
 
@@ -51,16 +52,10 @@ export function SearchableSelect({
   }
 
   useEffect(() => {
-    if (!open) {
-      setQuery(selected?.label ?? "");
-      setActiveIndex(-1);
-    }
-  }, [open, selected?.label, value]);
-
-  useEffect(() => {
     function closeWhenClickingAway(event: MouseEvent) {
       if (containerRef.current && !containerRef.current.contains(event.target as Node)) {
-        closeList();
+        setOpen(false);
+        setActiveIndex(-1);
       }
     }
 

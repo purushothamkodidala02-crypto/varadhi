@@ -1,6 +1,7 @@
 "use server";
 
-import { revalidatePath } from "next/cache";
+import { revalidatePath, revalidateTag } from "next/cache";
+import { PUBLIC_CATALOG_TAG } from "@/lib/catalog-data";
 import { createClient } from "@/lib/supabase/server";
 
 export type MockTestManagementResult = {
@@ -40,6 +41,7 @@ function revalidateMockTestPages(mockTestId: string) {
   revalidatePath("/admin/mock-tests");
   revalidatePath(`/admin/mock-tests/${mockTestId}/edit`);
   revalidatePath("/mock-tests");
+  revalidateTag(PUBLIC_CATALOG_TAG, "max");
 }
 
 export async function archiveMockTest(mockTestId: string): Promise<MockTestManagementResult> {
@@ -66,33 +68,21 @@ export async function publishMockTest(mockTestId: string): Promise<MockTestManag
   if ("error" in result) return { success: false, message: result.error ?? "Unable to publish the Mock Test." };
   if (result.mockTest.status !== "draft") return { success: false, message: "Only draft Mock Tests can be published." };
 
-  const { data: assignments, error: assignmentError } = await result.supabase
-    .from("mock_test_questions")
-    .select("question_id, marks, negative_marks")
-    .eq("mock_test_id", mockTestId);
-  if (assignmentError) return { success: false, message: assignmentError.message };
-  if (!assignments?.length) return { success: false, message: "Add at least one question before publishing." };
-  if (assignments.some((item) => Number(item.marks) <= 0 || Number(item.negative_marks) < 0)) {
-    return { success: false, message: "Fix the marks on every assigned question before publishing." };
+  const { error } = await result.supabase.rpc("publish_mock_test_safely", {
+    requested_mock_test_id: mockTestId,
+  });
+  if (error) {
+    const knownMessage = [
+      "Add at least one Question before publishing.",
+      "Every assigned Question and mark must be active and valid.",
+      "The assigned Question count must match the Paper Question count.",
+      "Paid Mock Tests cannot be published before payment verification is enabled.",
+    ].find((message) => error.message.includes(message));
+    return {
+      success: false,
+      message: knownMessage ?? "This Mock Test could not be published. Verify its Questions, marks, and Paper setup.",
+    };
   }
-
-  const questionIds = assignments.map((item) => item.question_id);
-  const { data: questions, error: questionError } = await result.supabase
-    .from("questions")
-    .select("id, is_active, expires_on")
-    .in("id", questionIds);
-  if (questionError) return { success: false, message: questionError.message };
-  const today = new Date().toISOString().slice(0, 10);
-  const usableIds = new Set((questions ?? []).filter((item) => item.is_active && (!item.expires_on || item.expires_on >= today)).map((item) => item.id));
-  if (questionIds.some((id) => !usableIds.has(id))) {
-    return { success: false, message: "Every assigned question must be available before publishing." };
-  }
-
-  const { error } = await result.supabase
-    .from("mock_tests")
-    .update({ status: "published", published_at: new Date().toISOString() })
-    .eq("id", mockTestId);
-  if (error) return { success: false, message: error.message };
   revalidateMockTestPages(mockTestId);
   return { success: true, message: `“${result.mockTest.title}” is published.` };
 }

@@ -15,6 +15,7 @@ type TestQuestion = {
   option_d: string;
   image_url: string | null;
   selected_answer: "A" | "B" | "C" | "D" | null;
+  marked_for_review: boolean;
   content_language_mode: "bilingual" | "english" | "telugu";
   question_text_te: string | null;
   option_a_te: string | null;
@@ -31,7 +32,7 @@ export default async function TakeMockTestPage({ params, searchParams }: PagePro
   const [{ id }, query] = await Promise.all([params, searchParams]);
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
-  if (!user) redirect(`/login?next=${encodeURIComponent(`/mock-tests/${id}/attempt`)}`);
+  if (!user) redirect(`/login?next=${encodeURIComponent(`/mock-tests/${id}`)}`);
 
   const { data: mockTest } = await supabase.from("mock_tests").select("id, title, status, access_type").eq("id", id).eq("status", "published").maybeSingle();
   if (!mockTest) notFound();
@@ -42,16 +43,20 @@ export default async function TakeMockTestPage({ params, searchParams }: PagePro
   }
   if (!hasAccess) return <TestNotReady title={mockTest.title} testId={id} message="This mock test is not publicly available right now." />;
 
-  const sessionFunction = query.mode === "restart" ? "restart_mock_test_session" : "start_mock_test_session";
-  const { data: sessionData, error: sessionError } = await supabase.rpc(sessionFunction, { requested_mock_test_id: id });
-  const session = sessionData?.[0] as { session_id: string; expires_at: string } | undefined;
-  if (sessionError || !session) {
-    const noActiveQuestions = /no active questions/i.test(sessionError?.message ?? "");
-    return <TestNotReady title={mockTest.title} testId={id} message={noActiveQuestions ? "This mock test does not have active questions available yet. Please try again later." : "This mock test could not be started. Its administrator needs to review the setup."} />;
-  }
+  const requestedSessionId = typeof query.session === "string" ? query.session : "";
+  if (!/^[0-9a-f-]{36}$/i.test(requestedSessionId)) redirect(`/mock-tests/${id}`);
 
-  const { data, error } = await supabase.rpc("get_mock_test_session_payload", { requested_session_id: session.session_id });
+  const { data: session } = await supabase
+    .from("test_attempt_sessions")
+    .select("id, expires_at, session_state")
+    .eq("id", requestedSessionId)
+    .eq("mock_test_id", id)
+    .is("submitted_at", null)
+    .maybeSingle();
+  if (!session || session.session_state !== "active") redirect(`/mock-tests/${id}`);
+
+  const { data, error } = await supabase.rpc("get_mock_test_session_payload", { requested_session_id: session.id });
   const questions = (data ?? []) as TestQuestion[];
   if (error || questions.length === 0) return <TestNotReady title={mockTest.title} testId={id} message="This mock test does not have active questions available yet. Please try again later." />;
-  return <StudentTestRunner mockTestId={id} title={mockTest.title} sessionId={session.session_id} expiresAt={session.expires_at} questions={questions} />;
+  return <StudentTestRunner mockTestId={id} title={mockTest.title} sessionId={session.id} expiresAt={session.expires_at} questions={questions} />;
 }

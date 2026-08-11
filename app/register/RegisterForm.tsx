@@ -44,6 +44,11 @@ export function RegisterForm({ nextPath }: { nextPath: string }) {
 
     const supabase = createClient();
     const normalizedEmail = email.trim().toLowerCase();
+    if (fullName.trim().length > 120 || normalizedEmail.length > 254 || password.length > MAX_PASSWORD_LENGTH) {
+      setNotice({ tone: "error", message: "Check your name, email, and password lengths, then try again." });
+      setLoading(false);
+      return;
+    }
     const { data, error } = await supabase.auth.signUp({
       email: normalizedEmail,
       password,
@@ -186,11 +191,11 @@ export function RegisterForm({ nextPath }: { nextPath: string }) {
         <form onSubmit={handleRegister} className="mt-7 space-y-5">
           <label htmlFor="full_name" className="block text-sm font-bold text-slate-800">
             Full name
-            <input id="full_name" type="text" required autoComplete="name" value={fullName} onChange={(event) => setFullName(event.target.value)} placeholder="Your name" className="mt-2 w-full rounded-xl border px-4 py-3 font-normal" />
+            <input id="full_name" type="text" required maxLength={120} autoComplete="name" value={fullName} onChange={(event) => setFullName(event.target.value)} placeholder="Your name" className="mt-2 w-full rounded-xl border px-4 py-3 font-normal" />
           </label>
           <label htmlFor="register_email" className="block text-sm font-bold text-slate-800">
             Email
-            <input id="register_email" type="email" required autoComplete="email" value={email} onChange={(event) => setEmail(event.target.value)} placeholder="you@example.com" className="mt-2 w-full rounded-xl border px-4 py-3 font-normal" />
+            <input id="register_email" type="email" required maxLength={254} autoComplete="email" value={email} onChange={(event) => setEmail(event.target.value)} placeholder="you@example.com" className="mt-2 w-full rounded-xl border px-4 py-3 font-normal" />
           </label>
           <label htmlFor="new_password" className="block text-sm font-bold text-slate-800">
             Password

@@ -35,6 +35,7 @@ export function ExamsWorkspace({
         onExamCategoryChange={setCategoryId}
       />
       <ExistingExamsTable
+        key={categoryId || "no-category"}
         categoryId={categoryId}
         categoryName={categoryName}
         exams={exams}

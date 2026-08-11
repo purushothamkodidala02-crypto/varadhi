@@ -4,8 +4,8 @@ import { BrandMark } from "@/components/brand/VaradhiBrand";
 import { ExamSymbol, MockSymbol, StateSymbol } from "@/components/exams/CatalogSymbols";
 import { JsonLd } from "@/components/seo/JsonLd";
 import { PublicHeader } from "@/components/site/PublicHeader";
+import { getHomeCatalogData } from "@/lib/catalog-data";
 import { absoluteUrl, SITE_DESCRIPTION } from "@/lib/site";
-import { createClient } from "@/lib/supabase/server";
 
 export const metadata: Metadata = {
   title: "TG & AP State Exam Mock Tests | Varadhi Prep",
@@ -27,19 +27,8 @@ const benefits = [
 ];
 
 export default async function Home() {
-  const supabase = await createClient();
-  const [statesResult, categoriesResult, examsResult, papersResult, testsResult] = await Promise.all([
-    supabase.from("exam_states").select("id, name, code, slug, description, display_order").eq("is_active", true).order("display_order"),
-    supabase.from("exams").select("id, state_id, name").eq("is_active", true).order("display_order"),
-    supabase.from("exam_groups").select("id, exam_id, name").eq("is_active", true).order("display_order"),
-    supabase.from("papers").select("id, exam_group_id").eq("is_active", true),
-    supabase.from("mock_tests").select("id, paper_id").eq("status", "published").eq("access_type", "free"),
-  ]);
-  const states = statesResult.data ?? [];
-  const categories = categoriesResult.data ?? [];
-  const exams = examsResult.data ?? [];
-  const papers = papersResult.data ?? [];
-  const tests = testsResult.data ?? [];
+  const { states, categories, exams, papers, tests, hasStateError } =
+    await getHomeCatalogData();
   const categoryById = new Map(categories.map((item) => [item.id, item]));
   const paperById = new Map(papers.map((item) => [item.id, item]));
   const testCountByExam = new Map<string, number>();
@@ -79,7 +68,7 @@ export default async function Home() {
             <Link href="/mock-tests" className="inline-flex items-center gap-2 rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm font-black text-slate-800 shadow-sm hover:border-teal-300">Browse complete catalogue <span aria-hidden="true">→</span></Link>
           </div>
 
-          {statesResult.error ? (
+          {hasStateError ? (
             <div className="mt-8 rounded-3xl border border-dashed bg-white p-8 text-center text-sm text-slate-600">The new state catalogue will appear after its database update is applied.</div>
           ) : (
             <div className="mt-8 grid gap-4 md:grid-cols-3">

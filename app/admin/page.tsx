@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
+import { indiaDateKey } from "@/lib/date";
 
 export default async function AdminDashboard() {
   const supabase = await createClient();
@@ -18,7 +19,7 @@ export default async function AdminDashboard() {
 
   const tests = testsResult.data ?? [];
   const questions = questionsResult.data ?? [];
-  const today = new Date().toISOString().slice(0, 10);
+  const today = indiaDateKey();
   const usableIds = new Set(
     questions
       .filter(

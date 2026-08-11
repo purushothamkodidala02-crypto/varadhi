@@ -11,6 +11,12 @@ import { createClient } from "@/lib/supabase/server";
 import { TestStartActions } from "./TestStartActions";
 
 type MockTestDetailsProps = { params: Promise<{ id: string }> };
+type MockTestStats = {
+  mock_test_id: string;
+  question_count: number;
+  total_marks: number;
+  maximum_negative_marks: number;
+};
 
 export async function generateMetadata({ params }: MockTestDetailsProps): Promise<Metadata> {
   const { id } = await params;
@@ -67,8 +73,9 @@ export async function generateMetadata({ params }: MockTestDetailsProps): Promis
   };
 }
 
-export default async function MockTestDetailsPage({ params }: MockTestDetailsProps) {
+export default async function MockTestDetailsPage({ params, searchParams }: MockTestDetailsProps & { searchParams: Promise<{ start_error?: string }> }) {
   const { id } = await params;
+  const query = await searchParams;
   const supabase = await createClient();
   const [testResult, authResult] = await Promise.all([
     supabase.from("mock_tests").select("id, paper_id, subject_id, test_scope, series_number, title, description, instructions, duration_minutes, status, access_type").eq("id", id).eq("status", "published").eq("access_type", "free").maybeSingle(),
@@ -77,9 +84,10 @@ export default async function MockTestDetailsPage({ params }: MockTestDetailsPro
   const test = testResult.data;
   if (!test) notFound();
 
-  const [paperResult, subjectResult] = await Promise.all([
+  const [paperResult, subjectResult, statsResult] = await Promise.all([
     supabase.from("papers").select("id, exam_group_id, specialization_id, name, display_order, question_count, default_correct_marks, default_negative_marks").eq("id", test.paper_id).maybeSingle(),
     test.subject_id ? supabase.from("subjects").select("id, name, content_language_mode").eq("id", test.subject_id).maybeSingle() : Promise.resolve({ data: null }),
+    supabase.rpc("get_published_mock_test_stats"),
   ]);
   const paper = paperResult.data;
   const [examResult, specializationResult, siblingPapersResult] = await Promise.all([
@@ -93,15 +101,10 @@ export default async function MockTestDetailsPage({ params }: MockTestDetailsPro
     : undefined;
   const categoryResult = exam ? await supabase.from("exams").select("id, state_id, name").eq("id", exam.exam_id).maybeSingle() : { data: null };
   const stateResult = categoryResult.data?.state_id ? await supabase.from("exam_states").select("id, name, code, slug").eq("id", categoryResult.data.state_id).maybeSingle() : { data: null };
-  const configuredQuestionCount = Number(paper?.question_count ?? 0);
-  const questionCount =
-    test.test_scope === "paper" && configuredQuestionCount > 0
-      ? configuredQuestionCount
-      : null;
-  const totalMarks = questionCount
-    ? questionCount * Number(paper?.default_correct_marks ?? 0)
-    : null;
-  const negativeMarks = Number(paper?.default_negative_marks ?? 0);
+  const stats = ((statsResult.data ?? []) as MockTestStats[]).find((item) => item.mock_test_id === id);
+  const questionCount = stats ? Number(stats.question_count) : null;
+  const totalMarks = stats ? Number(stats.total_marks) : null;
+  const negativeMarks = stats ? Number(stats.maximum_negative_marks) : 0;
   const questionCountLabel = questionCount ? String(questionCount) : "Shown when started";
   const totalMarksLabel = totalMarks
     ? totalMarks.toFixed(2).replace(/\.00$/, "")
@@ -177,6 +180,7 @@ export default async function MockTestDetailsPage({ params }: MockTestDetailsPro
       <JsonLd data={jsonLd} />
       <PublicHeader />
       <div className="mx-auto max-w-6xl px-5 py-10 sm:px-8 sm:py-14">
+        {query.start_error === "1" && <p className="mb-6 rounded-2xl border border-amber-200 bg-amber-50 px-5 py-4 text-sm font-semibold text-amber-900">This test could not be started because its setup is incomplete. The administrator needs to verify its active questions and Paper count.</p>}
         <Link href="/mock-tests" className="text-sm font-bold text-teal-700 hover:text-teal-800">← Back to mock tests</Link>
         <div className="mt-7 grid gap-8 lg:grid-cols-[1fr_22rem] lg:items-start">
           <section>

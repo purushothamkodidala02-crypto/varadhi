@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useEffect, useMemo, useState } from "react";
+import { useActionState, useMemo, useState } from "react";
 import { SearchableSelect } from "@/components/admin/SearchableSelect";
 import { createSubjects, type CreateSubjectState } from "./actions";
 import { SubjectListInput } from "./SubjectListInput";
@@ -33,7 +33,11 @@ export function CreateSubjectForm({
   const [specializationId, setSpecializationId] = useState(initialLocation?.specializationId ?? "");
   const [paperId, setPaperId] = useState(initialLocation?.paperId ?? "");
   const [subjectResetKey, setSubjectResetKey] = useState(0);
-  const [state, formAction, pending] = useActionState(createSubjects, initialState);
+  const [state, formAction, pending] = useActionState(async (previous: CreateSubjectState, formData: FormData) => {
+    const next = await createSubjects(previous, formData);
+    if (next.success) setSubjectResetKey((current) => current + 1);
+    return next;
+  }, initialState);
 
   const availableExams = useMemo(
     () => exams.filter((exam) => exam.exam_id === categoryId),
@@ -47,10 +51,6 @@ export function CreateSubjectForm({
     () => papers.filter((paper) => paper.exam_group_id === examId && (specializationId ? paper.specialization_id === specializationId : !paper.specialization_id)),
     [examId, papers, specializationId],
   );
-
-  useEffect(() => {
-    if (state.success) setSubjectResetKey((current) => current + 1);
-  }, [state]);
 
   function changeCategory(nextCategoryId: string) {
     setCategoryId(nextCategoryId);
@@ -105,7 +105,7 @@ export function CreateSubjectForm({
           </label>
         </div>
 
-        <SubjectListInput resetKey={subjectResetKey} />
+        <SubjectListInput key={subjectResetKey} />
 
         <button disabled={pending || !paperId} className="rounded-xl bg-slate-950 px-5 py-3 text-sm font-bold text-white disabled:opacity-50">
           {pending ? "Adding..." : "Add Subjects"}

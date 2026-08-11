@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { buildMockTestTitle, toCatalogSlug } from "@/lib/exam-catalog";
 import { buildPaperDisplayMap, type OrderedPaper } from "@/lib/papers";
 import { createClient } from "@/lib/supabase/server";
-import type { MockTestAccessType, MockTestScope } from "@/types/mock-test";
+import type { MockTestScope } from "@/types/mock-test";
 
 export type CreateMockTestState = { success: boolean; message: string };
 
@@ -22,15 +22,10 @@ export async function createMockTest(_previous: CreateMockTestState, formData: F
   const scope = String(formData.get("test_scope") ?? "paper") as MockTestScope;
   const subjectId = String(formData.get("subject_id") ?? "").trim() || null;
   const duration = Number(formData.get("duration_minutes") ?? 0);
-  const accessType = String(formData.get("access_type") ?? "free") as MockTestAccessType;
-  const priceValue = String(formData.get("price_inr") ?? "").trim();
-  const price = priceValue ? Number(priceValue) : null;
   if (!stateId || !categoryId || !examId || !paperId) return { success: false, message: "Choose the state, board, exam and paper." };
   if (!Number.isInteger(duration) || duration <= 0) return { success: false, message: "Enter a valid duration." };
   if (scope !== "paper" && scope !== "subject") return { success: false, message: "Choose a valid practice coverage." };
   if (scope === "subject" && !subjectId) return { success: false, message: "Choose a subject for a subject-only mock." };
-  if (accessType !== "free" && accessType !== "paid") return { success: false, message: "Choose Free or Paid access." };
-  if (accessType === "paid" && (!price || price <= 0)) return { success: false, message: "Enter a valid price." };
 
   const [stateResult, categoryResult, groupResult, paperResult, papersResult, subjectResult] = await Promise.all([
     supabase.from("exam_states").select("id, name, code, slug").eq("id", stateId).maybeSingle(),
@@ -71,8 +66,8 @@ export async function createMockTest(_previous: CreateMockTestState, formData: F
     version: 1,
     display_order: seriesNumber,
     published_at: null,
-    access_type: accessType,
-    price_inr: accessType === "paid" ? price : null,
+    access_type: "free",
+    price_inr: null,
   });
   if (error?.code === "23505") return { success: false, message: "This series number was just used. Submit again to create the next number." };
   if (error) return { success: false, message: error.message };

@@ -7,9 +7,9 @@ import {
   StateSymbol,
 } from "@/components/exams/CatalogSymbols";
 import { PublicHeader } from "@/components/site/PublicHeader";
+import { getMockTestCatalogData } from "@/lib/catalog-data";
 import { mockTestLabel } from "@/lib/exam-catalog";
 import { buildPaperDisplayMap, type OrderedPaper } from "@/lib/papers";
-import { createClient } from "@/lib/supabase/server";
 
 type Filters = {
   state?: string;
@@ -17,9 +17,17 @@ type Filters = {
   paper?: string;
   q?: string;
   type?: string;
+  page?: string;
 };
 
 type MockTestsPageProps = { searchParams: Promise<Filters> };
+
+type MockTestStats = {
+  mock_test_id: string;
+  question_count: number;
+  total_marks: number;
+  maximum_negative_marks: number;
+};
 
 type CatalogTest = {
   id: string;
@@ -44,7 +52,10 @@ type CatalogTest = {
 
 export async function generateMetadata({ searchParams }: MockTestsPageProps): Promise<Metadata> {
   const filters = await searchParams;
-  const isFiltered = Boolean(filters.state || filters.exam || filters.paper || filters.q || filters.type);
+  const isFiltered = Boolean(
+    filters.state || filters.exam || filters.paper || filters.q || filters.type ||
+      (filters.page && filters.page !== "1"),
+  );
 
   return {
     title: "State Exam Mock Tests for Telangana & Andhra Pradesh",
@@ -66,23 +77,8 @@ function catalogHref(filters: Filters) {
 
 export default async function MockTestsPage({ searchParams }: MockTestsPageProps) {
   const filters = await searchParams;
-  const supabase = await createClient();
-  const [statesResult, categoriesResult, examsResult, specializationsResult, papersResult, subjectsResult, testsResult] = await Promise.all([
-    supabase.from("exam_states").select("id, name, code, slug, description, display_order").eq("is_active", true).order("display_order"),
-    supabase.from("exams").select("id, state_id, name, slug").eq("is_active", true).order("display_order"),
-    supabase.from("exam_groups").select("id, exam_id, name, slug").eq("is_active", true).order("display_order"),
-    supabase.from("exam_specializations").select("id, exam_group_id, name").eq("is_active", true).order("display_order"),
-    supabase.from("papers").select("id, exam_group_id, specialization_id, name, display_order, question_count, default_correct_marks").eq("is_active", true).order("display_order"),
-    supabase.from("subjects").select("id, paper_id, name").eq("is_active", true).order("display_order"),
-    supabase.from("mock_tests").select("id, paper_id, subject_id, test_scope, series_number, title, description, duration_minutes, access_type, price_inr").eq("status", "published").eq("access_type", "free").order("series_number"),
-  ]);
-
-  const states = statesResult.data ?? [];
-  const categories = categoriesResult.data ?? [];
-  const exams = examsResult.data ?? [];
-  const specializations = specializationsResult.data ?? [];
-  const papers = papersResult.data ?? [];
-  const subjects = subjectsResult.data ?? [];
+  const catalog = await getMockTestCatalogData();
+  const { states, categories, exams, specializations, papers, subjects } = catalog;
   const paperDisplayById = buildPaperDisplayMap(papers as OrderedPaper[]);
   const stateById = new Map(states.map((item) => [item.id, item]));
   const categoryById = new Map(categories.map((item) => [item.id, item]));
@@ -90,8 +86,11 @@ export default async function MockTestsPage({ searchParams }: MockTestsPageProps
   const specializationById = new Map(specializations.map((item) => [item.id, item]));
   const paperById = new Map(papers.map((item) => [item.id, item]));
   const subjectById = new Map(subjects.map((item) => [item.id, item]));
+  const statsByTestId = new Map(
+    (catalog.stats as MockTestStats[]).map((item) => [item.mock_test_id, item]),
+  );
 
-  const tests = (testsResult.data ?? []).flatMap((test) => {
+  const tests = catalog.tests.flatMap((test) => {
     const paper = paperById.get(test.paper_id);
     const exam = paper ? examById.get(paper.exam_group_id) : undefined;
     const category = exam ? categoryById.get(exam.exam_id) : undefined;
@@ -100,9 +99,9 @@ export default async function MockTestsPage({ searchParams }: MockTestsPageProps
     const subject = test.subject_id ? subjectById.get(test.subject_id) : undefined;
     const specialization = paper.specialization_id ? specializationById.get(paper.specialization_id) : undefined;
     const paperDisplay = paperDisplayById.get(paper.id);
-    const configuredQuestions = Number(paper.question_count ?? 0);
-    const questions = test.test_scope === "paper" && configuredQuestions > 0 ? configuredQuestions : null;
-    const marks = questions ? questions * Number(paper.default_correct_marks ?? 0) : null;
+    const stats = statsByTestId.get(test.id);
+    const questions = stats ? Number(stats.question_count) : null;
+    const marks = stats ? Number(stats.total_marks) : null;
     return [{ ...test, paper, exam, category, state, subject, specialization, paperDisplay, questions, marks }];
   });
 
@@ -126,6 +125,16 @@ export default async function MockTestsPage({ searchParams }: MockTestsPageProps
       (!query || searchable.includes(query))
     );
   });
+  const pageSize = 24;
+  const requestedPage = Number.parseInt(filters.page ?? "1", 10);
+  const totalPages = Math.max(1, Math.ceil(matchingTests.length / pageSize));
+  const currentPage = Number.isFinite(requestedPage)
+    ? Math.min(totalPages, Math.max(1, requestedPage))
+    : 1;
+  const paginatedTests = matchingTests.slice(
+    (currentPage - 1) * pageSize,
+    currentPage * pageSize,
+  );
 
   const stateStats = new Map(states.map((state) => {
     const stateTests = tests.filter((test) => test.state.id === state.id);
@@ -135,7 +144,7 @@ export default async function MockTestsPage({ searchParams }: MockTestsPageProps
     }];
   }));
 
-  const dataError = statesResult.error ?? categoriesResult.error ?? examsResult.error ?? papersResult.error ?? testsResult.error;
+  const dataError = catalog.hasError;
 
   return (
     <main className="min-h-screen bg-[#f4f7f8] text-slate-950">
@@ -178,7 +187,8 @@ export default async function MockTestsPage({ searchParams }: MockTestsPageProps
           </section>
         ) : isSearching ? (
           <CatalogSection eyebrow="Search results" title={`${matchingTests.length} result${matchingTests.length === 1 ? "" : "s"} for “${filters.q?.trim()}”`} action={<Link href={catalogHref({ state: selectedState?.slug })} className="text-sm font-bold text-teal-800">Clear search</Link>}>
-            <TestGrid tests={matchingTests} />
+            <TestGrid tests={paginatedTests} />
+            <CatalogPagination filters={filters} page={currentPage} totalPages={totalPages} />
           </CatalogSection>
         ) : !selectedState ? (
           <CatalogSection eyebrow="Step 1" title="Choose your exam location" description="TG and AP content stays completely separate. Central exams have their own space.">
@@ -227,7 +237,8 @@ export default async function MockTestsPage({ searchParams }: MockTestsPageProps
             <div className="mb-5 flex flex-wrap gap-2">
               {([['all', 'All tests'], ['paper', 'Full paper'], ['subject', 'Subject practice']] as const).map(([value, label]) => <Link key={value} href={catalogHref({ state: selectedState.slug, exam: selectedExam.id, paper: selectedPaper.id, type: value })} className={`rounded-full px-4 py-2 text-xs font-black ${(!filters.type && value === 'all') || filters.type === value ? 'bg-slate-950 text-white' : 'border bg-white text-slate-600'}`}>{label}</Link>)}
             </div>
-            <TestGrid tests={matchingTests} />
+            <TestGrid tests={paginatedTests} />
+            <CatalogPagination filters={filters} page={currentPage} totalPages={totalPages} />
           </CatalogSection>
         )}
       </div>
@@ -249,6 +260,15 @@ function CatalogSection({ eyebrow, title, description, action, children }: { eye
 function TestGrid({ tests }: { tests: CatalogTest[] }) {
   if (tests.length === 0) return <EmptyCatalog title="No matching mock tests" detail="Try another paper or clear the current search." />;
   return <div className="grid gap-5 md:grid-cols-2 lg:grid-cols-3">{tests.map((test) => <article key={test.id} className="group flex flex-col overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm transition hover:-translate-y-1 hover:border-teal-300 hover:shadow-xl hover:shadow-slate-950/5"><div className="h-1.5 bg-gradient-to-r from-teal-500 to-teal-300" /><div className="flex flex-1 flex-col p-6"><div className="flex items-start justify-between gap-3"><span className="grid h-11 w-11 place-items-center rounded-2xl bg-slate-950 text-teal-200"><MockSymbol /></span><span className={`rounded-full px-3 py-1 text-xs font-black ${test.access_type === "free" ? "bg-emerald-100 text-emerald-800" : "bg-amber-100 text-amber-900"}`}>{test.access_type === "free" ? "Free" : `₹${test.price_inr ?? "Paid"}`}</span></div><p className="mt-5 text-[11px] font-black uppercase tracking-[0.12em] text-teal-700">{test.state.code} · {test.exam.name} · {test.paperDisplay?.shortLabel ?? "Paper"}</p><h3 className="font-display mt-2 text-2xl">{mockTestLabel(Number(test.series_number ?? 1))}</h3>{test.subject && <p className="mt-1 text-sm font-bold text-slate-700">{test.subject.name}</p>}<p className="mt-3 flex-1 text-sm leading-6 text-slate-600">{test.description ?? "Focused exam practice with saved progress and detailed answer review."}</p><div className="mt-6 grid grid-cols-3 divide-x rounded-2xl bg-slate-50 py-3 text-center"><Metric value={test.questions ?? "—"} label="Questions" /><Metric value={test.duration_minutes} label="Minutes" /><Metric value={test.marks === null ? "—" : Number(test.marks).toFixed(2).replace(/\.00$/, "")} label="Marks" /></div><Link href={`/mock-tests/${test.id}`} className="mt-5 flex items-center justify-between rounded-xl bg-slate-950 px-4 py-3 text-sm font-black text-white transition group-hover:bg-teal-700"><span>View test details</span><span>→</span></Link></div></article>)}</div>;
+}
+
+function CatalogPagination({ filters, page, totalPages }: { filters: Filters; page: number; totalPages: number }) {
+  if (totalPages <= 1) return null;
+  return <nav aria-label="Mock-test pages" className="mt-8 flex items-center justify-center gap-3">
+    <Link href={catalogHref({ ...filters, page: page > 2 ? String(page - 1) : undefined })} aria-disabled={page === 1} className={`rounded-xl border bg-white px-4 py-2.5 text-sm font-bold ${page === 1 ? "pointer-events-none opacity-40" : "hover:border-teal-300"}`}>Previous</Link>
+    <span className="text-sm font-semibold text-slate-600">Page {page} of {totalPages}</span>
+    <Link href={catalogHref({ ...filters, page: page < totalPages ? String(page + 1) : undefined })} aria-disabled={page === totalPages} className={`rounded-xl border bg-white px-4 py-2.5 text-sm font-bold ${page === totalPages ? "pointer-events-none opacity-40" : "hover:border-teal-300"}`}>Next</Link>
+  </nav>;
 }
 
 function Metric({ value, label }: { value: string | number; label: string }) {

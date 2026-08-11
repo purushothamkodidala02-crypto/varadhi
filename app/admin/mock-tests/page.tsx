@@ -1,6 +1,7 @@
 import { MockSymbol } from "@/components/exams/CatalogSymbols";
 import { buildPaperDisplayMap, type OrderedPaper } from "@/lib/papers";
 import { createClient } from "@/lib/supabase/server";
+import { indiaDateKey } from "@/lib/date";
 import { CreateMockTestForm } from "./CreateMockTestForm";
 import { ExistingMockTestsTable } from "./ExistingMockTestsTable";
 
@@ -36,7 +37,7 @@ export default async function MockTestsPage() {
   const examOptions = exams.map((item) => ({ id: item.id, categoryId: item.exam_id, name: item.name }));
   const specializationOptions = specializations.map((item) => ({ id: item.id, examId: item.exam_group_id, name: item.name }));
   const paperOptions = papers.map((item) => ({ id: item.id, examId: item.exam_group_id, specializationId: item.specialization_id, name: item.name, duration: item.duration_minutes, number: paperDisplayById.get(item.id)?.number ?? 1 }));
-  const today = new Date().toISOString().slice(0, 10);
+  const today = indiaDateKey();
   const questionById = new Map((questionsResult.data ?? []).map((item) => [item.id, item]));
   const assignmentsByTest = new Map<string, NonNullable<typeof assignmentsResult.data>>();
   for (const assignment of assignmentsResult.data ?? []) {

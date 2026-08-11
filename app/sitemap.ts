@@ -1,17 +1,22 @@
 import type { MetadataRoute } from "next";
+import { unstable_cache } from "next/cache";
 import { absoluteUrl } from "@/lib/site";
 import { createPublicClient } from "@/lib/supabase/public";
+import { PUBLIC_CATALOG_TAG } from "@/lib/catalog-data";
 
-export const dynamic = "force-dynamic";
-
-export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
+const getPublishedTests = unstable_cache(async () => {
   const supabase = createPublicClient();
-  const { data: tests } = await supabase
+  const { data } = await supabase
     .from("mock_tests")
     .select("id, updated_at")
     .eq("status", "published")
     .eq("access_type", "free")
     .order("display_order");
+  return data ?? [];
+}, ["published-test-sitemap-v1"], { tags: [PUBLIC_CATALOG_TAG], revalidate: 3600 });
+
+export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
+  const tests = await getPublishedTests();
 
   const publicPages: MetadataRoute.Sitemap = [
     {
@@ -26,7 +31,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     },
   ];
 
-  const testPages: MetadataRoute.Sitemap = (tests ?? []).map((test) => ({
+  const testPages: MetadataRoute.Sitemap = tests.map((test) => ({
     url: absoluteUrl(`/mock-tests/${test.id}`),
     lastModified: test.updated_at ? new Date(test.updated_at) : undefined,
     changeFrequency: "weekly",

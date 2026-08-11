@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { DeleteGroupButton } from "./DeleteGroupButton";
 
 type ExistingExam = {
@@ -35,18 +35,10 @@ export function ExistingExamsTable({
     );
   }, [categoryId, exams, search]);
   const pageCount = Math.max(1, Math.ceil(filtered.length / pageSize));
-  const visibleExams = filtered.slice((page - 1) * pageSize, page * pageSize);
-  const firstEntry = filtered.length === 0 ? 0 : (page - 1) * pageSize + 1;
-  const lastEntry = Math.min(page * pageSize, filtered.length);
-
-  useEffect(() => {
-    setSearch("");
-    setPage(1);
-  }, [categoryId]);
-
-  useEffect(() => {
-    setPage(1);
-  }, [search]);
+  const visiblePage = Math.min(page, pageCount);
+  const visibleExams = filtered.slice((visiblePage - 1) * pageSize, visiblePage * pageSize);
+  const firstEntry = filtered.length === 0 ? 0 : (visiblePage - 1) * pageSize + 1;
+  const lastEntry = Math.min(visiblePage * pageSize, filtered.length);
 
   return (
     <section className="mt-8 overflow-hidden rounded-2xl border bg-white">
@@ -70,7 +62,10 @@ export function ExistingExamsTable({
           <input
             type="search"
             value={search}
-            onChange={(event) => setSearch(event.target.value)}
+            onChange={(event) => {
+              setSearch(event.target.value);
+              setPage(1);
+            }}
             placeholder="For example: Group 2 or Executive Officer"
             disabled={!categoryId}
             className="mt-2 w-full rounded-xl border px-4 py-3 font-normal disabled:cursor-not-allowed disabled:bg-slate-100"
@@ -136,18 +131,18 @@ export function ExistingExamsTable({
               <button
                 type="button"
                 onClick={() => setPage((current) => Math.max(1, current - 1))}
-                disabled={page === 1}
+                disabled={visiblePage === 1}
                 className="rounded-lg border bg-white px-3 py-2 font-bold disabled:cursor-not-allowed disabled:opacity-40"
               >
                 Previous
               </button>
               <span className="px-2 font-semibold text-slate-600">
-                Page {page} of {pageCount}
+                Page {visiblePage} of {pageCount}
               </span>
               <button
                 type="button"
                 onClick={() => setPage((current) => Math.min(pageCount, current + 1))}
-                disabled={page === pageCount}
+                disabled={visiblePage === pageCount}
                 className="rounded-lg border bg-white px-3 py-2 font-bold disabled:cursor-not-allowed disabled:opacity-40"
               >
                 Next

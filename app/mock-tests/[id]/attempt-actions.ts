@@ -37,23 +37,48 @@ function cleanAnswers(answers: Record<string, Answer>) {
 
 export async function saveAttemptProgress(
   sessionId: string,
-  answers: Record<string, Answer>
+  questionId: string,
+  answer: Answer | null,
 ): Promise<{ success: boolean }> {
   const supabase = await createClient();
   const {
     data: { user },
   } = await supabase.auth.getUser();
 
-  const cleanedAnswers = cleanAnswers(answers);
-  if (!user || !UUID_PATTERN.test(sessionId) || !cleanedAnswers) {
+  if (
+    !user ||
+    !UUID_PATTERN.test(sessionId) ||
+    !UUID_PATTERN.test(questionId) ||
+    (answer !== null && !["A", "B", "C", "D"].includes(answer))
+  ) {
     return { success: false };
   }
 
-  const { error } = await supabase.rpc("save_mock_test_session_answers", {
+  const { error } = await supabase.rpc("save_mock_test_answer_update", {
     requested_session_id: sessionId,
-    submitted_answers: cleanedAnswers,
+    requested_question_id: questionId,
+    requested_answer: answer,
   });
 
+  return { success: !error };
+}
+
+export async function saveReviewState(
+  sessionId: string,
+  questionId: string,
+  marked: boolean,
+): Promise<{ success: boolean }> {
+  const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user || !UUID_PATTERN.test(sessionId) || !UUID_PATTERN.test(questionId)) {
+    return { success: false };
+  }
+
+  const { error } = await supabase.rpc("save_mock_test_review_mark", {
+    requested_session_id: sessionId,
+    requested_question_id: questionId,
+    requested_mark: marked,
+  });
   return { success: !error };
 }
 
@@ -88,7 +113,7 @@ export async function pauseAttempt(
     requested_session_id: sessionId,
   });
   return pauseError
-    ? { success: false, message: pauseError.message }
+    ? { success: false, message: "The attempt could not be paused. Refresh the page and try again." }
     : { success: true, message: "Practice paused. Resume whenever you are ready.", remaining: Number(pausedSeconds) };
 }
 
@@ -101,7 +126,7 @@ export async function resumeAttempt(mockTestId: string, sessionId: string): Prom
   });
   const resumed = data?.[0] as { session_id: string; expires_at: string } | undefined;
   if (error || !resumed || resumed.session_id !== sessionId) {
-    return { success: false, message: error?.message ?? "This attempt could not be resumed." };
+    return { success: false, message: "This attempt could not be resumed. Return to the test details and try again." };
   }
   return { success: true, message: "Practice resumed.", expiresAt: resumed.expires_at };
 }
@@ -132,7 +157,7 @@ export async function submitAttempt(
 
   const result = data?.[0];
   if (error || !result) {
-    return { success: false, message: error?.message ?? "Unable to submit this attempt." };
+    return { success: false, message: "Unable to submit this attempt right now. Your saved answers are still protected; try again." };
   }
 
   revalidatePath("/dashboard");

@@ -1,15 +1,16 @@
 "use client";
 
 import Link from "next/link";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import Image from "next/image";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { containsTeluguText, FormattedQuestionText } from "@/components/questions/FormattedQuestionText";
-import { pauseAttempt, resumeAttempt, saveAttemptProgress, submitAttempt, syncAttemptTimer, type SubmitAttemptResult } from "./attempt-actions";
+import { pauseAttempt, resumeAttempt, saveAttemptProgress, saveReviewState, submitAttempt, syncAttemptTimer, type SubmitAttemptResult } from "./attempt-actions";
 
 type Answer = "A" | "B" | "C" | "D";
 type TestQuestion = {
   question_id: string; question_order: number; marks: number; negative_marks: number;
   question_text: string; option_a: string; option_b: string; option_c: string; option_d: string;
-  image_url: string | null; selected_answer: Answer | null;
+  image_url: string | null; selected_answer: Answer | null; marked_for_review: boolean;
   content_language_mode: "bilingual" | "english" | "telugu";
   question_text_te: string | null; option_a_te: string | null; option_b_te: string | null;
   option_c_te: string | null; option_d_te: string | null;
@@ -31,7 +32,9 @@ export function StudentTestRunner({ mockTestId, title, sessionId, expiresAt, que
     return lastAnsweredIndex >= 0 ? Math.min(lastAnsweredIndex + 1, questions.length - 1) : 0;
   });
   const [answers, setAnswers] = useState<Record<string, Answer>>(() => Object.fromEntries(questions.flatMap((item) => item.selected_answer ? [[item.question_id, item.selected_answer]] : [])));
-  const [reviewIds, setReviewIds] = useState<Set<string>>(() => new Set());
+  const [reviewIds, setReviewIds] = useState<Set<string>>(
+    () => new Set(questions.filter((item) => item.marked_for_review).map((item) => item.question_id)),
+  );
   const [remaining, setRemaining] = useState<number | null>(null);
   const [language, setLanguage] = useState<"en" | "te">("en");
   const [saveState, setSaveState] = useState<"saved" | "saving" | "error">("saved");
@@ -42,6 +45,7 @@ export function StudentTestRunner({ mockTestId, title, sessionId, expiresAt, que
   const [paused, setPaused] = useState(false);
   const [pauseError, setPauseError] = useState("");
   const [submission, setSubmission] = useState<SubmitAttemptResult | null>(null);
+  const saveChains = useRef(new Map<string, Promise<void>>());
 
   const current = questions[index];
   const answered = useMemo(() => Object.keys(answers).length, [answers]);
@@ -49,23 +53,36 @@ export function StudentTestRunner({ mockTestId, title, sessionId, expiresAt, que
   const locked = remaining === null || remaining === 0 || submitting || pausing || paused;
   const pauseControlDisabled = remaining === null || remaining === 0 || submitting || pausing;
 
-  useEffect(() => {
-    if (submission || submitting) return;
-    let active = true;
-    const timer = window.setTimeout(async () => {
-      const result = await saveAttemptProgress(sessionId, answers);
-      if (active) setSaveState(result.success ? "saved" : "error");
-    }, 450);
-    return () => { active = false; window.clearTimeout(timer); };
-  }, [answers, sessionId, submission, submitting]);
+  const queueSave = useCallback((key: string, operation: () => Promise<{ success: boolean }>) => {
+    setSaveState("saving");
+    const previous = saveChains.current.get(key) ?? Promise.resolve();
+    const next = previous
+      .then(operation)
+      .then((result) => {
+        if (!result.success) setSaveState("error");
+      })
+      .catch(() => setSaveState("error"))
+      .then(() => {
+        if (saveChains.current.get(key) === next) saveChains.current.delete(key);
+        if (saveChains.current.size === 0) {
+          setSaveState((current) => current === "error" ? current : "saved");
+        }
+      });
+    saveChains.current.set(key, next);
+  }, []);
+
+  const flushSaves = useCallback(async () => {
+    await Promise.all([...saveChains.current.values()]);
+  }, []);
 
   const finish = useCallback(async () => {
     if (submitting || submission) return;
     setConfirming(false);
     setSubmitting(true);
+    await flushSaves();
     setSubmission(await submitAttempt(sessionId, answers));
     setSubmitting(false);
-  }, [answers, sessionId, submission, submitting]);
+  }, [answers, flushSaves, sessionId, submission, submitting]);
 
   useEffect(() => {
     if (submission || paused) return;
@@ -89,9 +106,26 @@ export function StudentTestRunner({ mockTestId, title, sessionId, expiresAt, que
         setRemaining(result.remaining);
       }
     };
-    const timer = window.setInterval(() => void sync(), 5000);
+    const timer = window.setInterval(() => void sync(), 30000);
     return () => window.clearInterval(timer);
   }, [paused, pausing, sessionId, submission, submitting]);
+
+  useEffect(() => {
+    function navigateWithKeyboard(event: KeyboardEvent) {
+      if (locked || confirming) return;
+      const target = event.target as HTMLElement | null;
+      if (target?.matches("input, textarea, select, button, a, [contenteditable='true']")) return;
+      if (event.key === "ArrowLeft") {
+        event.preventDefault();
+        setIndex((value) => Math.max(0, value - 1));
+      } else if (event.key === "ArrowRight") {
+        event.preventDefault();
+        setIndex((value) => Math.min(questions.length - 1, value + 1));
+      }
+    }
+    window.addEventListener("keydown", navigateWithKeyboard);
+    return () => window.removeEventListener("keydown", navigateWithKeyboard);
+  }, [confirming, locked, questions.length]);
 
   if (submission) return <SubmissionResult mockTestId={mockTestId} title={title} result={submission} onRetry={() => setSubmission(null)} />;
 
@@ -106,16 +140,30 @@ export function StudentTestRunner({ mockTestId, title, sessionId, expiresAt, que
   ] as const;
 
   function toggleReview() {
-    setReviewIds((value) => { const next = new Set(value); if (next.has(current.question_id)) next.delete(current.question_id); else next.add(current.question_id); return next; });
+    const marked = !reviewIds.has(current.question_id);
+    setReviewIds((value) => {
+      const next = new Set(value);
+      if (marked) next.add(current.question_id); else next.delete(current.question_id);
+      return next;
+    });
+    queueSave(
+      `review:${current.question_id}`,
+      () => saveReviewState(sessionId, current.question_id, marked),
+    );
   }
   function clearAnswer() {
     setSaveState("saving");
     setAnswers((value) => { const next = { ...value }; delete next[current.question_id]; return next; });
+    queueSave(
+      `answer:${current.question_id}`,
+      () => saveAttemptProgress(sessionId, current.question_id, null),
+    );
   }
   async function togglePause() {
     if (pauseControlDisabled) return;
     setPauseError("");
     setPausing(true);
+    await flushSaves();
     if (paused) {
       const result = await resumeAttempt(mockTestId, sessionId);
       if (result.success && result.expiresAt) {
@@ -158,8 +206,8 @@ export function StudentTestRunner({ mockTestId, title, sessionId, expiresAt, que
         <section className="rounded-3xl border bg-white p-6 shadow-sm sm:p-8">
           <div className="flex flex-wrap items-start justify-between gap-3"><div><p className="text-xs font-bold uppercase tracking-[0.15em] text-teal-700">Multiple choice question</p><p className="mt-1 text-xs font-semibold text-slate-500">{current.marks} mark{Number(current.marks) === 1 ? "" : "s"}{Number(current.negative_marks) > 0 ? ` · −${current.negative_marks} for a wrong answer` : ""}</p></div>{bilingual && <div className="rounded-lg bg-slate-100 p-1 text-xs font-bold"><button type="button" onClick={() => setLanguage("en")} className={`rounded-md px-3 py-1.5 ${language === "en" ? "bg-white shadow-sm" : "text-slate-600"}`}>English</button><button type="button" onClick={() => setLanguage("te")} className={`rounded-md px-3 py-1.5 ${language === "te" ? "bg-white shadow-sm" : "text-slate-600"}`}>తెలుగు</button></div>}</div>
           <FormattedQuestionText text={questionText} className="mt-6 text-lg leading-8" />
-          {current.image_url && <img src={current.image_url} alt="Question reference" className="mt-6 max-h-80 rounded-xl border object-contain" />}
-          <div className="mt-7 grid gap-3">{options.map(([key, text]) => { const selected = answers[current.question_id] === key; const teluguOption = containsTeluguText(text); return <label key={key} className={`flex cursor-pointer gap-4 rounded-2xl border p-4 transition hover:border-teal-300 ${selected ? "border-teal-600 bg-teal-50" : "bg-white"} ${locked ? "pointer-events-none opacity-60" : ""}`}><input className="sr-only" type="radio" name={current.question_id} value={key} checked={selected} disabled={locked} onChange={() => { setSaveState("saving"); setAnswers((value) => ({ ...value, [current.question_id]: key })); }} /><span className={`grid h-8 w-8 shrink-0 place-items-center rounded-lg text-sm font-black ${selected ? "bg-teal-700 text-white" : "bg-slate-100 text-slate-600"}`}>{key}</span><span lang={teluguOption ? "te" : undefined} className={`whitespace-pre-line pt-1 text-sm font-medium leading-6 text-slate-800 ${teluguOption ? "font-telugu" : ""}`}>{text}</span></label>; })}</div>
+          {current.image_url && <Image src={current.image_url} alt="Question reference" width={1200} height={800} sizes="(max-width: 1024px) 100vw, 800px" className="mt-6 h-auto max-h-80 w-auto max-w-full rounded-xl border object-contain" />}
+          <div className="mt-7 grid gap-3">{options.map(([key, text]) => { const selected = answers[current.question_id] === key; const teluguOption = containsTeluguText(text); return <label key={key} className={`flex cursor-pointer gap-4 rounded-2xl border p-4 transition hover:border-teal-300 ${selected ? "border-teal-600 bg-teal-50" : "bg-white"} ${locked ? "pointer-events-none opacity-60" : ""}`}><input className="sr-only" type="radio" name={current.question_id} value={key} checked={selected} disabled={locked} onChange={() => { setSaveState("saving"); setAnswers((value) => ({ ...value, [current.question_id]: key })); queueSave(`answer:${current.question_id}`, () => saveAttemptProgress(sessionId, current.question_id, key)); }} /><span className={`grid h-8 w-8 shrink-0 place-items-center rounded-lg text-sm font-black ${selected ? "bg-teal-700 text-white" : "bg-slate-100 text-slate-600"}`}>{key}</span><span lang={teluguOption ? "te" : undefined} className={`whitespace-pre-line pt-1 text-sm font-medium leading-6 text-slate-800 ${teluguOption ? "font-telugu" : ""}`}>{text}</span></label>; })}</div>
           <div className="mt-6 flex flex-wrap items-center justify-between gap-3 border-t pt-5"><button type="button" onClick={clearAnswer} disabled={!answers[current.question_id] || locked} className="text-sm font-bold text-slate-500 hover:text-red-700 disabled:opacity-40">Clear answer</button><button type="button" onClick={toggleReview} disabled={locked} className={`rounded-xl px-4 py-2.5 text-sm font-bold ${reviewIds.has(current.question_id) ? "bg-amber-100 text-amber-900" : "border text-slate-700"}`}>{reviewIds.has(current.question_id) ? "Marked for review" : "Mark for review"}</button></div>
         </section>
         <aside className="hidden h-[calc(100vh-7rem)] min-h-0 overflow-hidden rounded-3xl border bg-white p-5 shadow-sm lg:sticky lg:top-24 lg:block">{navigator}</aside>
@@ -228,7 +276,7 @@ function SubmissionDialog({ answered, review, unanswered, submitting, onCancel, 
 }
 
 function SubmissionResult({ mockTestId, title, result, onRetry }: { mockTestId: string; title: string; result: SubmitAttemptResult; onRetry: () => void }) {
-  return <main className="grid min-h-screen place-items-center bg-slate-50 px-5 py-10"><section className="w-full max-w-2xl rounded-3xl border bg-white p-8 text-center shadow-xl sm:p-10"><p className={`text-xs font-bold uppercase tracking-[0.16em] ${result.success ? "text-emerald-700" : "text-red-700"}`}>{result.success ? "Test submitted" : "Submission needs attention"}</p><h1 className="mt-3 text-3xl font-black">{title}</h1>{result.success ? <><p className="mt-7 text-5xl font-black">{result.score} <span className="text-2xl text-slate-400">/ {result.totalMarks}</span></p><div className="mt-7 grid grid-cols-3 gap-3"><Metric value={result.correctAnswers ?? 0} label="Correct" tone="text-emerald-800" /><Metric value={result.incorrectAnswers ?? 0} label="Incorrect" tone="text-red-800" /><Metric value={result.unansweredQuestions ?? 0} label="Unanswered" tone="text-slate-700" /></div><div className="mt-8 flex flex-wrap justify-center gap-3">{result.attemptId && <Link href={`/dashboard/attempts/${result.attemptId}`} className="rounded-xl bg-slate-950 px-5 py-3 text-sm font-bold text-white">Review answers</Link>}<Link href={`/mock-tests/${mockTestId}/attempt`} className="rounded-xl bg-teal-700 px-5 py-3 text-sm font-bold text-white">Retake test</Link><Link href="/dashboard" className="rounded-xl border px-5 py-3 text-sm font-bold">Go to dashboard</Link></div></> : <><p className="mt-5 text-slate-600">{result.message}</p><button type="button" onClick={onRetry} className="mt-7 rounded-xl bg-slate-950 px-5 py-3 text-sm font-bold text-white">Try submission again</button></>}</section></main>;
+  return <main className="grid min-h-screen place-items-center bg-slate-50 px-5 py-10"><section className="w-full max-w-2xl rounded-3xl border bg-white p-8 text-center shadow-xl sm:p-10"><p className={`text-xs font-bold uppercase tracking-[0.16em] ${result.success ? "text-emerald-700" : "text-red-700"}`}>{result.success ? "Test submitted" : "Submission needs attention"}</p><h1 className="mt-3 text-3xl font-black">{title}</h1>{result.success ? <><p className="mt-7 text-5xl font-black">{result.score} <span className="text-2xl text-slate-400">/ {result.totalMarks}</span></p><div className="mt-7 grid grid-cols-3 gap-3"><Metric value={result.correctAnswers ?? 0} label="Correct" tone="text-emerald-800" /><Metric value={result.incorrectAnswers ?? 0} label="Incorrect" tone="text-red-800" /><Metric value={result.unansweredQuestions ?? 0} label="Unanswered" tone="text-slate-700" /></div><div className="mt-8 flex flex-wrap justify-center gap-3">{result.attemptId && <Link href={`/dashboard/attempts/${result.attemptId}`} className="rounded-xl bg-slate-950 px-5 py-3 text-sm font-bold text-white">Review answers</Link>}<Link href={`/mock-tests/${mockTestId}`} className="rounded-xl bg-teal-700 px-5 py-3 text-sm font-bold text-white">Retake test</Link><Link href="/dashboard" className="rounded-xl border px-5 py-3 text-sm font-bold">Go to dashboard</Link></div></> : <><p className="mt-5 text-slate-600">{result.message}</p><button type="button" onClick={onRetry} className="mt-7 rounded-xl bg-slate-950 px-5 py-3 text-sm font-bold text-white">Try submission again</button></>}</section></main>;
 }
 
 function Metric({ value, label, tone }: { value: number; label: string; tone: string }) { return <div className="rounded-xl border bg-white px-3 py-3 text-center"><strong className={`block text-lg font-black ${tone}`}>{value}</strong><span className="text-xs font-semibold text-slate-500">{label}</span></div>; }

@@ -2,7 +2,7 @@
 
 import { useActionState, useMemo, useState } from "react";
 import { SearchableSelect } from "@/components/admin/SearchableSelect";
-import type { MockTest, MockTestAccessType } from "@/types/mock-test";
+import type { MockTest } from "@/types/mock-test";
 import { mockTestLabel } from "@/lib/exam-catalog";
 import { updateMockTest, type UpdateMockTestState } from "./actions";
 
@@ -27,9 +27,6 @@ export function EditMockTestForm({
   const [paperId, setPaperId] = useState(mockTest.paper_id);
   const [subjectId, setSubjectId] = useState(mockTest.subject_id ?? "");
   const [scope, setScope] = useState(mockTest.test_scope);
-  const [accessType, setAccessType] = useState<MockTestAccessType>(
-    mockTest.access_type,
-  );
   const availableSubjects = useMemo(
     () => subjects.filter((subject) => subject.paperId === paperId),
     [subjects, paperId],
@@ -119,29 +116,13 @@ export function EditMockTestForm({
           Student access
           <SearchableSelect
             name="access_type"
-            value={accessType}
-            onChange={(value) => setAccessType(value as MockTestAccessType)}
-            options={[
-              { value: "free", label: "Free" },
-              { value: "paid", label: "Paid" },
-            ]}
-            placeholder="Search an access type"
+            value="free"
+            onChange={() => undefined}
+            options={[{ value: "free", label: "Free" }]}
+            placeholder="Free"
+            disabled
           />
         </label>
-        {accessType === "paid" && (
-          <label className="block text-sm font-bold">
-            Price in ₹
-            <input
-              name="price_inr"
-              type="number"
-              min="1"
-              step="0.01"
-              required
-              defaultValue={mockTest.price_inr ?? ""}
-              className="mt-2 w-full rounded-xl border px-4 py-3 font-normal"
-            />
-          </label>
-        )}
         <div className="md:col-span-2">
           <button
             disabled={pending}

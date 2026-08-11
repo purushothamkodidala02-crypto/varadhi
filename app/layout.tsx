@@ -11,6 +11,7 @@ export const metadata: Metadata = {
   description: SITE_DESCRIPTION,
   applicationName: SITE_NAME,
   icons: { icon: "/varadhi-mark.svg" },
+  manifest: "/manifest.webmanifest",
   category: "education",
   openGraph: {
     type: "website",
@@ -22,7 +23,7 @@ export const metadata: Metadata = {
     url: "/",
   },
   twitter: {
-    card: "summary",
+    card: "summary_large_image",
     title: "Varadhi Prep: Smart Mock Tests for Career Growth",
     description: SITE_DESCRIPTION,
   },

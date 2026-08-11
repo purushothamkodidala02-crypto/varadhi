@@ -146,18 +146,39 @@ export async function createGroup(
     };
   }
 
-  const { data: group, error: insertError } = await supabase
-    .from("exam_groups")
-    .insert({
-      exam_id: examId,
-      name,
-      slug,
-      description: description || null,
-      is_active: isActive,
-      display_order: displayOrder,
-    })
-    .select("id")
-    .single();
+  const placeholderGroupId = "00000000-0000-0000-0000-000000000000";
+  const directPapers = toPaperRows(placeholderGroupId, paperInput.papers);
+  const usedSlugs = directPapers.map((paper) => paper.slug);
+  let nextDisplayOrder = directPapers.length + 1;
+  const specializations = specializationInput.specializations.map((specialization) => {
+    const specializationPapers = toPaperRows(
+      placeholderGroupId,
+      specialization.papers,
+      usedSlugs,
+      nextDisplayOrder,
+    );
+    usedSlugs.push(...specializationPapers.map((paper) => paper.slug));
+    nextDisplayOrder += specializationPapers.length;
+    return { ...specialization, papers: specializationPapers };
+  });
+  const allPaperCount = directPapers.length + specializations.reduce(
+    (total, specialization) => total + specialization.papers.length,
+    0,
+  );
+
+  const { data: groupId, error: insertError } = await supabase.rpc(
+    "create_exam_structure_atomic",
+    {
+      requested_exam_id: examId,
+      requested_name: name,
+      requested_slug: slug,
+      requested_description: description,
+      requested_is_active: isActive,
+      requested_display_order: displayOrder,
+      requested_direct_papers: directPapers,
+      requested_specializations: specializations,
+    },
+  );
 
   if (insertError?.code === "23505") {
     return {
@@ -166,60 +187,16 @@ export async function createGroup(
     };
   }
 
-  if (insertError || !group) {
+  if (insertError || !groupId) {
     return {
       success: false,
       message: insertError?.message ?? "The Exam could not be created.",
     };
   }
 
-  const allPaperRows = toPaperRows(group.id, paperInput.papers);
-  const usedSlugs = allPaperRows.map((paper) => paper.slug);
-  let nextDisplayOrder = allPaperRows.length + 1;
-
-  for (const specialization of specializationInput.specializations) {
-    const { data: savedSpecialization, error: specializationError } = await supabase
-      .from("exam_specializations")
-      .insert({
-        exam_group_id: group.id,
-        name: specialization.name,
-        slug: specialization.slug,
-        display_order: specialization.display_order,
-        is_active: isActive,
-      })
-      .select("id")
-      .single();
-
-    if (specializationError || !savedSpecialization) {
-      await supabase.from("exam_groups").delete().eq("id", group.id);
-      return {
-        success: false,
-        message: `The Exam could not be created because its Specialisations could not be saved: ${specializationError?.message ?? "Unknown error"}`,
-      };
-    }
-
-    const specializationPaperRows = toPaperRows(group.id, specialization.papers, usedSlugs, nextDisplayOrder)
-      .map((paper) => ({ ...paper, specialization_id: savedSpecialization.id }));
-    allPaperRows.push(...specializationPaperRows);
-    usedSlugs.push(...specializationPaperRows.map((paper) => paper.slug));
-    nextDisplayOrder += specializationPaperRows.length;
-  }
-
-  const { error: papersError } = allPaperRows.length > 0
-    ? await supabase.from("papers").insert(allPaperRows)
-    : { error: null };
-
-  if (papersError) {
-    await supabase.from("exam_groups").delete().eq("id", group.id);
-    return {
-      success: false,
-      message: `The Exam could not be created because its Papers could not be saved: ${papersError.message}`,
-    };
-  }
-
   revalidatePath("/admin/groups");
   revalidatePath("/admin/exams");
-  revalidatePath(`/admin/groups/${group.id}/edit`);
+  revalidatePath(`/admin/groups/${groupId}/edit`);
   revalidatePath("/admin/papers");
   revalidatePath("/admin/subjects");
   revalidatePath("/admin/mock-tests");
@@ -228,6 +205,6 @@ export async function createGroup(
 
   return {
     success: true,
-    message: `Exam created with ${specializationInput.specializations.length ? `${specializationInput.specializations.length} ${specializationInput.specializations.length === 1 ? "Specialisation" : "Specialisations"}` : "no Specialisations"} and ${allPaperRows.length} ${allPaperRows.length === 1 ? "Paper" : "Papers"}.`,
+    message: `Exam created with ${specializationInput.specializations.length ? `${specializationInput.specializations.length} ${specializationInput.specializations.length === 1 ? "Specialisation" : "Specialisations"}` : "no Specialisations"} and ${allPaperCount} ${allPaperCount === 1 ? "Paper" : "Papers"}.`,
   };
 }

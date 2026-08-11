@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useActionState, useEffect, useState } from "react";
+import { useActionState, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { DeletePaperButton } from "@/app/admin/papers/DeletePaperButton";
 import { PaperForm } from "@/app/admin/papers/PaperForm";
@@ -24,8 +24,6 @@ export function ExamPaperManager({ examId, examName, specializations, papers }: 
   const [paperFormTarget, setPaperFormTarget] = useState<string | null>(null);
   const [openSpecializationId, setOpenSpecializationId] = useState<string | null>(requestedOpen && requestedOpen !== "direct" ? requestedOpen : null);
   const [state, specializationAction, pending] = useActionState(createSpecialization, initialSpecializationState);
-  useEffect(() => { if (state.success) setShowSpecializationForm(false); }, [state.success]);
-  useEffect(() => { if (requestedOpen && requestedOpen !== "direct") setOpenSpecializationId(requestedOpen); }, [requestedOpen]);
   const specializationPapers = (specializationId: string) => papers.filter((paper) => paper.specializationId === specializationId);
   const directPapers = papers.filter((paper) => paper.specializationId === null);
 

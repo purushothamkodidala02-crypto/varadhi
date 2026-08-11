@@ -1,7 +1,9 @@
 "use client";
 
 import Link from "next/link";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { createClient } from "@/lib/supabase/client";
+import { indiaDateKey } from "@/lib/date";
 import {
   LocationFilters,
   type LocationCategory,
@@ -42,7 +44,7 @@ const emptyLocation: LocationFilterValue = {
 };
 
 function statusOf(question: QuestionBankRow) {
-  const today = new Date().toISOString().slice(0, 10);
+  const today = indiaDateKey();
 
   if (!question.isActive) {
     return { label: "Unavailable", className: "bg-slate-200 text-slate-700" };
@@ -78,32 +80,100 @@ export function QuestionBankTable({
   specializations,
   papers,
   subjects,
-  questions,
 }: {
   categories: LocationCategory[];
   exams: LocationExam[];
   specializations: LocationSpecialization[];
   papers: LocationPaper[];
   subjects: LocationSubject[];
-  questions: QuestionBankRow[];
 }) {
   const [location, setLocation] = useState(emptyLocation);
   const [search, setSearch] = useState("");
-  const filtered = useMemo(() => {
-    const query = search.trim().toLowerCase();
-    return questions.filter(
-      (question) =>
-        question.categoryId === location.categoryId &&
-        (!location.examId || question.examId === location.examId) &&
-        (!location.specializationId || question.specializationId === location.specializationId) &&
-        (!location.paperId || question.paperId === location.paperId) &&
-        (!location.subjectId || question.subjectId === location.subjectId) &&
-        (!query ||
-          `${question.questionText} ${question.subjectName}`
-            .toLowerCase()
-            .includes(query)),
-    );
-  }, [location, questions, search]);
+  const [questions, setQuestions] = useState<QuestionBankRow[]>([]);
+  const [page, setPage] = useState(1);
+  const [total, setTotal] = useState(0);
+  const [loading, setLoading] = useState(false);
+  const [loadError, setLoadError] = useState("");
+  const pageSize = 50;
+
+  const visibleSubjectIds = useMemo(() => {
+    if (!location.categoryId) return [];
+    const examIds = new Set(exams.filter((exam) => exam.categoryId === location.categoryId && (!location.examId || exam.id === location.examId)).map((exam) => exam.id));
+    const paperIds = new Set(papers.filter((paper) => examIds.has(paper.examId) && (!location.specializationId || paper.specializationId === location.specializationId) && (!location.paperId || paper.id === location.paperId)).map((paper) => paper.id));
+    return subjects.filter((subject) => paperIds.has(subject.paperId) && (!location.subjectId || subject.id === location.subjectId)).map((subject) => subject.id);
+  }, [exams, location, papers, subjects]);
+
+  useEffect(() => {
+    let active = true;
+    const timer = window.setTimeout(() => {
+      void (async () => {
+        if (!location.categoryId || visibleSubjectIds.length === 0) {
+          if (active) {
+            setQuestions([]);
+            setTotal(0);
+            setLoadError("");
+          }
+          return;
+        }
+        setLoading(true);
+        setLoadError("");
+        const supabase = createClient();
+        let query = supabase
+          .from("questions")
+          .select("id, subject_id, question_text, correct_answer, is_active, content_lifecycle, review_on, expires_on", { count: "exact" })
+          .in("subject_id", visibleSubjectIds)
+          .order("created_at", { ascending: false })
+          .range((page - 1) * pageSize, page * pageSize - 1);
+        const normalizedSearch = search.trim().slice(0, 100);
+        if (normalizedSearch) query = query.ilike("question_text", `%${normalizedSearch}%`);
+        const { data, count, error } = await query;
+        if (!active) return;
+        if (error) {
+          setQuestions([]);
+          setTotal(0);
+          setLoadError("Questions could not be loaded. Refresh and try again.");
+          setLoading(false);
+          return;
+        }
+
+        const subjectById = new Map(subjects.map((subject) => [subject.id, subject]));
+        const paperById = new Map(papers.map((paper) => [paper.id, paper]));
+        const examById = new Map(exams.map((exam) => [exam.id, exam]));
+        const specializationById = new Map(specializations.map((item) => [item.id, item.name]));
+        setQuestions((data ?? []).map((question) => {
+          const subject = subjectById.get(question.subject_id);
+          const paper = subject ? paperById.get(subject.paperId) : undefined;
+          const exam = paper ? examById.get(paper.examId) : undefined;
+          const paperName = paper ? `${paper.specializationId ? `${specializationById.get(paper.specializationId) ?? "Unknown Specialisation"} / ` : ""}${paper.name}` : "Unknown Paper";
+          return {
+            id: question.id,
+            questionText: question.question_text,
+            correctAnswer: question.correct_answer,
+            isActive: question.is_active,
+            contentLifecycle: question.content_lifecycle as QuestionLifecycle,
+            reviewOn: question.review_on,
+            expiresOn: question.expires_on,
+            categoryId: exam?.categoryId ?? "",
+            examId: exam?.id ?? "",
+            specializationId: paper?.specializationId ?? "",
+            paperId: paper?.id ?? "",
+            subjectId: subject?.id ?? "",
+            examName: exam?.name ?? "Unknown Exam",
+            paperName,
+            subjectName: subject?.name ?? "Unknown Subject",
+          };
+        }));
+        setTotal(count ?? 0);
+        setLoading(false);
+      })();
+    }, 250);
+    return () => {
+      active = false;
+      window.clearTimeout(timer);
+    };
+  }, [exams, location.categoryId, page, papers, search, specializations, subjects, visibleSubjectIds]);
+
+  const totalPages = Math.max(1, Math.ceil(total / pageSize));
 
   return (
     <section className="mt-10 overflow-hidden rounded-2xl border bg-white">
@@ -121,7 +191,7 @@ export function QuestionBankTable({
           papers={papers}
           subjects={subjects}
           value={location}
-          onChange={setLocation}
+          onChange={(value) => { setLocation(value); setPage(1); }}
           includeSubjects
         />
         <label className="block max-w-xl text-sm font-bold">
@@ -129,7 +199,7 @@ export function QuestionBankTable({
           <input
             type="search"
             value={search}
-            onChange={(event) => setSearch(event.target.value)}
+            onChange={(event) => { setSearch(event.target.value); setPage(1); }}
             placeholder="Type a word from the question"
             disabled={!location.categoryId}
             className="mt-2 w-full rounded-xl border px-4 py-3 font-normal disabled:cursor-not-allowed disabled:bg-slate-100"
@@ -141,7 +211,11 @@ export function QuestionBankTable({
         <p className="p-6 text-sm text-slate-600">
           Select an Exam Category above to see its questions.
         </p>
-      ) : filtered.length === 0 ? (
+      ) : loading ? (
+        <p className="p-6 text-sm text-slate-600">Loading questionsâ€¦</p>
+      ) : loadError ? (
+        <p className="p-6 text-sm font-semibold text-red-700">{loadError}</p>
+      ) : questions.length === 0 ? (
         <p className="p-6 text-sm text-slate-600">
           No questions match this location and search.
         </p>
@@ -160,7 +234,7 @@ export function QuestionBankTable({
               </tr>
             </thead>
             <tbody className="divide-y">
-              {filtered.map((question) => {
+              {questions.map((question) => {
                 const status = statusOf(question);
 
                 return (
@@ -214,6 +288,7 @@ export function QuestionBankTable({
               })}
             </tbody>
           </table>
+          {totalPages > 1 && <div className="flex items-center justify-center gap-3 border-t p-4"><button type="button" disabled={page === 1} onClick={() => setPage((value) => Math.max(1, value - 1))} className="rounded-lg border px-3 py-2 text-sm font-bold disabled:opacity-40">Previous</button><span className="text-sm font-semibold text-slate-600">Page {page} of {totalPages}</span><button type="button" disabled={page === totalPages} onClick={() => setPage((value) => Math.min(totalPages, value + 1))} className="rounded-lg border px-3 py-2 text-sm font-bold disabled:opacity-40">Next</button></div>}
         </div>
       )}
     </section>

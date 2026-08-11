@@ -291,86 +291,38 @@ async function importQuestions(
     return { success: false, message: `Nothing was imported. ${shownErrors.join(" ")}${errors.length > shownErrors.length ? ` Plus ${errors.length - shownErrors.length} more issue(s).` : ""}` };
   }
 
-  const subjectIds = [...new Set(importRows.map((row) => String(row.subject_id)))];
-  const keys = [...new Set(importRows.map((row) => String(row.import_key)))];
-  const { data: existing, error: existingError } = await supabase
-    .from("questions")
-    .select("id, subject_id, import_key")
-    .in("subject_id", subjectIds)
-    .in("import_key", keys);
-  if (existingError) return { success: false, message: existingError.message };
-  const existingKeys = new Set((existing ?? []).map((question) => `${question.subject_id}:${question.import_key}`));
-  const existingQuestionByKey = new Map((existing ?? []).map((question) => [`${question.subject_id}:${question.import_key}`, question.id]));
-
-  let existingAssignments: Array<{ question_id: string; question_order: number }> = [];
-  if (mockTest) {
-    const { data, error: assignmentsError } = await supabase
-      .from("mock_test_questions")
-      .select("question_id, question_order")
-      .eq("mock_test_id", mockTest.id);
-    if (assignmentsError) return { success: false, message: assignmentsError.message };
-    existingAssignments = data ?? [];
-    const assignedQuestionIds = new Set(existingAssignments.map((assignment) => assignment.question_id));
-    const occupiedOrders = new Set(existingAssignments.map((assignment) => assignment.question_order));
-    const explicitOrders = new Set<number>();
-    for (const preference of assignmentPreferences) {
-      const existingQuestionId = existingQuestionByKey.get(preference.key);
-      if (existingQuestionId && assignedQuestionIds.has(existingQuestionId)) continue;
-      if (preference.questionOrder === null) continue;
-      if (explicitOrders.has(preference.questionOrder) || occupiedOrders.has(preference.questionOrder)) {
-        return { success: false, message: `Nothing was imported. Question order ${preference.questionOrder} is already used in this draft Mock Test.` };
-      }
-      explicitOrders.add(preference.questionOrder);
-    }
+  const atomicAssignments = mockTest
+    ? assignmentPreferences.map((preference) => {
+        const separator = preference.key.indexOf(":");
+        return {
+          subject_id: preference.key.slice(0, separator),
+          import_key: preference.key.slice(separator + 1),
+          question_order: preference.questionOrder,
+          marks: preference.marks ?? paper.default_correct_marks ?? 1,
+          negative_marks: preference.negativeMarks ?? paper.default_negative_marks ?? 0,
+        };
+      })
+    : [];
+  const { data: importResult, error } = await supabase.rpc("import_questions_atomic", {
+    requested_paper_id: paperId,
+    requested_mock_test_id: mockTest?.id ?? null,
+    requested_questions: importRows,
+    requested_assignments: atomicAssignments,
+  });
+  if (error) {
+    const orderConflict = error.code === "23505" && error.message.includes("question_order");
+    return {
+      success: false,
+      message: orderConflict
+        ? "Nothing was imported. One or more Question order numbers are already in use."
+        : `Nothing was imported. ${error.message}`,
+    };
   }
-
-  const { data: savedQuestions, error } = await supabase
-    .from("questions")
-    .upsert(importRows, { onConflict: "subject_id,import_key" })
-    .select("id, subject_id, import_key");
-  if (error) return { success: false, message: error.message };
-
-  let assigned = 0;
-  let alreadyAssigned = 0;
-  if (mockTest) {
-    const savedQuestionByKey = new Map((savedQuestions ?? []).map((question) => [`${question.subject_id}:${question.import_key}`, question.id]));
-    const assignedQuestionIds = new Set(existingAssignments.map((assignment) => assignment.question_id));
-    const occupiedOrders = new Set(existingAssignments.map((assignment) => assignment.question_order));
-    const explicitOrders = new Set(assignmentPreferences.map((preference) => preference.questionOrder).filter((order): order is number => order !== null));
-    let nextOrder = Math.max(0, ...existingAssignments.map((assignment) => assignment.question_order)) + 1;
-    const assignmentRows: Array<{ mock_test_id: string; question_id: string; question_order: number; marks: number; negative_marks: number }> = [];
-
-    for (const preference of assignmentPreferences) {
-      const questionId = savedQuestionByKey.get(preference.key);
-      if (!questionId) continue;
-      if (assignedQuestionIds.has(questionId)) {
-        alreadyAssigned += 1;
-        continue;
-      }
-      let order = preference.questionOrder;
-      if (order === null) {
-        while (occupiedOrders.has(nextOrder) || explicitOrders.has(nextOrder)) nextOrder += 1;
-        order = nextOrder;
-        nextOrder += 1;
-      }
-      occupiedOrders.add(order);
-      assignmentRows.push({
-        mock_test_id: mockTest.id,
-        question_id: questionId,
-        question_order: order,
-        marks: preference.marks ?? paper.default_correct_marks ?? 1,
-        negative_marks: preference.negativeMarks ?? paper.default_negative_marks ?? 0,
-      });
-    }
-    if (assignmentRows.length) {
-      const { error: assignmentError } = await supabase.from("mock_test_questions").insert(assignmentRows);
-      if (assignmentError) return { success: false, message: `Questions were saved in the Question Bank, but could not be added to this Mock Test: ${assignmentError.message}` };
-      assigned = assignmentRows.length;
-    }
-  }
-
-  const updated = importRows.filter((row) => existingKeys.has(`${row.subject_id}:${row.import_key}`)).length;
-  const added = importRows.length - updated;
+  const summary = importResult?.[0] ?? { added: 0, updated: 0, assigned: 0, already_assigned: 0 };
+  const added = Number(summary.added);
+  const updated = Number(summary.updated);
+  const assigned = Number(summary.assigned);
+  const alreadyAssigned = Number(summary.already_assigned);
   revalidatePath("/admin/questions");
   revalidatePath("/admin/mock-tests");
   if (mockTest) {

@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import { indiaDateKey } from "@/lib/date";
 import type { MockTest } from "@/types/mock-test";
 import { EditMockTestForm } from "./EditMockTestForm";
 import { MockTestCsvImport } from "./MockTestCsvImport";
@@ -31,7 +32,7 @@ export default async function EditMockTestPage({ params }: { params: Promise<{ i
   const questionById = new Map((questionsResult.data ?? []).map((item) => [item.id, item]));
   const assignments = (assignmentsResult.data ?? []).map((item) => ({ ...item, question_text: questionById.get(item.question_id)?.question_text ?? "Question unavailable", is_active: questionById.get(item.question_id)?.is_active ?? false, is_score_valid: Number(item.marks) > 0 && Number(item.negative_marks) >= 0 }));
   const assignedIds = new Set(assignments.map((item) => item.question_id));
-  const today = new Date().toISOString().slice(0, 10);
+  const today = indiaDateKey();
   const availableQuestions = (questionsResult.data ?? []).filter((question) => {
     const subject = subjectById.get(question.subject_id);
     return !assignedIds.has(question.id) && question.is_active && (!question.expires_on || question.expires_on >= today) && subject?.paper_id === test.paper_id && (test.test_scope === "paper" || question.subject_id === test.subject_id);
