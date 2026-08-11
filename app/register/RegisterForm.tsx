@@ -55,7 +55,7 @@ export function RegisterForm({ nextPath }: { nextPath: string }) {
       setNotice({
         tone: "error",
         message: mayAlreadyExist
-          ? "This email may already have a Varadhi account. Try signing in instead."
+          ? "This email may already have a Varadhi Prep account. Try signing in instead."
           : error.code === "over_email_send_rate_limit"
             ? "Too many confirmation emails were requested. Wait a few minutes, then try again."
             : "We could not create the account right now. Check the details and try again.",
@@ -68,7 +68,7 @@ export function RegisterForm({ nextPath }: { nextPath: string }) {
       setNotice({
         tone: "error",
         message:
-          "This email may already have a Varadhi account. Sign in with your existing password instead.",
+          "This email may already have a Varadhi Prep account. Sign in with your existing password instead.",
       });
       setLoading(false);
       return;
@@ -132,7 +132,7 @@ export function RegisterForm({ nextPath }: { nextPath: string }) {
       <p className="mt-3 text-sm leading-6 text-slate-600">
         {awaitingConfirmation
           ? `We sent the next step to ${email}.`
-          : "Create one account, then use it for every free Varadhi mock test."}
+          : "Create one account, then use it for every free Varadhi Prep mock test."}
       </p>
 
       {awaitingConfirmation ? (
@@ -140,7 +140,7 @@ export function RegisterForm({ nextPath }: { nextPath: string }) {
           <ol className="space-y-3 text-sm leading-6 text-slate-700">
             <li className="flex gap-3 rounded-2xl bg-slate-50 p-4">
               <span className="grid h-7 w-7 shrink-0 place-items-center rounded-lg bg-slate-950 text-xs font-black text-white">1</span>
-              Open the Varadhi confirmation email. Check the spam folder if it is not in your inbox.
+              Open the Varadhi Prep confirmation email. Check the spam folder if it is not in your inbox.
             </li>
             <li className="flex gap-3 rounded-2xl bg-slate-50 p-4">
               <span className="grid h-7 w-7 shrink-0 place-items-center rounded-lg bg-teal-700 text-xs font-black text-white">2</span>

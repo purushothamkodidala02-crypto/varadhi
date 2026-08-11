@@ -59,7 +59,7 @@ export function ForgotPasswordForm({
       setNotice({
         tone: "success",
         message:
-          "If this email has a Varadhi account, a password-reset link has been sent. Check the inbox and spam folder.",
+          "If this email has a Varadhi Prep account, a password-reset link has been sent. Check the inbox and spam folder.",
       });
     }
 
@@ -75,7 +75,7 @@ export function ForgotPasswordForm({
         Reset your password
       </h2>
       <p className="mt-3 text-sm leading-6 text-slate-600">
-        Enter the email used for your Varadhi account. We will send a secure reset link.
+        Enter the email used for your Varadhi Prep account. We will send a secure reset link.
       </p>
 
       <form onSubmit={handleSubmit} className="mt-7 space-y-5">

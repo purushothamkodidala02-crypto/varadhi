@@ -23,18 +23,18 @@ const benefits = [
 ];
 
 export const metadata: Metadata = {
-  title: "Free TGPSC Mock Tests in English & Telugu | Varadhi",
+  title: "Free TGPSC Mock Tests in English & Telugu | Varadhi Prep",
   description: SITE_DESCRIPTION,
   alternates: { canonical: "/" },
   openGraph: {
-    title: "Free TGPSC Mock Tests in English & Telugu | Varadhi",
+    title: "Free TGPSC Mock Tests in English & Telugu | Varadhi Prep",
     description: SITE_DESCRIPTION,
     url: "/",
     type: "website",
   },
   twitter: {
     card: "summary",
-    title: "Free TGPSC Mock Tests in English & Telugu | Varadhi",
+    title: "Free TGPSC Mock Tests in English & Telugu | Varadhi Prep",
     description: SITE_DESCRIPTION,
   },
 };
@@ -61,8 +61,8 @@ export default async function Home() {
   const websiteJsonLd = {
     "@context": "https://schema.org",
     "@type": "WebSite",
-    name: "Varadhi",
-    alternateName: "Varadhi Exam Practice",
+    name: "Varadhi Prep",
+    alternateName: "Varadhi Prep Smart Mock Tests",
     url: absoluteUrl("/"),
     description: SITE_DESCRIPTION,
     inLanguage: ["en-IN", "te-IN"],
@@ -120,7 +120,7 @@ export default async function Home() {
       </section>
 
       <section className="mx-auto max-w-6xl px-5 py-16 sm:px-8 sm:py-24">
-        <div className="max-w-2xl"><p className="text-xs font-bold uppercase tracking-[0.14em] text-teal-700">Purposeful practice</p><h2 className="mt-3 text-3xl font-black tracking-tight sm:text-4xl">Everything you need to improve—without the distractions.</h2><p className="mt-4 leading-7 text-slate-600">Varadhi keeps preparation focused on practising, reviewing, and deciding what to study next.</p></div>
+        <div className="max-w-2xl"><p className="text-xs font-bold uppercase tracking-[0.14em] text-teal-700">Purposeful practice</p><h2 className="mt-3 text-3xl font-black tracking-tight sm:text-4xl">Everything you need to improve—without the distractions.</h2><p className="mt-4 leading-7 text-slate-600">Varadhi Prep keeps preparation focused on practising, reviewing, and deciding what to study next.</p></div>
         <div className="mt-10 grid gap-5 md:grid-cols-3">{benefits.map((benefit) => <article key={benefit.number} className="rounded-2xl border p-6 transition hover:-translate-y-0.5 hover:border-teal-200 hover:shadow-lg hover:shadow-slate-950/5"><span className="text-sm font-black text-teal-700">{benefit.number}</span><h3 className="mt-6 text-xl font-black">{benefit.title}</h3><p className="mt-3 text-sm leading-6 text-slate-600">{benefit.description}</p></article>)}</div>
       </section>
 
@@ -128,7 +128,7 @@ export default async function Home() {
 
       <section className="mx-auto max-w-6xl px-5 py-16 sm:px-8 sm:py-24"><div className="overflow-hidden rounded-[2rem] bg-teal-50 px-6 py-10 sm:px-10 lg:flex lg:items-center lg:justify-between lg:gap-12"><div className="max-w-2xl"><p className="text-xs font-bold uppercase tracking-[0.14em] text-teal-800">Ready for focused practice?</p><h2 className="mt-3 text-3xl font-black tracking-tight">Make your next study session count.</h2><p className="mt-4 leading-7 text-slate-600">Create your account, take a free mock test, and start building a clearer picture of your preparation.</p></div><div className="mt-7 flex shrink-0 flex-wrap gap-3 lg:mt-0"><Link href="/register" className="rounded-xl bg-slate-950 px-5 py-3.5 font-bold text-white hover:bg-slate-800">Create free account</Link><Link href="/mock-tests" className="rounded-xl border border-teal-200 bg-white px-5 py-3.5 font-bold text-teal-800 hover:border-teal-300">Browse tests</Link></div></div></section>
 
-      <footer className="border-t bg-slate-50"><div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-5 px-5 py-8 text-sm text-slate-500 sm:px-8"><div className="flex items-center gap-3"><BrandMark className="h-9 w-9" /><span><strong className="text-slate-900">Varadhi</strong><br />TGPSC practice platform</span></div><div className="flex gap-5 font-semibold"><Link href="/mock-tests" className="hover:text-slate-900">Mock tests</Link><Link href="/login" className="hover:text-slate-900">Login</Link><Link href="/register" className="hover:text-slate-900">Register</Link></div></div></footer>
+      <footer className="border-t bg-slate-50"><div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-5 px-5 py-8 text-sm text-slate-500 sm:px-8"><div className="flex items-center gap-3"><BrandMark className="h-9 w-9" /><span><strong className="text-slate-900">Varadhi Prep</strong><br />Smart mock tests for career growth</span></div><div className="flex gap-5 font-semibold"><Link href="/mock-tests" className="hover:text-slate-900">Mock tests</Link><Link href="/login" className="hover:text-slate-900">Login</Link><Link href="/register" className="hover:text-slate-900">Register</Link></div></div></footer>
     </main>
   );
 }

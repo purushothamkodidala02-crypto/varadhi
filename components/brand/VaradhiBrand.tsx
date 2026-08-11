@@ -20,8 +20,8 @@ export function BrandLockup({ context = "public", markClassName }: BrandLockupPr
     <span className="flex items-center gap-3">
       <BrandMark className={markClassName ?? "h-11 w-11 shrink-0 drop-shadow-[0_8px_12px_rgba(7,18,37,0.18)]"} />
       <span className="leading-none">
-        <span className={`font-brand block text-[1.35rem] font-bold tracking-[-0.035em] ${admin ? "text-white" : "text-slate-950"}`}>Varadhi</span>
-        <span className={`mt-1.5 block text-[9px] font-black uppercase tracking-[0.24em] ${admin ? "text-teal-200" : "text-teal-700"}`}>{admin ? "Admin workspace" : "Exam practice"}</span>
+        <span className={`font-brand block text-[1.28rem] font-bold tracking-[-0.035em] ${admin ? "text-white" : "text-slate-950"}`}>Varadhi Prep</span>
+        <span className={`mt-1.5 block text-[8px] font-black uppercase tracking-[0.18em] ${admin ? "text-teal-200" : "text-teal-700"}`}>{admin ? "Admin workspace" : "Smart mock tests for career growth"}</span>
       </span>
     </span>
   );

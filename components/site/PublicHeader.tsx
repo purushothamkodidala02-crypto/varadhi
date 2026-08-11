@@ -18,7 +18,7 @@ export async function PublicHeader({ compact = false }: PublicHeaderProps) {
           compact ? "max-w-4xl py-3" : "max-w-6xl py-3.5"
         }`}
       >
-        <Link href="/" className="group flex shrink-0 items-center gap-3" aria-label="Varadhi home">
+        <Link href="/" className="group flex shrink-0 items-center gap-3" aria-label="Varadhi Prep home">
           <BrandLockup />
         </Link>
 

@@ -22,7 +22,7 @@ export async function generateMetadata({ searchParams }: MockTestsPageProps): Pr
   return {
     title: "Free TGPSC Mock Tests by Exam, Paper & Subject",
     description:
-      "Browse free TGPSC mock tests by exam, Paper number, and subject. Practise timed tests in English and Telugu and review your answers on Varadhi.",
+      "Browse free TGPSC mock tests by exam, Paper number, and subject. Practise timed tests in English and Telugu and review your answers on Varadhi Prep.",
     alternates: { canonical: "/mock-tests" },
     robots: isFiltered ? { index: false, follow: true } : undefined,
     openGraph: {

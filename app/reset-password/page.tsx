@@ -38,7 +38,7 @@ export default async function ResetPasswordPage({
             Password protection
           </p>
           <h1 className="mt-3 text-3xl font-black tracking-tight">
-            Secure your Varadhi account.
+            Secure your Varadhi Prep account.
           </h1>
           <ul className="mt-6 space-y-3 text-sm leading-6 text-slate-300">
             <li>• Do not reuse a password from another website</li>

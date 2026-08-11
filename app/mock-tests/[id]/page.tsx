@@ -45,7 +45,7 @@ export async function generateMetadata({ params }: MockTestDetailsProps): Promis
     : undefined;
   const paperLabel = paperDisplay?.shortLabel ?? "TGPSC";
   const title = `${test.title} ${paperLabel} Mock Test`;
-  const description = `Take the free ${test.title} ${paperLabel} mock test${paper ? ` covering ${paper.name}` : ""}. ${test.duration_minutes}-minute timed TGPSC practice on Varadhi.`;
+  const description = `Take the free ${test.title} ${paperLabel} mock test${paper ? ` covering ${paper.name}` : ""}. ${test.duration_minutes}-minute timed TGPSC practice on Varadhi Prep.`;
 
   return {
     title,
@@ -160,7 +160,7 @@ export default async function MockTestDetailsPage({ params }: MockTestDetailsPro
             : "en-IN",
       provider: {
         "@type": "Organization",
-        name: "Varadhi",
+        name: "Varadhi Prep",
         url: absoluteUrl("/"),
       },
     },
@@ -186,7 +186,7 @@ export default async function MockTestDetailsPage({ params }: MockTestDetailsPro
             <div className="flex flex-wrap items-center gap-2"><span className="rounded-full bg-emerald-100 px-3 py-1 text-xs font-bold text-emerald-800">Free</span><span className="rounded-full bg-slate-200 px-3 py-1 text-xs font-bold text-slate-700">{test.test_scope === "paper" ? "Full-length Paper test" : "Subject test"}</span></div>
             <p className="mt-6 text-xs font-bold uppercase tracking-[0.14em] text-teal-700">{categoryResult.data?.name ?? "TGPSC"} · {exam?.name ?? "Exam"}</p>
             <h1 className="mt-3 text-4xl font-black leading-tight tracking-tight text-slate-950 sm:text-5xl">{test.title}</h1>
-            <p className="mt-5 max-w-3xl text-lg leading-8 text-slate-600">{test.description ?? "A focused Varadhi mock test designed to strengthen your exam preparation."}</p>
+            <p className="mt-5 max-w-3xl text-lg leading-8 text-slate-600">{test.description ?? "A focused Varadhi Prep mock test designed to strengthen your exam preparation."}</p>
             <div className="mt-7 flex flex-wrap gap-2 text-sm font-semibold text-slate-600">{specializationResult.data && <span className="rounded-lg border bg-white px-3 py-2">{specializationResult.data.name}</span>}<span className="rounded-lg border bg-white px-3 py-2">{paperDisplay?.label ?? paper?.name ?? "Paper"}</span>{subjectResult.data && <span className="rounded-lg border bg-white px-3 py-2">{subjectResult.data.name}</span>}</div>
 
             <section className="mt-10 rounded-3xl border bg-white p-6 shadow-sm sm:p-8"><h2 className="text-2xl font-black">Before you begin</h2><p className="mt-2 text-sm leading-6 text-slate-600">Review the test rules now. The timer starts only after you select the start button.</p><div className="mt-7 grid gap-4 sm:grid-cols-2">{[["Questions", questionCountLabel], ["Duration", `${test.duration_minutes} minutes`], ["Total marks", totalMarksLabel], ["Negative marking", negativeMarks > 0 ? `Up to ${negativeMarks} per wrong answer` : "No negative marking"], ["Language", languageLabel], ["Progress", "Saved during the attempt"]].map(([label, value]) => <div key={label} className="rounded-2xl bg-slate-50 p-4"><p className="text-xs font-bold uppercase tracking-wide text-slate-500">{label}</p><p className="mt-2 font-black text-slate-950">{value}</p></div>)}</div></section>

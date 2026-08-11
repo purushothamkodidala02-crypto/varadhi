@@ -5,8 +5,8 @@ import "./globals.css";
 export const metadata: Metadata = {
   metadataBase: new URL(SITE_URL),
   title: {
-    default: "Varadhi: Free TGPSC Mock Tests",
-    template: "%s | Varadhi",
+    default: "Varadhi Prep: Smart Mock Tests for Career Growth",
+    template: "%s | Varadhi Prep",
   },
   description: SITE_DESCRIPTION,
   applicationName: SITE_NAME,
@@ -17,13 +17,13 @@ export const metadata: Metadata = {
     locale: "en_IN",
     alternateLocale: ["te_IN"],
     siteName: SITE_NAME,
-    title: "Varadhi: Free TGPSC Mock Tests",
+    title: "Varadhi Prep: Smart Mock Tests for Career Growth",
     description: SITE_DESCRIPTION,
     url: "/",
   },
   twitter: {
     card: "summary",
-    title: "Varadhi: Free TGPSC Mock Tests",
+    title: "Varadhi Prep: Smart Mock Tests for Career Growth",
     description: SITE_DESCRIPTION,
   },
   robots: {

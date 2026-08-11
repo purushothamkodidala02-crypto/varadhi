@@ -166,7 +166,7 @@ export function LoginForm({
       </form>
       <div className="mt-6 border-t border-slate-100 pt-5">
         <p className="text-sm text-slate-600">
-          New to Varadhi?{" "}
+          New to Varadhi Prep?{" "}
           <Link href={registerHref} className="font-bold text-teal-700 hover:text-teal-800">
             Create a free account
           </Link>
