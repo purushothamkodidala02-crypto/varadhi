@@ -35,7 +35,12 @@ export default async function LoginPage({
       .select("role")
       .eq("id", user.id)
       .maybeSingle();
-    redirect(profile?.role === "admin" ? "/admin" : nextPath);
+    if (profile?.role === "admin") {
+      const { data: assurance } =
+        await supabase.auth.mfa.getAuthenticatorAssuranceLevel();
+      redirect(assurance?.currentLevel === "aal2" ? "/admin" : "/admin-mfa");
+    }
+    redirect(nextPath);
   }
   const initialMessage =
     params.reset === "1"

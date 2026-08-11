@@ -94,7 +94,26 @@ export function LoginForm({
       return;
     }
 
-    window.location.replace(profile.role === "admin" ? "/admin" : nextPath);
+    if (profile.role === "admin") {
+      const { data: assurance, error: assuranceError } =
+        await supabase.auth.mfa.getAuthenticatorAssuranceLevel();
+
+      if (assuranceError) {
+        setNotice({
+          tone: "error",
+          message: "Your password was accepted, but administrator security could not be checked. Please try again.",
+        });
+        setLoading(false);
+        return;
+      }
+
+      window.location.replace(
+        assurance?.currentLevel === "aal2" ? "/admin" : "/admin-mfa",
+      );
+      return;
+    }
+
+    window.location.replace(nextPath);
   }
 
   async function resendConfirmation() {

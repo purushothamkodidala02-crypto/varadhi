@@ -23,6 +23,13 @@ export default async function AdminLayout({ children }: { children: React.ReactN
 
   if (!profile || profile.role !== "admin") redirect("/dashboard");
 
+  const { data: assurance, error: assuranceError } =
+    await supabase.auth.mfa.getAuthenticatorAssuranceLevel();
+
+  if (assuranceError || assurance?.currentLevel !== "aal2") {
+    redirect("/admin-mfa");
+  }
+
   return (
     <div className="min-h-screen bg-[#f3f7f8] text-slate-900">
       <AdminNavigation />
@@ -33,6 +40,10 @@ export default async function AdminLayout({ children }: { children: React.ReactN
             <p className="mt-1 hidden text-sm text-slate-500 sm:block">Manage exam content, tests, and student outcomes.</p>
           </div>
           <div className="flex items-center gap-3">
+            <span className="hidden items-center gap-1.5 rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1.5 text-[10px] font-black uppercase tracking-[0.12em] text-emerald-800 sm:inline-flex">
+              <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
+              MFA verified
+            </span>
             <p className="hidden max-w-56 truncate text-sm font-semibold text-slate-700 sm:block">{user.email}</p>
             <LogoutButton />
           </div>
