@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { BrandMark } from "@/components/brand/VaradhiBrand";
 import { JsonLd } from "@/components/seo/JsonLd";
 import { PublicHeader } from "@/components/site/PublicHeader";
 import { buildPaperDisplayMap, type OrderedPaper } from "@/lib/papers";
@@ -127,7 +128,7 @@ export default async function Home() {
 
       <section className="mx-auto max-w-6xl px-5 py-16 sm:px-8 sm:py-24"><div className="overflow-hidden rounded-[2rem] bg-teal-50 px-6 py-10 sm:px-10 lg:flex lg:items-center lg:justify-between lg:gap-12"><div className="max-w-2xl"><p className="text-xs font-bold uppercase tracking-[0.14em] text-teal-800">Ready for focused practice?</p><h2 className="mt-3 text-3xl font-black tracking-tight">Make your next study session count.</h2><p className="mt-4 leading-7 text-slate-600">Create your account, take a free mock test, and start building a clearer picture of your preparation.</p></div><div className="mt-7 flex shrink-0 flex-wrap gap-3 lg:mt-0"><Link href="/register" className="rounded-xl bg-slate-950 px-5 py-3.5 font-bold text-white hover:bg-slate-800">Create free account</Link><Link href="/mock-tests" className="rounded-xl border border-teal-200 bg-white px-5 py-3.5 font-bold text-teal-800 hover:border-teal-300">Browse tests</Link></div></div></section>
 
-      <footer className="border-t bg-slate-50"><div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-5 px-5 py-8 text-sm text-slate-500 sm:px-8"><div className="flex items-center gap-3"><span className="grid h-8 w-8 place-items-center rounded-lg bg-slate-950 text-xs font-black text-white">V</span><span><strong className="text-slate-900">Varadhi</strong><br />TGPSC practice platform</span></div><div className="flex gap-5 font-semibold"><Link href="/mock-tests" className="hover:text-slate-900">Mock tests</Link><Link href="/login" className="hover:text-slate-900">Login</Link><Link href="/register" className="hover:text-slate-900">Register</Link></div></div></footer>
+      <footer className="border-t bg-slate-50"><div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-5 px-5 py-8 text-sm text-slate-500 sm:px-8"><div className="flex items-center gap-3"><BrandMark className="h-9 w-9" /><span><strong className="text-slate-900">Varadhi</strong><br />TGPSC practice platform</span></div><div className="flex gap-5 font-semibold"><Link href="/mock-tests" className="hover:text-slate-900">Mock tests</Link><Link href="/login" className="hover:text-slate-900">Login</Link><Link href="/register" className="hover:text-slate-900">Register</Link></div></div></footer>
     </main>
   );
 }

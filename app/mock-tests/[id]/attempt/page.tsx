@@ -52,5 +52,5 @@ export default async function TakeMockTestPage({ params }: { params: Promise<{ i
   const { data, error } = await supabase.rpc("get_mock_test_session_payload", { requested_session_id: session.session_id });
   const questions = (data ?? []) as TestQuestion[];
   if (error || questions.length === 0) return <TestNotReady title={mockTest.title} testId={id} message="This mock test does not have active questions available yet. Please try again later." />;
-  return <StudentTestRunner title={mockTest.title} sessionId={session.session_id} expiresAt={session.expires_at} questions={questions} />;
+  return <StudentTestRunner mockTestId={id} title={mockTest.title} sessionId={session.session_id} expiresAt={session.expires_at} questions={questions} />;
 }

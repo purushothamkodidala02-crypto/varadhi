@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { BrandLockup } from "@/components/brand/VaradhiBrand";
 import { usePathname } from "next/navigation";
 
 const sections = [
@@ -156,19 +157,7 @@ function NavigationLinks() {
 }
 
 function Brand({ linked = true }: { linked?: boolean }) {
-  const content = (
-    <>
-      <span className="grid h-10 w-10 place-items-center rounded-xl bg-teal-300 text-sm font-black text-slate-950 shadow-lg shadow-teal-950/30">
-        V
-      </span>
-      <span>
-        <span className="block text-lg font-black tracking-tight text-white">Varadhi</span>
-        <span className="block text-[10px] font-black uppercase tracking-[0.15em] text-teal-200">
-          Admin workspace
-        </span>
-      </span>
-    </>
-  );
+  const content = <BrandLockup context="admin" markClassName="h-10 w-10 shrink-0 drop-shadow-[0_8px_14px_rgba(0,0,0,0.3)]" />;
 
   if (!linked) return <div className="flex items-center gap-3">{content}</div>;
 

@@ -10,6 +10,7 @@ export const metadata: Metadata = {
   },
   description: SITE_DESCRIPTION,
   applicationName: SITE_NAME,
+  icons: { icon: "/varadhi-mark.svg" },
   category: "education",
   openGraph: {
     type: "website",

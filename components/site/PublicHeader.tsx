@@ -1,5 +1,6 @@
 import Link from "next/link";
 import LogoutButton from "@/components/admin/LogoutButton";
+import { BrandLockup } from "@/components/brand/VaradhiBrand";
 import { createClient } from "@/lib/supabase/server";
 
 type PublicHeaderProps = {
@@ -18,18 +19,7 @@ export async function PublicHeader({ compact = false }: PublicHeaderProps) {
         }`}
       >
         <Link href="/" className="group flex shrink-0 items-center gap-3" aria-label="Varadhi home">
-          <span className="relative grid h-11 w-11 place-items-center overflow-hidden rounded-2xl bg-slate-950 text-base font-black text-white shadow-lg shadow-slate-950/15 transition duration-200 group-hover:-translate-y-0.5 group-hover:shadow-xl">
-            <span className="absolute inset-x-2 bottom-1.5 h-0.5 rounded-full bg-teal-300" />
-            <span className="relative">V</span>
-          </span>
-          <span className="leading-none">
-            <span className="font-brand block text-[1.35rem] font-bold tracking-[-0.025em] text-slate-950">
-              Varadhi
-            </span>
-            <span className="mt-1.5 hidden text-[10px] font-bold uppercase tracking-[0.2em] text-teal-700 sm:block">
-              Exam practice
-            </span>
-          </span>
+          <BrandLockup />
         </Link>
 
         <nav aria-label="Primary navigation" className="font-brand hidden items-center gap-1 rounded-2xl border border-slate-200/80 bg-slate-50/90 p-1 text-[15px] font-bold tracking-[-0.01em] text-slate-600 shadow-inner shadow-slate-950/[0.02] md:flex">

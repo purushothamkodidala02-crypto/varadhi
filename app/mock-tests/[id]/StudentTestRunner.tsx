@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { containsTeluguText, FormattedQuestionText } from "@/components/questions/FormattedQuestionText";
-import { saveAttemptProgress, submitAttempt, type SubmitAttemptResult } from "./attempt-actions";
+import { pauseAttempt, resumeAttempt, saveAttemptProgress, submitAttempt, syncAttemptTimer, type SubmitAttemptResult } from "./attempt-actions";
 
 type Answer = "A" | "B" | "C" | "D";
 type TestQuestion = {
@@ -14,7 +14,7 @@ type TestQuestion = {
   question_text_te: string | null; option_a_te: string | null; option_b_te: string | null;
   option_c_te: string | null; option_d_te: string | null;
 };
-type Props = { title: string; sessionId: string; expiresAt: string; questions: TestQuestion[] };
+type Props = { mockTestId: string; title: string; sessionId: string; expiresAt: string; questions: TestQuestion[] };
 
 function secondsLeft(expiresAt: string) { return Math.max(0, Math.ceil((new Date(expiresAt).getTime() - Date.now()) / 1000)); }
 function displayTime(total: number) {
@@ -24,7 +24,8 @@ function displayTime(total: number) {
   return hours ? `${String(hours).padStart(2, "0")}:${minutes}:${seconds}` : `${minutes}:${seconds}`;
 }
 
-export function StudentTestRunner({ title, sessionId, expiresAt, questions }: Props) {
+export function StudentTestRunner({ mockTestId, title, sessionId, expiresAt, questions }: Props) {
+  const [deadline, setDeadline] = useState(expiresAt);
   const [index, setIndex] = useState(0);
   const [answers, setAnswers] = useState<Record<string, Answer>>(() => Object.fromEntries(questions.flatMap((item) => item.selected_answer ? [[item.question_id, item.selected_answer]] : [])));
   const [reviewIds, setReviewIds] = useState<Set<string>>(() => new Set());
@@ -34,12 +35,16 @@ export function StudentTestRunner({ title, sessionId, expiresAt, questions }: Pr
   const [navigatorOpen, setNavigatorOpen] = useState(false);
   const [confirming, setConfirming] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const [pausing, setPausing] = useState(false);
+  const [paused, setPaused] = useState(false);
+  const [pauseError, setPauseError] = useState("");
   const [submission, setSubmission] = useState<SubmitAttemptResult | null>(null);
 
   const current = questions[index];
   const answered = useMemo(() => Object.keys(answers).length, [answers]);
   const unanswered = questions.length - answered;
-  const locked = remaining === null || remaining === 0 || submitting;
+  const locked = remaining === null || remaining === 0 || submitting || pausing || paused;
+  const pauseControlDisabled = remaining === null || remaining === 0 || submitting || pausing;
 
   useEffect(() => {
     if (submission || submitting) return;
@@ -51,13 +56,6 @@ export function StudentTestRunner({ title, sessionId, expiresAt, questions }: Pr
     return () => { active = false; window.clearTimeout(timer); };
   }, [answers, sessionId, submission, submitting]);
 
-  useEffect(() => {
-    if (submission) return;
-    const warn = (event: BeforeUnloadEvent) => { event.preventDefault(); event.returnValue = ""; };
-    window.addEventListener("beforeunload", warn);
-    return () => window.removeEventListener("beforeunload", warn);
-  }, [submission]);
-
   const finish = useCallback(async () => {
     if (submitting || submission) return;
     setConfirming(false);
@@ -67,9 +65,9 @@ export function StudentTestRunner({ title, sessionId, expiresAt, questions }: Pr
   }, [answers, sessionId, submission, submitting]);
 
   useEffect(() => {
-    if (submission) return;
+    if (submission || paused) return;
     const updateTimer = () => {
-      const next = secondsLeft(expiresAt);
+      const next = secondsLeft(deadline);
       setRemaining(next);
       if (next === 0 && !submitting) void finish();
     };
@@ -78,9 +76,21 @@ export function StudentTestRunner({ title, sessionId, expiresAt, questions }: Pr
       updateTimer();
     }, 1000);
     return () => window.clearInterval(timer);
-  }, [expiresAt, finish, submission, submitting]);
+  }, [deadline, finish, paused, submission, submitting]);
 
-  if (submission) return <SubmissionResult title={title} result={submission} onRetry={() => setSubmission(null)} />;
+  useEffect(() => {
+    if (submission || paused || pausing || submitting) return;
+    const sync = async () => {
+      const result = await syncAttemptTimer(sessionId);
+      if (result.success && typeof result.remaining === "number") {
+        setRemaining(result.remaining);
+      }
+    };
+    const timer = window.setInterval(() => void sync(), 5000);
+    return () => window.clearInterval(timer);
+  }, [paused, pausing, sessionId, submission, submitting]);
+
+  if (submission) return <SubmissionResult mockTestId={mockTestId} title={title} result={submission} onRetry={() => setSubmission(null)} />;
 
   const bilingual = current.content_language_mode === "bilingual" && Boolean(current.question_text_te);
   const telugu = bilingual && language === "te";
@@ -99,6 +109,30 @@ export function StudentTestRunner({ title, sessionId, expiresAt, questions }: Pr
     setSaveState("saving");
     setAnswers((value) => { const next = { ...value }; delete next[current.question_id]; return next; });
   }
+  async function togglePause() {
+    if (pauseControlDisabled) return;
+    setPauseError("");
+    setPausing(true);
+    if (paused) {
+      const result = await resumeAttempt(mockTestId, sessionId);
+      if (result.success && result.expiresAt) {
+        setDeadline(result.expiresAt);
+        setPaused(false);
+      } else {
+        setPauseError(result.message);
+      }
+      setPausing(false);
+      return;
+    }
+    const result = await pauseAttempt(sessionId, answers);
+    if (result.success) {
+      if (typeof result.remaining === "number") setRemaining(result.remaining);
+      setPaused(true);
+    } else {
+      setPauseError(result.message);
+    }
+    setPausing(false);
+  }
 
   const navigator = <QuestionNavigator questions={questions} currentIndex={index} answers={answers} reviewIds={reviewIds} locked={locked} onSelect={(next) => { setIndex(next); setNavigatorOpen(false); }} onFinish={() => setConfirming(true)} />;
 
@@ -107,13 +141,15 @@ export function StudentTestRunner({ title, sessionId, expiresAt, questions }: Pr
       <div className="mx-auto max-w-6xl">
         <div className="flex items-center justify-between gap-4">
           <div className="min-w-0"><p className="truncate text-sm font-semibold text-slate-300">{title}</p><h1 className="mt-1 text-lg font-black">Question {index + 1} <span className="text-slate-400">of {questions.length}</span></h1></div>
-          <div className="flex items-center gap-2"><button type="button" onClick={() => setNavigatorOpen(true)} className="rounded-lg border border-slate-700 px-3 py-2 text-xs font-bold lg:hidden">Questions</button><div className={`rounded-xl px-4 py-2.5 font-mono text-lg font-black ${remaining !== null && remaining <= 300 ? "bg-red-500" : "bg-white text-slate-950"}`}>{remaining === null ? "--:--" : displayTime(remaining)}</div></div>
+          <div className="flex items-center gap-2"><button type="button" onClick={() => setNavigatorOpen(true)} className="rounded-xl border border-slate-700 px-3 py-2.5 text-xs font-bold lg:hidden">Questions</button><PracticeTimerControl remaining={remaining} paused={paused} busy={pausing} disabled={pauseControlDisabled} onToggle={() => void togglePause()} /></div>
         </div>
         <div className="mt-4 flex items-center gap-4"><div className="h-2 flex-1 overflow-hidden rounded-full bg-slate-700"><div className="h-full rounded-full bg-teal-300 transition-all" style={{ width: `${Math.round((answered / questions.length) * 100)}%` }} /></div><span className={`text-xs font-bold ${saveState === "error" ? "text-red-300" : "text-teal-100"}`}>{saveState === "saving" ? "Saving…" : saveState === "error" ? "Save failed" : "Answers saved"}</span></div>
       </div>
     </header>
 
-    <div className="mx-auto max-w-6xl px-4 pt-6 sm:px-8">
+      <div className="mx-auto max-w-6xl px-4 pt-6 sm:px-8">
+      {pauseError && <p className="mb-4 rounded-xl border border-red-200 bg-red-50 p-3 text-sm font-semibold text-red-700">{pauseError}</p>}
+      {paused && <p className="mb-4 rounded-xl border border-teal-200 bg-teal-50 p-3 text-sm font-semibold text-teal-800">Practice paused. Your answers and remaining time are saved. Select Resume when you are ready.</p>}
       <div className="mb-4 grid max-w-md grid-cols-3 gap-2"><Metric value={answered} label="Answered" tone="text-emerald-800" /><Metric value={reviewIds.size} label="Review" tone="text-amber-800" /><Metric value={unanswered} label="Remaining" tone="text-slate-700" /></div>
       {navigatorOpen && <section className="mb-5 rounded-3xl border bg-white p-5 shadow-sm lg:hidden"><button type="button" onClick={() => setNavigatorOpen(false)} className="float-right text-xs font-bold text-slate-500">Close</button>{navigator}</section>}
       <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_15rem]">
@@ -142,9 +178,29 @@ function SubmissionDialog({ answered, review, unanswered, submitting, onCancel, 
   return <div className="fixed inset-0 z-50 grid place-items-center bg-slate-950/70 px-5" role="dialog" aria-modal="true"><section className="w-full max-w-lg rounded-3xl bg-white p-7 shadow-2xl"><p className="text-xs font-bold uppercase tracking-[0.14em] text-teal-700">Final submission</p><h2 className="mt-2 text-2xl font-black">Finish this mock test?</h2><p className="mt-3 text-sm text-slate-600">You cannot change your answers after submission.</p><div className="mt-6 grid grid-cols-3 gap-3"><Metric value={answered} label="Answered" tone="text-emerald-800" /><Metric value={review} label="Review" tone="text-amber-800" /><Metric value={unanswered} label="Unanswered" tone="text-slate-700" /></div>{unanswered > 0 && <p className="mt-5 rounded-xl bg-amber-50 p-4 text-sm font-semibold text-amber-900">You still have {unanswered} unanswered question{unanswered === 1 ? "" : "s"}.</p>}<div className="mt-7 flex justify-end gap-3"><button type="button" onClick={onCancel} className="rounded-xl border px-4 py-3 text-sm font-bold">Continue test</button><button type="button" onClick={onSubmit} disabled={submitting} className="rounded-xl bg-teal-700 px-4 py-3 text-sm font-bold text-white disabled:opacity-50">{submitting ? "Submitting…" : "Submit test"}</button></div></section></div>;
 }
 
-function SubmissionResult({ title, result, onRetry }: { title: string; result: SubmitAttemptResult; onRetry: () => void }) {
-  return <main className="grid min-h-screen place-items-center bg-slate-50 px-5 py-10"><section className="w-full max-w-2xl rounded-3xl border bg-white p-8 text-center shadow-xl sm:p-10"><p className={`text-xs font-bold uppercase tracking-[0.16em] ${result.success ? "text-emerald-700" : "text-red-700"}`}>{result.success ? "Test submitted" : "Submission needs attention"}</p><h1 className="mt-3 text-3xl font-black">{title}</h1>{result.success ? <><p className="mt-7 text-5xl font-black">{result.score} <span className="text-2xl text-slate-400">/ {result.totalMarks}</span></p><div className="mt-7 grid grid-cols-3 gap-3"><Metric value={result.correctAnswers ?? 0} label="Correct" tone="text-emerald-800" /><Metric value={result.incorrectAnswers ?? 0} label="Incorrect" tone="text-red-800" /><Metric value={result.unansweredQuestions ?? 0} label="Unanswered" tone="text-slate-700" /></div><div className="mt-8 flex flex-wrap justify-center gap-3">{result.attemptId && <Link href={`/dashboard/attempts/${result.attemptId}`} className="rounded-xl bg-slate-950 px-5 py-3 text-sm font-bold text-white">Review answers</Link>}<Link href="/dashboard" className="rounded-xl border px-5 py-3 text-sm font-bold">Go to dashboard</Link></div></> : <><p className="mt-5 text-slate-600">{result.message}</p><button type="button" onClick={onRetry} className="mt-7 rounded-xl bg-slate-950 px-5 py-3 text-sm font-bold text-white">Try submission again</button></>}</section></main>;
+function SubmissionResult({ mockTestId, title, result, onRetry }: { mockTestId: string; title: string; result: SubmitAttemptResult; onRetry: () => void }) {
+  return <main className="grid min-h-screen place-items-center bg-slate-50 px-5 py-10"><section className="w-full max-w-2xl rounded-3xl border bg-white p-8 text-center shadow-xl sm:p-10"><p className={`text-xs font-bold uppercase tracking-[0.16em] ${result.success ? "text-emerald-700" : "text-red-700"}`}>{result.success ? "Test submitted" : "Submission needs attention"}</p><h1 className="mt-3 text-3xl font-black">{title}</h1>{result.success ? <><p className="mt-7 text-5xl font-black">{result.score} <span className="text-2xl text-slate-400">/ {result.totalMarks}</span></p><div className="mt-7 grid grid-cols-3 gap-3"><Metric value={result.correctAnswers ?? 0} label="Correct" tone="text-emerald-800" /><Metric value={result.incorrectAnswers ?? 0} label="Incorrect" tone="text-red-800" /><Metric value={result.unansweredQuestions ?? 0} label="Unanswered" tone="text-slate-700" /></div><div className="mt-8 flex flex-wrap justify-center gap-3">{result.attemptId && <Link href={`/dashboard/attempts/${result.attemptId}`} className="rounded-xl bg-slate-950 px-5 py-3 text-sm font-bold text-white">Review answers</Link>}<Link href={`/mock-tests/${mockTestId}/attempt`} className="rounded-xl bg-teal-700 px-5 py-3 text-sm font-bold text-white">Retake test</Link><Link href="/dashboard" className="rounded-xl border px-5 py-3 text-sm font-bold">Go to dashboard</Link></div></> : <><p className="mt-5 text-slate-600">{result.message}</p><button type="button" onClick={onRetry} className="mt-7 rounded-xl bg-slate-950 px-5 py-3 text-sm font-bold text-white">Try submission again</button></>}</section></main>;
 }
 
 function Metric({ value, label, tone }: { value: number; label: string; tone: string }) { return <div className="rounded-xl border bg-white px-3 py-3 text-center"><strong className={`block text-lg font-black ${tone}`}>{value}</strong><span className="text-xs font-semibold text-slate-500">{label}</span></div>; }
 function Legend({ color, label }: { color: string; label: string }) { return <span className="flex items-center gap-2"><span className={`h-3 w-3 rounded ${color}`} />{label}</span>; }
+
+function PracticeTimerControl({ remaining, paused, busy, disabled, onToggle }: { remaining: number | null; paused: boolean; busy: boolean; disabled: boolean; onToggle: () => void }) {
+  const urgent = remaining !== null && remaining <= 300 && !paused;
+  return (
+    <div className={`flex items-stretch rounded-2xl border p-1 shadow-inner transition ${paused ? "border-teal-400/60 bg-teal-300/10" : urgent ? "border-red-400/50 bg-red-500/10" : "border-slate-700 bg-slate-900"}`}>
+      <button type="button" onClick={onToggle} disabled={disabled} aria-label={paused ? "Resume practice timer" : "Pause practice timer"} title={paused ? "Resume timer" : "Pause timer"} className={`inline-flex min-w-11 items-center justify-center gap-2 rounded-xl px-3 text-xs font-black transition disabled:cursor-not-allowed disabled:opacity-50 ${paused ? "bg-teal-300 text-slate-950 hover:bg-teal-200" : "text-white hover:bg-slate-800"}`}>
+        {paused ? (
+          <svg aria-hidden="true" viewBox="0 0 24 24" className="h-4 w-4 fill-current"><path d="M8 5.2v13.6c0 .9 1 1.4 1.7.9l9.1-6.8a1.1 1.1 0 0 0 0-1.8L9.7 4.3A1.1 1.1 0 0 0 8 5.2Z" /></svg>
+        ) : (
+          <svg aria-hidden="true" viewBox="0 0 24 24" className="h-4 w-4 fill-current"><rect x="6" y="5" width="4.5" height="14" rx="1.2" /><rect x="13.5" y="5" width="4.5" height="14" rx="1.2" /></svg>
+        )}
+        <span className="hidden sm:inline">{busy ? (paused ? "Resuming" : "Pausing") : paused ? "Resume" : "Pause"}</span>
+      </button>
+      <div className="ml-1 min-w-[5.8rem] border-l border-slate-700/80 px-3 py-1 text-right">
+        <span className={`block text-[9px] font-black uppercase tracking-[0.14em] ${paused ? "text-teal-200" : urgent ? "text-red-200" : "text-slate-400"}`}>{paused ? "Paused" : "Time left"}</span>
+        <strong className={`mt-0.5 block font-mono text-lg leading-none ${urgent ? "text-red-300" : "text-white"}`}>{remaining === null ? "--:--" : displayTime(remaining)}</strong>
+      </div>
+    </div>
+  );
+}
