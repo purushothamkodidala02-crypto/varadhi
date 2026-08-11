@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { PasswordInput } from "@/components/auth/PasswordInput";
+import { MAX_PASSWORD_LENGTH, MIN_PASSWORD_LENGTH, passwordLengthMessage } from "@/lib/auth/password-policy";
 
 export function ResetPasswordForm({
   nextPath,
@@ -113,8 +114,8 @@ export function ResetPasswordForm({
     event.preventDefault();
     setError(null);
 
-    if (password.length < 10) {
-      setError("Use a password with at least 10 characters.");
+    if (password.length < MIN_PASSWORD_LENGTH) {
+      setError(passwordLengthMessage());
       return;
     }
 
@@ -146,12 +147,12 @@ export function ResetPasswordForm({
           <PasswordInput
             id="recovery_password"
             required
-            minLength={10}
-            maxLength={72}
+            minLength={MIN_PASSWORD_LENGTH}
+            maxLength={MAX_PASSWORD_LENGTH}
             autoComplete="new-password"
             value={password}
             onChange={(event) => setPassword(event.target.value)}
-            placeholder="At least 10 characters"
+            placeholder={`At least ${MIN_PASSWORD_LENGTH} characters`}
           />
         </label>
         <label htmlFor="confirm_recovery_password" className="block text-sm font-bold text-slate-800">
@@ -159,8 +160,8 @@ export function ResetPasswordForm({
           <PasswordInput
             id="confirm_recovery_password"
             required
-            minLength={10}
-            maxLength={72}
+            minLength={MIN_PASSWORD_LENGTH}
+            maxLength={MAX_PASSWORD_LENGTH}
             autoComplete="new-password"
             value={confirmPassword}
             onChange={(event) => setConfirmPassword(event.target.value)}

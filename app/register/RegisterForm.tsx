@@ -5,6 +5,7 @@ import { useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { PasswordInput } from "@/components/auth/PasswordInput";
 import { TurnstileChallenge } from "@/components/auth/TurnstileChallenge";
+import { MAX_PASSWORD_LENGTH, MIN_PASSWORD_LENGTH } from "@/lib/auth/password-policy";
 
 type Notice = {
   tone: "error" | "success" | "info";
@@ -193,8 +194,8 @@ export function RegisterForm({ nextPath }: { nextPath: string }) {
           </label>
           <label htmlFor="new_password" className="block text-sm font-bold text-slate-800">
             Password
-            <PasswordInput id="new_password" required minLength={10} maxLength={72} autoComplete="new-password" value={password} onChange={(event) => setPassword(event.target.value)} placeholder="At least 10 characters" />
-            <span className="mt-2 block text-xs font-normal text-slate-500">Use at least 10 characters. A short phrase is easier to remember and harder to guess.</span>
+            <PasswordInput id="new_password" required minLength={MIN_PASSWORD_LENGTH} maxLength={MAX_PASSWORD_LENGTH} autoComplete="new-password" value={password} onChange={(event) => setPassword(event.target.value)} placeholder={`At least ${MIN_PASSWORD_LENGTH} characters`} />
+            <span className="mt-2 block text-xs font-normal text-slate-500">Minimum {MIN_PASSWORD_LENGTH} characters. A longer password or short phrase is safer.</span>
           </label>
           <TurnstileChallenge onToken={setCaptchaToken} resetKey={captchaResetKey} />
           <button type="submit" disabled={loading || !captchaToken} className="w-full rounded-xl bg-slate-950 px-4 py-3 font-bold text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-50">
