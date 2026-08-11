@@ -4,6 +4,7 @@ import { ExamStructureWorkspace } from "./ExamStructureWorkspace";
 export default async function AdminExamStructurePage() {
   const supabase = await createClient();
   const [
+    statesResult,
     categoriesResult,
     examsResult,
     specializationsResult,
@@ -11,8 +12,13 @@ export default async function AdminExamStructurePage() {
     subjectsResult,
   ] = await Promise.all([
     supabase
+      .from("exam_states")
+      .select("id, name, code, slug, description, is_active, display_order")
+      .order("display_order")
+      .order("name"),
+    supabase
       .from("exams")
-      .select("id, name, slug, is_active, display_order")
+      .select("id, state_id, name, slug, is_active, display_order")
       .order("display_order")
       .order("name"),
     supabase
@@ -38,6 +44,7 @@ export default async function AdminExamStructurePage() {
   ]);
 
   const errors = [
+    statesResult.error,
     categoriesResult.error,
     examsResult.error,
     specializationsResult.error,
@@ -45,6 +52,7 @@ export default async function AdminExamStructurePage() {
     subjectsResult.error,
   ].filter(Boolean);
   const categories = categoriesResult.data ?? [];
+  const states = statesResult.data ?? [];
   const exams = examsResult.data ?? [];
   const papers = papersResult.data ?? [];
   const subjects = subjectsResult.data ?? [];
@@ -57,20 +65,20 @@ export default async function AdminExamStructurePage() {
           <div>
             <p className="inline-flex items-center gap-2 rounded-full border border-teal-300/20 bg-teal-300/10 px-3 py-1.5 text-xs font-bold uppercase tracking-[0.15em] text-teal-200">
               <span className="h-1.5 w-1.5 rounded-full bg-teal-300" />
-              Central structure manager
+              State-first structure manager
             </p>
             <h1 className="mt-5 text-3xl font-black tracking-tight sm:text-4xl">
               Exam Structure
             </h1>
             <p className="mt-3 max-w-2xl leading-7 text-slate-300">
-              Manage TGPSC, DSC, and every other category from one hierarchy:
-              Exams, Specialisations, Papers, and Subjects.
+              Keep Telangana, Andhra Pradesh and Central exams separate, then
+              manage boards, Exams, Specialisations, Papers and Subjects.
             </p>
           </div>
           <div className="grid grid-cols-3 gap-2 text-center text-xs font-semibold">
-            <SummaryCount value={categories.length} label="Categories" tone="teal" />
+            <SummaryCount value={states.length} label="States" tone="teal" />
+            <SummaryCount value={categories.length} label="Boards" tone="amber" />
             <SummaryCount value={exams.length} label="Exams" tone="amber" />
-            <SummaryCount value={papers.length + subjects.length} label="Content levels" tone="slate" />
           </div>
         </div>
       </section>
@@ -82,8 +90,18 @@ export default async function AdminExamStructurePage() {
       )}
 
       <ExamStructureWorkspace
+        states={states.map((state) => ({
+          id: state.id,
+          name: state.name,
+          code: state.code,
+          slug: state.slug,
+          description: state.description,
+          isActive: state.is_active,
+          displayOrder: state.display_order,
+        }))}
         categories={categories.map((category) => ({
           id: category.id,
+          stateId: category.state_id,
           name: category.name,
           slug: category.slug,
           isActive: category.is_active,

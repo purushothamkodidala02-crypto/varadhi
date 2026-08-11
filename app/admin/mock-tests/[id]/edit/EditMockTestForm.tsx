@@ -3,6 +3,7 @@
 import { useActionState, useMemo, useState } from "react";
 import { SearchableSelect } from "@/components/admin/SearchableSelect";
 import type { MockTest, MockTestAccessType } from "@/types/mock-test";
+import { mockTestLabel } from "@/lib/exam-catalog";
 import { updateMockTest, type UpdateMockTestState } from "./actions";
 
 type Paper = { id: string; label: string; duration: number | null };
@@ -37,6 +38,7 @@ export function EditMockTestForm({
   return (
     <section className="mt-8 rounded-2xl border bg-white p-6 shadow-sm">
       <form action={action} className="grid gap-5 md:grid-cols-2">
+        <div className="rounded-2xl border border-teal-200 bg-teal-50 p-5 md:col-span-2"><p className="text-xs font-black uppercase tracking-[0.13em] text-teal-700">Series identity</p><h2 className="font-display mt-1 text-2xl">{mockTestLabel(mockTest.series_number)}</h2><p className="mt-1 text-sm text-slate-600">The full title and URL are regenerated from the selected exam and paper when you save.</p></div>
         <label className="block text-sm font-bold md:col-span-2">
           Paper
           <SearchableSelect
@@ -92,24 +94,6 @@ export function EditMockTestForm({
           </label>
         )}
 
-        <label className="block text-sm font-bold">
-          Title
-          <input
-            name="title"
-            required
-            defaultValue={mockTest.title}
-            className="mt-2 w-full rounded-xl border px-4 py-3 font-normal"
-          />
-        </label>
-        <label className="block text-sm font-bold">
-          Slug
-          <input
-            name="slug"
-            required
-            defaultValue={mockTest.slug}
-            className="mt-2 w-full rounded-xl border px-4 py-3 font-normal"
-          />
-        </label>
         <label className="block text-sm font-bold md:col-span-2">
           Description
           <textarea
@@ -127,17 +111,6 @@ export function EditMockTestForm({
             min="1"
             required
             defaultValue={mockTest.duration_minutes}
-            className="mt-2 w-full rounded-xl border px-4 py-3 font-normal"
-          />
-        </label>
-        <label className="block text-sm font-bold">
-          Display order
-          <input
-            name="display_order"
-            type="number"
-            min="0"
-            required
-            defaultValue={mockTest.display_order}
             className="mt-2 w-full rounded-xl border px-4 py-3 font-normal"
           />
         </label>

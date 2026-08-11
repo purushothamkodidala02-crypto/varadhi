@@ -9,6 +9,7 @@ import {
 
 type EditExamFormProps = {
   exam: Exam;
+  states: Array<{ id: string; name: string; code: string }>;
 };
 
 const initialState: UpdateExamState = {
@@ -18,6 +19,7 @@ const initialState: UpdateExamState = {
 
 export function EditExamForm({
   exam,
+  states,
 }: EditExamFormProps) {
   const updateExamWithId = updateExam.bind(null, exam.id);
 
@@ -29,6 +31,12 @@ export function EditExamForm({
   return (
     <section className="mt-8 rounded-xl border p-6">
       <form action={formAction} className="space-y-5">
+        <div>
+          <label htmlFor="state_id" className="mb-2 block text-sm font-medium">State / catalogue</label>
+          <select id="state_id" name="state_id" required defaultValue={exam.state_id} className="w-full rounded-lg border bg-white px-4 py-3">
+            {states.map((state) => <option key={state.id} value={state.id}>{state.code} · {state.name}</option>)}
+          </select>
+        </div>
         <div>
           <label
             htmlFor="name"

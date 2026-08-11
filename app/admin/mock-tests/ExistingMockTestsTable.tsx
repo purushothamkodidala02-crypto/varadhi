@@ -11,16 +11,22 @@ import {
   type LocationSpecialization,
 } from "@/components/admin/LocationFilters";
 import type { MockTestStatus } from "@/types/mock-test";
+import { MockSymbol, StateSymbol } from "@/components/exams/CatalogSymbols";
+import { mockTestLabel } from "@/lib/exam-catalog";
 import { MockTestManagementButtons } from "./MockTestManagementButtons";
 
 type ExistingMockTest = {
   id: string;
+  stateId: string;
+  stateName: string;
+  stateCode: string;
   categoryId: string;
   examId: string;
   specializationId: string;
   paperId: string;
   examName: string;
   paperName: string;
+  seriesNumber: number;
   title: string;
   slug: string;
   durationMinutes: number;
@@ -60,19 +66,22 @@ const filterStyles = {
   },
 };
 
-export function ExistingMockTestsTable({ categories, exams, specializations, papers, tests }: {
-  categories: LocationCategory[];
+export function ExistingMockTestsTable({ states, categories, exams, specializations, papers, tests }: {
+  states: Array<{ id: string; name: string; code: string; slug: string }>;
+  categories: Array<LocationCategory & { stateId: string }>;
   exams: LocationExam[];
   specializations: LocationSpecialization[];
   papers: LocationPaper[];
   tests: ExistingMockTest[];
 }) {
+  const [stateId, setStateId] = useState("");
   const [location, setLocation] = useState(emptyLocation);
   const [search, setSearch] = useState("");
   const [status, setStatus] = useState<MockTestStatus | "all">("all");
   const filtered = useMemo(() => {
     const query = search.trim().toLowerCase();
     return tests.filter((test) =>
+      (!stateId || test.stateId === stateId) &&
       (!location.categoryId || test.categoryId === location.categoryId) &&
       (!location.examId || test.examId === location.examId) &&
       (!location.specializationId || test.specializationId === location.specializationId) &&
@@ -80,7 +89,7 @@ export function ExistingMockTestsTable({ categories, exams, specializations, pap
       (status === "all" || test.status === status) &&
       (!query || `${test.title} ${test.slug} ${test.examName} ${test.paperName}`.toLowerCase().includes(query)),
     );
-  }, [location, search, status, tests]);
+  }, [location, search, stateId, status, tests]);
 
   const counts = {
     all: tests.length,
@@ -111,7 +120,8 @@ export function ExistingMockTestsTable({ categories, exams, specializations, pap
       </div>
 
       <div className="space-y-4 border-b border-teal-100 bg-gradient-to-r from-slate-50 to-teal-50/70 px-6 py-5 sm:px-7">
-        <LocationFilters categories={categories} exams={exams} specializations={specializations} papers={papers} value={location} onChange={setLocation} />
+        <div><p className="mb-3 text-xs font-black uppercase tracking-[0.13em] text-slate-500">Filter by state</p><div className="flex flex-wrap gap-2"><button type="button" onClick={() => { setStateId(""); setLocation(emptyLocation); }} className={`rounded-xl border px-4 py-2.5 text-sm font-bold ${!stateId ? "border-slate-950 bg-slate-950 text-white" : "bg-white text-slate-600"}`}>All states</button>{states.map((state) => <button key={state.id} type="button" onClick={() => { setStateId(state.id); setLocation(emptyLocation); }} className={`inline-flex items-center gap-2 rounded-xl border px-4 py-2.5 text-sm font-bold ${stateId === state.id ? "border-teal-600 bg-teal-50 text-teal-900 ring-1 ring-teal-600" : "bg-white text-slate-600"}`}><StateSymbol slug={state.slug} className="h-4 w-4" />{state.code} · {state.name}</button>)}</div></div>
+        <LocationFilters categories={categories.filter((category) => !stateId || category.stateId === stateId)} exams={exams} specializations={specializations} papers={papers} value={location} onChange={setLocation} />
         <label className="block max-w-xl text-sm font-bold">Search mock tests
           <input type="search" value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Search by test, Exam, or Paper" className="mt-2 w-full rounded-xl border bg-white px-4 py-3 font-normal" />
         </label>
@@ -133,8 +143,7 @@ export function ExistingMockTestsTable({ categories, exams, specializations, pap
                       <span className={`rounded-full px-3 py-1 text-xs font-bold ${statusDetail.className}`}>{statusDetail.label}</span>
                       <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-600">{test.scope === "paper" ? "Paper-wise" : "Subject-wise"}</span>
                     </div>
-                    <h3 className="mt-3 text-xl font-black text-slate-950">{test.title}</h3>
-                    <p className="mt-1 text-sm text-slate-600">{test.examName} → {test.paperName}{test.subjectName ? ` → ${test.subjectName}` : ""}</p>
+                    <div className="mt-3 flex items-start gap-3"><span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-slate-950 text-teal-200"><MockSymbol className="h-5 w-5" /></span><div><h3 className="font-display text-xl text-slate-950">{mockTestLabel(test.seriesNumber)}</h3><p className="mt-1 text-sm font-semibold text-slate-700">{test.stateCode} · {test.examName} · {test.paperName}{test.subjectName ? ` · ${test.subjectName}` : ""}</p><p className="mt-1 text-xs text-slate-400">Stored title: {test.title}</p></div></div>
                   </div>
                   <div className="flex flex-wrap items-center justify-end gap-2">
                     {test.status === "published" && <Link href={`/mock-tests/${test.id}`} target="_blank" className="rounded-lg border px-3 py-2 text-sm font-bold text-slate-700 hover:bg-slate-50">View live</Link>}

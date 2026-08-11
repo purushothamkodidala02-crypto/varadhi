@@ -1,5 +1,6 @@
 export interface Exam {
   id: string;
+  state_id: string;
   name: string;
   slug: string;
   description: string | null;
@@ -10,6 +11,7 @@ export interface Exam {
 }
 
 export interface CreateExamInput {
+  state_id: string;
   name: string;
   slug: string;
   description?: string;

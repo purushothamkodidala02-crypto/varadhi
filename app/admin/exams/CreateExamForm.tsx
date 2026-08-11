@@ -4,7 +4,8 @@ import Link from "next/link";
 import { useActionState, useEffect, useMemo, useRef, useState } from "react";
 import { createExam, type CreateExamState } from "./actions";
 
-type ExistingCategory = { id: string; name: string };
+type ExistingCategory = { id: string; stateId: string; name: string };
+type ExamState = { id: string; name: string; code: string };
 
 const initialState: CreateExamState = {
   success: false,
@@ -12,25 +13,31 @@ const initialState: CreateExamState = {
 };
 
 export function CreateExamForm({
+  states,
+  initialStateId,
   existingCategories,
 }: {
+  states: ExamState[];
+  initialStateId: string;
   existingCategories: ExistingCategory[];
 }) {
   const [state, formAction, pending] = useActionState(createExam, initialState);
   const inputAreaRef = useRef<HTMLDivElement>(null);
   const [name, setName] = useState("");
+  const [stateId, setStateId] = useState(initialStateId);
   const [listOpen, setListOpen] = useState(false);
   const normalizedName = name.trim().toLocaleLowerCase();
   const matchingCategories = useMemo(
     () =>
       existingCategories.filter(
         (category) =>
-          !normalizedName || category.name.toLocaleLowerCase().includes(normalizedName),
+          category.stateId === stateId &&
+          (!normalizedName || category.name.toLocaleLowerCase().includes(normalizedName)),
       ),
-    [existingCategories, normalizedName],
+    [existingCategories, normalizedName, stateId],
   );
   const existingMatch = existingCategories.find(
-    (category) => category.name.trim().toLocaleLowerCase() === normalizedName,
+    (category) => category.stateId === stateId && category.name.trim().toLocaleLowerCase() === normalizedName,
   );
 
   useEffect(() => {
@@ -52,6 +59,12 @@ export function CreateExamForm({
       </p>
 
       <form action={formAction} className="mt-6 space-y-5">
+        <div>
+          <label htmlFor="state_id" className="mb-2 block text-sm font-medium">State / catalogue</label>
+          <select id="state_id" name="state_id" required value={stateId} onChange={(event) => { setStateId(event.target.value); setName(""); }} className="w-full rounded-lg border bg-white px-4 py-3">
+            {states.map((state) => <option key={state.id} value={state.id}>{state.code} · {state.name}</option>)}
+          </select>
+        </div>
         <div ref={inputAreaRef} className="relative">
           <label htmlFor="name" className="mb-2 block text-sm font-medium">
             Exam category name
@@ -68,7 +81,6 @@ export function CreateExamForm({
               setListOpen(true);
             }}
             placeholder="For example: TGPSC"
-            aria-expanded={listOpen && Boolean(normalizedName)}
             aria-controls="existing-category-suggestions"
             className="w-full rounded-lg border px-4 py-3"
           />

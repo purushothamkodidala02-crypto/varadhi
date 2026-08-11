@@ -10,7 +10,7 @@ export default async function EditMockTestPage({ params }: { params: Promise<{ i
   const { id } = await params;
   const supabase = await createClient();
   const [testResult, subjectsResult, papersResult, groupsResult, categoriesResult, specializationsResult, questionsResult, assignmentsResult] = await Promise.all([
-    supabase.from("mock_tests").select("id, paper_id, subject_id, test_scope, title, slug, description, instructions, duration_minutes, difficulty, status, version, display_order, published_at, access_type, price_inr, created_at, updated_at").eq("id", id).maybeSingle(),
+    supabase.from("mock_tests").select("id, paper_id, subject_id, test_scope, series_number, title, slug, description, instructions, duration_minutes, difficulty, status, version, display_order, published_at, access_type, price_inr, created_at, updated_at").eq("id", id).maybeSingle(),
     supabase.from("subjects").select("id, paper_id, name").order("display_order"),
     supabase.from("papers").select("id, exam_group_id, specialization_id, name, duration_minutes, default_correct_marks, default_negative_marks"),
     supabase.from("exam_groups").select("id, exam_id, name"),

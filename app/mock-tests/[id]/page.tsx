@@ -3,10 +3,12 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { JsonLd } from "@/components/seo/JsonLd";
 import { PublicHeader } from "@/components/site/PublicHeader";
+import { mockTestLabel } from "@/lib/exam-catalog";
 import { buildPaperDisplayMap, type OrderedPaper } from "@/lib/papers";
 import { absoluteUrl } from "@/lib/site";
 import { createPublicClient } from "@/lib/supabase/public";
 import { createClient } from "@/lib/supabase/server";
+import { TestStartActions } from "./TestStartActions";
 
 type MockTestDetailsProps = { params: Promise<{ id: string }> };
 
@@ -15,7 +17,7 @@ export async function generateMetadata({ params }: MockTestDetailsProps): Promis
   const supabase = createPublicClient();
   const { data: test } = await supabase
     .from("mock_tests")
-    .select("id, paper_id, title, duration_minutes")
+    .select("id, paper_id, series_number, title, duration_minutes")
     .eq("id", id)
     .eq("status", "published")
     .eq("access_type", "free")
@@ -43,9 +45,9 @@ export async function generateMetadata({ params }: MockTestDetailsProps): Promis
   const paperDisplay = paper
     ? buildPaperDisplayMap((siblingPapers ?? []) as OrderedPaper[]).get(paper.id)
     : undefined;
-  const paperLabel = paperDisplay?.shortLabel ?? "TGPSC";
-  const title = `${test.title} ${paperLabel} Mock Test`;
-  const description = `Take the free ${test.title} ${paperLabel} mock test${paper ? ` covering ${paper.name}` : ""}. ${test.duration_minutes}-minute timed TGPSC practice on Varadhi Prep.`;
+  const paperLabel = paperDisplay?.shortLabel ?? "Paper";
+  const title = `${mockTestLabel(Number(test.series_number ?? 1))} | ${test.title} ${paperLabel}`;
+  const description = `Take the free ${test.title} ${paperLabel} mock test${paper ? ` covering ${paper.name}` : ""}. ${test.duration_minutes}-minute state-exam practice on Varadhi Prep.`;
 
   return {
     title,
@@ -69,7 +71,7 @@ export default async function MockTestDetailsPage({ params }: MockTestDetailsPro
   const { id } = await params;
   const supabase = await createClient();
   const [testResult, authResult] = await Promise.all([
-    supabase.from("mock_tests").select("id, paper_id, subject_id, test_scope, title, description, instructions, duration_minutes, status, access_type").eq("id", id).eq("status", "published").eq("access_type", "free").maybeSingle(),
+    supabase.from("mock_tests").select("id, paper_id, subject_id, test_scope, series_number, title, description, instructions, duration_minutes, status, access_type").eq("id", id).eq("status", "published").eq("access_type", "free").maybeSingle(),
     supabase.auth.getUser(),
   ]);
   const test = testResult.data;
@@ -89,7 +91,8 @@ export default async function MockTestDetailsPage({ params }: MockTestDetailsPro
   const paperDisplay = paper
     ? buildPaperDisplayMap((siblingPapersResult.data ?? []) as OrderedPaper[]).get(paper.id)
     : undefined;
-  const categoryResult = exam ? await supabase.from("exams").select("id, name").eq("id", exam.exam_id).maybeSingle() : { data: null };
+  const categoryResult = exam ? await supabase.from("exams").select("id, state_id, name").eq("id", exam.exam_id).maybeSingle() : { data: null };
+  const stateResult = categoryResult.data?.state_id ? await supabase.from("exam_states").select("id, name, code, slug").eq("id", categoryResult.data.state_id).maybeSingle() : { data: null };
   const configuredQuestionCount = Number(paper?.question_count ?? 0);
   const questionCount =
     test.test_scope === "paper" && configuredQuestionCount > 0
@@ -130,14 +133,8 @@ export default async function MockTestDetailsPage({ params }: MockTestDetailsPro
     : [{ data: null }, { data: null }];
   const hasResumableSession = Boolean(resumableSessionResult.data);
   const hasPreviousAttempt = Boolean(previousAttemptResult.data);
-  const practiceButtonLabel = !isLoggedIn
-    ? "Sign in to start"
-    : hasResumableSession
-      ? "Resume practice"
-      : hasPreviousAttempt
-        ? "Retake test"
-        : "Start practice";
-  const resourceName = `${test.title} ${paperDisplay?.shortLabel ?? "TGPSC"} Mock Test`;
+  const testLabel = mockTestLabel(Number(test.series_number ?? 1));
+  const resourceName = `${stateResult.data?.code ?? "State"} ${exam?.name ?? "Exam"} ${paperDisplay?.shortLabel ?? "Paper"} ${testLabel}`;
   const resourceDescription =
     test.description ??
     `A free, timed ${resourceName} for focused competitive-exam preparation.`;
@@ -184,8 +181,8 @@ export default async function MockTestDetailsPage({ params }: MockTestDetailsPro
         <div className="mt-7 grid gap-8 lg:grid-cols-[1fr_22rem] lg:items-start">
           <section>
             <div className="flex flex-wrap items-center gap-2"><span className="rounded-full bg-emerald-100 px-3 py-1 text-xs font-bold text-emerald-800">Free</span><span className="rounded-full bg-slate-200 px-3 py-1 text-xs font-bold text-slate-700">{test.test_scope === "paper" ? "Full-length Paper test" : "Subject test"}</span></div>
-            <p className="mt-6 text-xs font-bold uppercase tracking-[0.14em] text-teal-700">{categoryResult.data?.name ?? "TGPSC"} · {exam?.name ?? "Exam"}</p>
-            <h1 className="mt-3 text-4xl font-black leading-tight tracking-tight text-slate-950 sm:text-5xl">{test.title}</h1>
+            <p className="mt-6 text-xs font-bold uppercase tracking-[0.14em] text-teal-700">{stateResult.data?.code ?? "State"} · {categoryResult.data?.name ?? "Board"} · {exam?.name ?? "Exam"} · {paperDisplay?.shortLabel ?? "Paper"}</p>
+            <h1 className="font-display mt-3 text-4xl leading-tight tracking-tight text-slate-950 sm:text-5xl">{testLabel}</h1>
             <p className="mt-5 max-w-3xl text-lg leading-8 text-slate-600">{test.description ?? "A focused Varadhi Prep mock test designed to strengthen your exam preparation."}</p>
             <div className="mt-7 flex flex-wrap gap-2 text-sm font-semibold text-slate-600">{specializationResult.data && <span className="rounded-lg border bg-white px-3 py-2">{specializationResult.data.name}</span>}<span className="rounded-lg border bg-white px-3 py-2">{paperDisplay?.label ?? paper?.name ?? "Paper"}</span>{subjectResult.data && <span className="rounded-lg border bg-white px-3 py-2">{subjectResult.data.name}</span>}</div>
 
@@ -194,7 +191,7 @@ export default async function MockTestDetailsPage({ params }: MockTestDetailsPro
             <section className="mt-6 rounded-3xl border bg-white p-6 shadow-sm sm:p-8"><h2 className="text-2xl font-black">Instructions</h2>{test.instructions ? <div className="mt-5 whitespace-pre-line text-sm leading-7 text-slate-700">{test.instructions}</div> : <ul className="mt-5 space-y-3 text-sm leading-6 text-slate-700"><li className="flex gap-3"><span className="font-black text-teal-700">01</span>Answer each question before moving on, or return to it later during the attempt.</li><li className="flex gap-3"><span className="font-black text-teal-700">02</span>Your answers and remaining time are saved automatically.</li><li className="flex gap-3"><span className="font-black text-teal-700">03</span>Select Pause to stop the timer, then Resume whenever you are ready.</li><li className="flex gap-3"><span className="font-black text-teal-700">04</span>After submission, review your result or retake the test for more practice.</li></ul>}</section>
           </section>
 
-          <aside className="rounded-3xl bg-slate-950 p-6 text-white shadow-xl lg:sticky lg:top-6"><p className="text-xs font-bold uppercase tracking-[0.14em] text-teal-200">Ready to practise?</p><h2 className="mt-3 text-2xl font-black">Practice at your pace.</h2><p className="mt-3 text-sm leading-6 text-slate-300">Pause when needed, resume with your saved time, and retake after submission.</p><div className="mt-6 space-y-3 border-y border-slate-700 py-5 text-sm"><p className="flex justify-between gap-3"><span className="text-slate-400">Questions</span><strong>{questionCount ?? "—"}</strong></p><p className="flex justify-between gap-3"><span className="text-slate-400">Duration</span><strong>{test.duration_minutes} min</strong></p><p className="flex justify-between gap-3"><span className="text-slate-400">Access</span><strong>Free</strong></p></div><Link href={`/mock-tests/${id}/attempt`} className="mt-6 block rounded-xl bg-teal-300 px-5 py-3.5 text-center font-black text-slate-950 hover:bg-teal-200">{practiceButtonLabel}</Link><p className="mt-4 text-center text-xs leading-5 text-slate-400">{!isLoggedIn ? "Sign in or create an account, then return directly to this test." : hasResumableSession ? "Continue with your saved answers and remaining time." : hasPreviousAttempt ? "A new attempt will start. Your earlier result remains saved." : "Your answers and remaining time will be saved automatically."}</p></aside>
+          <aside className="rounded-3xl bg-slate-950 p-6 text-white shadow-xl lg:sticky lg:top-6"><p className="text-xs font-bold uppercase tracking-[0.14em] text-teal-200">Ready to begin?</p><h2 className="mt-3 text-2xl font-black">Take the test at your pace.</h2><p className="mt-3 text-sm leading-6 text-slate-300">Pause when needed, resume with your saved time, and start again when you want a fresh attempt.</p><div className="mt-6 space-y-3 border-y border-slate-700 py-5 text-sm"><p className="flex justify-between gap-3"><span className="text-slate-400">Questions</span><strong>{questionCount ?? "—"}</strong></p><p className="flex justify-between gap-3"><span className="text-slate-400">Duration</span><strong>{test.duration_minutes} min</strong></p><p className="flex justify-between gap-3"><span className="text-slate-400">Access</span><strong>Free</strong></p></div><TestStartActions testId={id} isLoggedIn={isLoggedIn} hasResumableSession={hasResumableSession} /><p className="mt-4 text-center text-xs leading-5 text-slate-400">{!isLoggedIn ? "Sign in or create an account, then return directly to this test." : hasResumableSession ? "Resume keeps your progress. Start test begins again after confirmation." : hasPreviousAttempt ? "Start a new attempt; your earlier submitted result remains saved." : "Your answers and remaining time will be saved automatically."}</p></aside>
         </div>
       </div>
     </main>

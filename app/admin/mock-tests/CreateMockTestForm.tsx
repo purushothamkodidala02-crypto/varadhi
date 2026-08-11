@@ -1,34 +1,81 @@
 "use client";
 
 import { useActionState, useMemo, useState } from "react";
-import { createMockTest, type CreateMockTestState } from "./actions";
+import { MockSymbol, StateSymbol } from "@/components/exams/CatalogSymbols";
+import { mockTestLabel } from "@/lib/exam-catalog";
 import { SearchableSelect } from "@/components/admin/SearchableSelect";
+import { createMockTest, type CreateMockTestState } from "./actions";
 
-type Category = { id: string; name: string };
+type ExamState = { id: string; name: string; code: string; slug: string };
+type Category = { id: string; stateId: string; name: string };
 type Exam = { id: string; categoryId: string; name: string };
 type Specialization = { id: string; examId: string; name: string };
-type Paper = { id: string; examId: string; specializationId: string | null; name: string; duration: number | null };
+type Paper = { id: string; examId: string; specializationId: string | null; name: string; duration: number | null; number: number };
 type Subject = { id: string; paperId: string; name: string };
+type ExistingSeries = { paperId: string; subjectId: string | null; scope: "paper" | "subject"; seriesNumber: number };
 
 const initialState: CreateMockTestState = { success: false, message: "" };
 
-export function CreateMockTestForm({ categories, exams, specializations, papers, subjects }: { categories: Category[]; exams: Exam[]; specializations: Specialization[]; papers: Paper[]; subjects: Subject[] }) {
-  const [state, action, pending] = useActionState(createMockTest, initialState);
+export function CreateMockTestForm({ states, categories, exams, specializations, papers, subjects, existingSeries }: {
+  states: ExamState[];
+  categories: Category[];
+  exams: Exam[];
+  specializations: Specialization[];
+  papers: Paper[];
+  subjects: Subject[];
+  existingSeries: ExistingSeries[];
+}) {
+  const [result, action, pending] = useActionState(createMockTest, initialState);
+  const [stateId, setStateId] = useState(states[0]?.id ?? "");
   const [categoryId, setCategoryId] = useState("");
   const [examId, setExamId] = useState("");
   const [specializationId, setSpecializationId] = useState("");
   const [paperId, setPaperId] = useState("");
   const [subjectId, setSubjectId] = useState("");
-  const [scope, setScope] = useState("");
-  const [accessType, setAccessType] = useState("");
+  const [scope, setScope] = useState<"paper" | "subject">("paper");
+  const [accessType, setAccessType] = useState<"free" | "paid">("free");
+  const state = states.find((item) => item.id === stateId);
+  const availableCategories = useMemo(() => categories.filter((item) => item.stateId === stateId), [categories, stateId]);
   const availableExams = useMemo(() => exams.filter((item) => item.categoryId === categoryId), [exams, categoryId]);
   const availableSpecializations = useMemo(() => specializations.filter((item) => item.examId === examId), [examId, specializations]);
   const availablePapers = useMemo(() => papers.filter((item) => item.examId === examId && (specializationId ? item.specializationId === specializationId : !item.specializationId)), [papers, examId, specializationId]);
   const availableSubjects = useMemo(() => subjects.filter((item) => item.paperId === paperId), [subjects, paperId]);
-  function changeCategory(value: string) { setCategoryId(value); setExamId(""); setSpecializationId(""); setPaperId(""); setSubjectId(""); }
-  function changeExam(value: string) { setExamId(value); setSpecializationId(""); setPaperId(""); setSubjectId(""); }
-  function changeSpecialization(value: string) { setSpecializationId(value); setPaperId(""); setSubjectId(""); }
-  function changePaper(value: string) { setPaperId(value); setSubjectId(""); }
+  const exam = exams.find((item) => item.id === examId);
+  const paper = papers.find((item) => item.id === paperId);
+  const subject = subjects.find((item) => item.id === subjectId);
+  const currentNumbers = existingSeries.filter((item) => item.paperId === paperId && item.scope === scope && (scope === "paper" || item.subjectId === subjectId)).map((item) => item.seriesNumber);
+  const nextSeries = currentNumbers.length ? Math.max(...currentNumbers) + 1 : 1;
 
-  return <section className="mt-8 rounded-3xl border bg-white p-6 shadow-sm sm:p-7"><p className="text-xs font-bold uppercase tracking-[0.14em] text-teal-700">New mock test</p><h2 className="mt-2 text-2xl font-black">Create a Paper-wise or Subject-wise mock</h2><p className="mt-2 text-sm text-slate-600">Choose a Specialisation only for branch-based Exams such as AEE.</p><form action={action} className="mt-6 grid gap-5 md:grid-cols-2"><label className="block text-sm font-bold">Exam Category<SearchableSelect name="exam_id" value={categoryId} onChange={changeCategory} options={categories.map((item) => ({ value: item.id, label: item.name }))} placeholder="Search and choose a category" /></label><label className="block text-sm font-bold">Exam<SearchableSelect name="exam_group_id" value={examId} onChange={changeExam} options={availableExams.map((item) => ({ value: item.id, label: item.name }))} placeholder="Search and choose an Exam" disabled={!categoryId} /></label><label className="block text-sm font-bold">Specialisation <span className="font-normal text-slate-500">(optional)</span><SearchableSelect value={specializationId} onChange={changeSpecialization} options={[{ value: "", label: availableSpecializations.length ? "No specialisation — direct Papers" : "No specialisation" }, ...availableSpecializations.map((item) => ({ value: item.id, label: item.name }))]} placeholder="Choose a Specialisation" disabled={!examId} emptyMessage="No Specialisations in this Exam." /></label><label className="block text-sm font-bold">Paper<SearchableSelect name="paper_id" value={paperId} onChange={changePaper} options={availablePapers.map((item) => ({ value: item.id, label: item.name }))} placeholder="Search and choose a Paper" disabled={!examId} emptyMessage="No Papers in this selection." /></label><fieldset className="rounded-xl border p-4"><legend className="px-1 text-sm font-bold">Mock type</legend><label className="mt-1 flex gap-2 text-sm"><input name="test_scope" type="radio" value="paper" checked={scope === "paper"} onChange={() => { setScope("paper"); setSubjectId(""); }} />Paper-wise full-length mock</label><label className="mt-2 flex gap-2 text-sm"><input name="test_scope" type="radio" value="subject" checked={scope === "subject"} onChange={() => setScope("subject")} />Subject-wise mock</label></fieldset>{scope === "subject" && <label className="block text-sm font-bold md:col-span-2">Subject<SearchableSelect name="subject_id" value={subjectId} onChange={setSubjectId} options={availableSubjects.map((item) => ({ value: item.id, label: item.name }))} placeholder="Search and choose a Subject" disabled={!paperId} /></label>}<label className="block text-sm font-bold">Mock Test title<input name="title" required placeholder="For example: Group 2 Paper I Mock Test 1" className="mt-2 w-full rounded-xl border px-4 py-3 font-normal" /></label><label className="block text-sm font-bold">Slug<input name="slug" required pattern="[a-z0-9-]+" placeholder="For example: group-2-paper-1-mock-1" className="mt-2 w-full rounded-xl border px-4 py-3 font-normal" /></label><label className="block text-sm font-bold md:col-span-2">Description<textarea name="description" rows={3} placeholder="For example: Full-length practice test for Group 2 Paper I" className="mt-2 w-full rounded-xl border px-4 py-3 font-normal" /></label><label className="block text-sm font-bold">Duration in minutes<input name="duration_minutes" type="number" min="1" required placeholder="For example: 150" className="mt-2 w-full rounded-xl border px-4 py-3 font-normal" /></label><label className="block text-sm font-bold">Display order<input name="display_order" type="number" min="0" required placeholder="For example: 1" className="mt-2 w-full rounded-xl border px-4 py-3 font-normal" /></label><label className="block text-sm font-bold">Student access<SearchableSelect name="access_type" value={accessType} onChange={setAccessType} options={[{ value: "free", label: "Free" }, { value: "paid", label: "Paid" }]} placeholder="Search and choose access" /></label>{accessType === "paid" && <label className="block text-sm font-bold">Price in INR<input name="price_inr" type="number" min="1" step="0.01" required placeholder="For example: 99" className="mt-2 w-full rounded-xl border px-4 py-3 font-normal" /></label>}<div className="md:col-span-2"><button disabled={pending || !paperId || !scope || !accessType || (scope === "subject" && !subjectId)} className="rounded-xl bg-slate-950 px-5 py-3 text-sm font-bold text-white disabled:opacity-50">{pending ? "Creating..." : "Create draft mock test"}</button>{state.message && <p className={`mt-4 text-sm font-semibold ${state.success ? "text-emerald-700" : "text-red-700"}`}>{state.message}</p>}</div></form></section>;
+  function resetAfterState(value: string) { setStateId(value); setCategoryId(""); setExamId(""); setSpecializationId(""); setPaperId(""); setSubjectId(""); }
+  function resetAfterCategory(value: string) { setCategoryId(value); setExamId(""); setSpecializationId(""); setPaperId(""); setSubjectId(""); }
+  function resetAfterExam(value: string) { setExamId(value); setSpecializationId(""); setPaperId(""); setSubjectId(""); }
+  function resetAfterSpecialization(value: string) { setSpecializationId(value); setPaperId(""); setSubjectId(""); }
+
+  return <section className="mt-6 overflow-hidden rounded-3xl border border-teal-100 bg-white shadow-sm">
+    <div className="border-b bg-gradient-to-r from-slate-950 to-teal-950 px-6 py-6 text-white sm:px-7"><div className="flex items-center gap-4"><span className="grid h-12 w-12 place-items-center rounded-2xl bg-teal-300 text-slate-950"><MockSymbol /></span><div><p className="text-xs font-black uppercase tracking-[0.14em] text-teal-200">Guided test creator</p><h2 className="font-display mt-1 text-2xl">Create the next mock in its correct series</h2></div></div><p className="mt-3 max-w-3xl text-sm leading-6 text-slate-300">Select the location from left to right. Varadhi generates the test number, full name and URL automatically.</p></div>
+    <form action={action} className="grid gap-5 p-6 md:grid-cols-2 sm:p-7">
+      <label className="block text-sm font-bold">1. State / catalogue
+        <select name="state_id" value={stateId} onChange={(event) => resetAfterState(event.target.value)} className="mt-2 w-full rounded-xl border bg-white px-4 py-3 font-normal">
+          {states.map((item) => <option key={item.id} value={item.id}>{item.code} · {item.name}</option>)}
+        </select>
+      </label>
+      <label className="block text-sm font-bold">2. Recruiting board<SearchableSelect name="exam_id" value={categoryId} onChange={resetAfterCategory} options={availableCategories.map((item) => ({ value: item.id, label: item.name }))} placeholder="Choose TGPSC, APPSC, DSC…" /></label>
+      <label className="block text-sm font-bold">3. Exam<SearchableSelect name="exam_group_id" value={examId} onChange={resetAfterExam} options={availableExams.map((item) => ({ value: item.id, label: item.name }))} placeholder="Choose Executive Officer, Group 2…" disabled={!categoryId} /></label>
+      <label className="block text-sm font-bold">Specialisation <span className="font-normal text-slate-500">(only when applicable)</span><SearchableSelect value={specializationId} onChange={resetAfterSpecialization} options={[{ value: "", label: availableSpecializations.length ? "Common / direct papers" : "No specialisation" }, ...availableSpecializations.map((item) => ({ value: item.id, label: item.name }))]} placeholder="Choose specialisation" disabled={!examId} /></label>
+      <label className="block text-sm font-bold md:col-span-2">4. Paper<SearchableSelect name="paper_id" value={paperId} onChange={(value) => { setPaperId(value); setSubjectId(""); }} options={availablePapers.map((item) => ({ value: item.id, label: `Paper ${item.number} · ${item.name}` }))} placeholder="Choose the exact paper" disabled={!examId} emptyMessage="No papers exist in this selection." /></label>
+      <fieldset className="rounded-2xl border bg-slate-50 p-4"><legend className="px-1 text-sm font-bold">Practice coverage</legend><label className="mt-1 flex gap-3 text-sm"><input name="test_scope" type="radio" value="paper" checked={scope === "paper"} onChange={() => { setScope("paper"); setSubjectId(""); }} />Full paper mock</label><label className="mt-3 flex gap-3 text-sm"><input name="test_scope" type="radio" value="subject" checked={scope === "subject"} onChange={() => setScope("subject")} />One subject only</label></fieldset>
+      {scope === "subject" ? <label className="block text-sm font-bold">Subject<SearchableSelect name="subject_id" value={subjectId} onChange={setSubjectId} options={availableSubjects.map((item) => ({ value: item.id, label: item.name }))} placeholder="Choose a subject" disabled={!paperId} /></label> : <div className="rounded-2xl border border-teal-100 bg-teal-50 p-4 text-sm text-teal-900"><strong>Full paper selected</strong><p className="mt-1 leading-5">Questions can cover every subject assigned to this paper.</p></div>}
+
+      <div className="md:col-span-2 rounded-2xl border border-teal-200 bg-gradient-to-r from-teal-50 to-white p-5">
+        <div className="flex flex-wrap items-start justify-between gap-4"><div className="flex gap-4">{state && <span className="grid h-11 w-11 place-items-center rounded-xl bg-slate-950 text-teal-200"><StateSymbol slug={state.slug} className="h-5 w-5" /></span>}<div><p className="text-xs font-black uppercase tracking-[0.13em] text-teal-700">Student-facing name preview</p><h3 className="font-display mt-1 text-xl">{paper ? mockTestLabel(nextSeries) : "Choose a paper to generate the name"}</h3>{paper && <p className="mt-1 text-sm font-semibold text-slate-600">{state?.code} · {exam?.name} · Paper {paper.number}{subject ? ` · ${subject.name}` : ""}</p>}</div></div>{paper && <span className="rounded-full bg-white px-3 py-1.5 text-xs font-black text-teal-800 shadow-sm">Next in series: {nextSeries}</span>}</div>
+        <input type="hidden" name="expected_series_number" value={nextSeries} />
+      </div>
+
+      <label className="block text-sm font-bold md:col-span-2">Description <span className="font-normal text-slate-500">(optional)</span><textarea name="description" rows={3} placeholder="Tell students what this mock covers" className="mt-2 w-full rounded-xl border px-4 py-3 font-normal" /></label>
+      <label className="block text-sm font-bold">Duration in minutes<input name="duration_minutes" type="number" min="1" required defaultValue={paper?.duration ?? 150} key={paperId || "duration"} className="mt-2 w-full rounded-xl border px-4 py-3 font-normal" /></label>
+      <label className="block text-sm font-bold">Student access<select name="access_type" value={accessType} onChange={(event) => setAccessType(event.target.value as "free" | "paid")} className="mt-2 w-full rounded-xl border bg-white px-4 py-3 font-normal"><option value="free">Free</option><option value="paid">Paid</option></select></label>
+      {accessType === "paid" && <label className="block text-sm font-bold">Price in INR<input name="price_inr" type="number" min="1" step="0.01" required className="mt-2 w-full rounded-xl border px-4 py-3 font-normal" /></label>}
+      <div className="md:col-span-2"><button disabled={pending || !paperId || (scope === "subject" && !subjectId)} className="rounded-xl bg-slate-950 px-5 py-3 text-sm font-black text-white shadow-lg disabled:opacity-50">{pending ? "Creating draft…" : `Create ${paper ? mockTestLabel(nextSeries) : "mock test"}`}</button>{result.message && <p className={`mt-4 text-sm font-semibold ${result.success ? "text-emerald-700" : "text-red-700"}`}>{result.message}</p>}</div>
+    </form>
+  </section>;
 }

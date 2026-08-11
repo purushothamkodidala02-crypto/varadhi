@@ -140,20 +140,19 @@ export function StudentTestRunner({ mockTestId, title, sessionId, expiresAt, que
   const navigator = <QuestionNavigator questions={questions} currentIndex={index} answers={answers} reviewIds={reviewIds} locked={locked} onSelect={(next) => { setIndex(next); setNavigatorOpen(false); }} onFinish={() => setConfirming(true)} />;
 
   return <main className="min-h-screen bg-slate-100 pb-8">
-    <header className="sticky top-0 z-20 border-b border-slate-700 bg-slate-950 px-4 py-4 text-white shadow-lg sm:px-8">
+    <header className="sticky top-0 z-20 border-b border-slate-700 bg-slate-950 px-4 py-2.5 text-white shadow-lg sm:px-8">
       <div className="mx-auto max-w-6xl">
         <div className="flex items-center justify-between gap-4">
-          <div className="min-w-0"><p className="truncate text-sm font-semibold text-slate-300">{title}</p><h1 className="mt-1 text-lg font-black">Question {index + 1} <span className="text-slate-400">of {questions.length}</span></h1></div>
+          <div className="min-w-0"><p className="truncate text-xs font-semibold text-slate-400 sm:text-sm">{title}</p><h1 className="mt-0.5 text-base font-black sm:text-lg">Question {index + 1} <span className="text-slate-400">of {questions.length}</span></h1></div>
           <div className="flex items-center gap-2"><button type="button" onClick={() => setNavigatorOpen(true)} className="rounded-xl border border-slate-700 px-3 py-2.5 text-xs font-bold lg:hidden">Questions</button><PracticeTimerControl remaining={remaining} paused={paused} busy={pausing} disabled={pauseControlDisabled} onToggle={() => void togglePause()} /></div>
         </div>
-        <div className="mt-4 flex items-center gap-4"><div className="h-2 flex-1 overflow-hidden rounded-full bg-slate-700"><div className="h-full rounded-full bg-teal-300 transition-all" style={{ width: `${Math.round((answered / questions.length) * 100)}%` }} /></div><span className={`text-xs font-bold ${saveState === "error" ? "text-red-300" : "text-teal-100"}`}>{saveState === "saving" ? "Saving…" : saveState === "error" ? "Save failed" : "Answers saved"}</span></div>
+        <div className="mt-2 flex items-center gap-3"><div className="h-1.5 flex-1 overflow-hidden rounded-full bg-slate-700"><div className="h-full rounded-full bg-teal-300 transition-all" style={{ width: `${Math.round((answered / questions.length) * 100)}%` }} /></div><span className={`text-[11px] font-bold ${saveState === "error" ? "text-red-300" : "text-teal-100"}`}>{saveState === "saving" ? "Saving…" : saveState === "error" ? "Save failed" : "Answers saved"}</span></div>
       </div>
     </header>
 
-      <div className="mx-auto max-w-6xl px-4 pt-6 sm:px-8">
+      <div className="mx-auto max-w-6xl px-4 pt-4 sm:px-8">
       {pauseError && <p className="mb-4 rounded-xl border border-red-200 bg-red-50 p-3 text-sm font-semibold text-red-700">{pauseError}</p>}
-      {paused && <p className="mb-4 rounded-xl border border-teal-200 bg-teal-50 p-3 text-sm font-semibold text-teal-800">Practice paused. Your answers and remaining time are saved. Select Resume when you are ready.</p>}
-      <div className="mb-4 grid max-w-md grid-cols-3 gap-2"><Metric value={answered} label="Answered" tone="text-emerald-800" /><Metric value={reviewIds.size} label="Review" tone="text-amber-800" /><Metric value={unanswered} label="Remaining" tone="text-slate-700" /></div>
+      {paused && <p className="mb-4 rounded-xl border border-teal-200 bg-teal-50 p-3 text-sm font-semibold text-teal-800">Test paused. Your answers and remaining time are saved. Select Resume when you are ready.</p>}
       {navigatorOpen && <section className="mb-5 rounded-3xl border bg-white p-5 shadow-sm lg:hidden"><button type="button" onClick={() => setNavigatorOpen(false)} className="float-right text-xs font-bold text-slate-500">Close</button>{navigator}</section>}
       <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_15rem]">
         <section className="rounded-3xl border bg-white p-6 shadow-sm sm:p-8">
@@ -163,7 +162,7 @@ export function StudentTestRunner({ mockTestId, title, sessionId, expiresAt, que
           <div className="mt-7 grid gap-3">{options.map(([key, text]) => { const selected = answers[current.question_id] === key; const teluguOption = containsTeluguText(text); return <label key={key} className={`flex cursor-pointer gap-4 rounded-2xl border p-4 transition hover:border-teal-300 ${selected ? "border-teal-600 bg-teal-50" : "bg-white"} ${locked ? "pointer-events-none opacity-60" : ""}`}><input className="sr-only" type="radio" name={current.question_id} value={key} checked={selected} disabled={locked} onChange={() => { setSaveState("saving"); setAnswers((value) => ({ ...value, [current.question_id]: key })); }} /><span className={`grid h-8 w-8 shrink-0 place-items-center rounded-lg text-sm font-black ${selected ? "bg-teal-700 text-white" : "bg-slate-100 text-slate-600"}`}>{key}</span><span lang={teluguOption ? "te" : undefined} className={`whitespace-pre-line pt-1 text-sm font-medium leading-6 text-slate-800 ${teluguOption ? "font-telugu" : ""}`}>{text}</span></label>; })}</div>
           <div className="mt-6 flex flex-wrap items-center justify-between gap-3 border-t pt-5"><button type="button" onClick={clearAnswer} disabled={!answers[current.question_id] || locked} className="text-sm font-bold text-slate-500 hover:text-red-700 disabled:opacity-40">Clear answer</button><button type="button" onClick={toggleReview} disabled={locked} className={`rounded-xl px-4 py-2.5 text-sm font-bold ${reviewIds.has(current.question_id) ? "bg-amber-100 text-amber-900" : "border text-slate-700"}`}>{reviewIds.has(current.question_id) ? "Marked for review" : "Mark for review"}</button></div>
         </section>
-        <aside className="hidden max-h-[calc(100vh-9rem)] overflow-y-auto rounded-3xl border bg-white p-5 shadow-sm lg:sticky lg:top-32 lg:block">{navigator}</aside>
+        <aside className="hidden h-[calc(100vh-7rem)] min-h-0 overflow-hidden rounded-3xl border bg-white p-5 shadow-sm lg:sticky lg:top-24 lg:block">{navigator}</aside>
       </div>
       {remaining === 0 && <p className="mt-6 rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm font-semibold text-amber-900">Time is up. Your saved answers are being submitted.</p>}
       <div className="mt-6 flex justify-between gap-3"><button type="button" onClick={() => setIndex((value) => Math.max(0, value - 1))} disabled={index === 0 || locked} className="rounded-xl border bg-white px-5 py-3 text-sm font-bold disabled:opacity-40">Previous</button>{index === questions.length - 1 ? <button type="button" onClick={() => setConfirming(true)} disabled={locked} className="rounded-xl bg-teal-700 px-5 py-3 text-sm font-bold text-white disabled:opacity-50">Review & finish</button> : <button type="button" onClick={() => setIndex((value) => Math.min(questions.length - 1, value + 1))} disabled={locked} className="rounded-xl bg-slate-950 px-5 py-3 text-sm font-bold text-white disabled:opacity-50">Save & next</button>}</div>
@@ -174,7 +173,54 @@ export function StudentTestRunner({ mockTestId, title, sessionId, expiresAt, que
 }
 
 function QuestionNavigator({ questions, currentIndex, answers, reviewIds, locked, onSelect, onFinish }: { questions: TestQuestion[]; currentIndex: number; answers: Record<string, Answer>; reviewIds: Set<string>; locked: boolean; onSelect: (index: number) => void; onFinish: () => void }) {
-  return <><p className="text-xs font-bold uppercase tracking-[0.14em] text-slate-500">Question navigator</p><div className="mt-4 grid grid-cols-5 gap-2 lg:grid-cols-4">{questions.map((item, index) => { const marked = reviewIds.has(item.question_id); const answered = Boolean(answers[item.question_id]); return <button key={item.question_id} type="button" disabled={locked} onClick={() => onSelect(index)} className={`grid aspect-square place-items-center rounded-lg text-xs font-black ${index === currentIndex ? "bg-slate-950 text-white ring-2 ring-teal-300 ring-offset-2" : marked ? "bg-amber-100 text-amber-900" : answered ? "bg-emerald-100 text-emerald-800" : "bg-slate-100 text-slate-600"}`}>{index + 1}</button>; })}</div><div className="mt-5 space-y-2 text-xs text-slate-600"><Legend color="bg-emerald-100" label="Answered" /><Legend color="bg-amber-100" label="Marked for review" /><Legend color="bg-slate-100" label="Not answered" /></div><button type="button" onClick={onFinish} disabled={locked} className="mt-6 w-full rounded-xl border px-4 py-3 text-sm font-bold disabled:opacity-50">Finish test</button></>;
+  const answeredCount = Object.keys(answers).length;
+  const remainingCount = questions.length - answeredCount;
+
+  return (
+    <div className="flex min-h-0 flex-col lg:h-full">
+      <div className="shrink-0 bg-white">
+        <p className="text-xs font-bold uppercase tracking-[0.14em] text-slate-500">
+          Question navigator
+        </p>
+        <div className="mt-3 grid grid-cols-3 gap-2">
+          <NavigatorMetric value={answeredCount} label="Answered" tone="text-emerald-800" />
+          <NavigatorMetric value={reviewIds.size} label="Review" tone="text-amber-800" />
+          <NavigatorMetric value={remainingCount} label="Remaining" tone="text-slate-700" />
+        </div>
+      </div>
+
+      <div className="mt-4 max-h-[45vh] min-h-0 overflow-y-auto overscroll-contain pr-1 lg:max-h-none lg:flex-1">
+        <div className="grid grid-cols-5 gap-2 lg:grid-cols-4">
+          {questions.map((item, index) => {
+            const marked = reviewIds.has(item.question_id);
+            const answered = Boolean(answers[item.question_id]);
+            return (
+              <button
+                key={item.question_id}
+                type="button"
+                disabled={locked}
+                onClick={() => onSelect(index)}
+                className={`grid aspect-square place-items-center rounded-lg text-xs font-black ${index === currentIndex ? "bg-slate-950 text-white ring-2 ring-teal-300 ring-offset-2" : marked ? "bg-amber-100 text-amber-900" : answered ? "bg-emerald-100 text-emerald-800" : "bg-slate-100 text-slate-600"}`}
+              >
+                {index + 1}
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
+      <div className="mt-4 shrink-0 border-t pt-4">
+        <div className="space-y-2 text-xs text-slate-600">
+          <Legend color="bg-emerald-100" label="Answered" />
+          <Legend color="bg-amber-100" label="Marked for review" />
+          <Legend color="bg-slate-100" label="Not answered" />
+        </div>
+        <button type="button" onClick={onFinish} disabled={locked} className="mt-4 w-full rounded-xl border px-4 py-3 text-sm font-bold disabled:opacity-50">
+          Finish test
+        </button>
+      </div>
+    </div>
+  );
 }
 
 function SubmissionDialog({ answered, review, unanswered, submitting, onCancel, onSubmit }: { answered: number; review: number; unanswered: number; submitting: boolean; onCancel: () => void; onSubmit: () => void }) {
@@ -186,13 +232,14 @@ function SubmissionResult({ mockTestId, title, result, onRetry }: { mockTestId: 
 }
 
 function Metric({ value, label, tone }: { value: number; label: string; tone: string }) { return <div className="rounded-xl border bg-white px-3 py-3 text-center"><strong className={`block text-lg font-black ${tone}`}>{value}</strong><span className="text-xs font-semibold text-slate-500">{label}</span></div>; }
+function NavigatorMetric({ value, label, tone }: { value: number; label: string; tone: string }) { return <div className="rounded-xl bg-slate-50 px-2 py-2.5 text-center"><strong className={`block text-base font-black ${tone}`}>{value}</strong><span className="mt-0.5 block text-[10px] font-bold text-slate-500">{label}</span></div>; }
 function Legend({ color, label }: { color: string; label: string }) { return <span className="flex items-center gap-2"><span className={`h-3 w-3 rounded ${color}`} />{label}</span>; }
 
 function PracticeTimerControl({ remaining, paused, busy, disabled, onToggle }: { remaining: number | null; paused: boolean; busy: boolean; disabled: boolean; onToggle: () => void }) {
   const urgent = remaining !== null && remaining <= 300 && !paused;
   return (
     <div className={`flex items-stretch rounded-2xl border p-1 shadow-inner transition ${paused ? "border-teal-400/60 bg-teal-300/10" : urgent ? "border-red-400/50 bg-red-500/10" : "border-slate-700 bg-slate-900"}`}>
-      <button type="button" onClick={onToggle} disabled={disabled} aria-label={paused ? "Resume practice timer" : "Pause practice timer"} title={paused ? "Resume timer" : "Pause timer"} className={`inline-flex min-w-11 items-center justify-center gap-2 rounded-xl px-3 text-xs font-black transition disabled:cursor-not-allowed disabled:opacity-50 ${paused ? "bg-teal-300 text-slate-950 hover:bg-teal-200" : "text-white hover:bg-slate-800"}`}>
+      <button type="button" onClick={onToggle} disabled={disabled} aria-label={paused ? "Resume test timer" : "Pause test timer"} title={paused ? "Resume timer" : "Pause timer"} className={`inline-flex min-w-11 items-center justify-center gap-2 rounded-xl px-3 text-xs font-black transition disabled:cursor-not-allowed disabled:opacity-50 ${paused ? "bg-teal-300 text-slate-950 hover:bg-teal-200" : "text-white hover:bg-slate-800"}`}>
         {paused ? (
           <svg aria-hidden="true" viewBox="0 0 24 24" className="h-4 w-4 fill-current"><path d="M8 5.2v13.6c0 .9 1 1.4 1.7.9l9.1-6.8a1.1 1.1 0 0 0 0-1.8L9.7 4.3A1.1 1.1 0 0 0 8 5.2Z" /></svg>
         ) : (

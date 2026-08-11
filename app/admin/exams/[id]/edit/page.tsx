@@ -16,13 +16,14 @@ export default async function EditExamPage({
   const { id } = await params;
   const supabase = await createClient();
 
-  const { data, error } = await supabase
-    .from("exams")
-    .select(
-      "id, name, slug, description, is_active, display_order, created_at, updated_at"
-    )
-    .eq("id", id)
-    .single();
+  const [{ data, error }, statesResult] = await Promise.all([
+    supabase
+      .from("exams")
+      .select("id, state_id, name, slug, description, is_active, display_order, created_at, updated_at")
+      .eq("id", id)
+      .single(),
+    supabase.from("exam_states").select("id, name, code").order("display_order"),
+  ]);
 
   if (error || !data) {
     notFound();
@@ -47,7 +48,7 @@ export default async function EditExamPage({
         </p>
       </div>
 
-      <EditExamForm exam={exam} />
+      <EditExamForm exam={exam} states={statesResult.data ?? []} />
     </main>
   );
 }

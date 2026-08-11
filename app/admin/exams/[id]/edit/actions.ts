@@ -41,6 +41,7 @@ export async function updateExam(
   }
 
   const name = String(formData.get("name") ?? "").trim();
+  const stateId = String(formData.get("state_id") ?? "").trim();
 
   const slug = String(formData.get("slug") ?? "")
     .trim()
@@ -56,16 +57,17 @@ export async function updateExam(
 
   const isActive = formData.get("is_active") === "on";
 
-  if (!name) {
+  if (!name || !stateId) {
     return {
       success: false,
-      message: "Exam category name is required.",
+      message: "State and exam board name are required.",
     };
   }
 
   const { data: existingCategories, error: existingCategoriesError } = await supabase
     .from("exams")
     .select("id, name")
+    .eq("state_id", stateId)
     .neq("id", examId);
 
   if (existingCategoriesError) {
@@ -104,6 +106,7 @@ export async function updateExam(
   const { error: updateError } = await supabase
     .from("exams")
     .update({
+      state_id: stateId,
       name,
       slug,
       description: description || null,

@@ -40,6 +40,7 @@ export async function createExam(
   }
 
   const name = String(formData.get("name") ?? "").trim();
+  const stateId = String(formData.get("state_id") ?? "").trim();
 
   const slug = String(formData.get("slug") ?? "")
     .trim()
@@ -55,16 +56,17 @@ export async function createExam(
 
   const isActive = formData.get("is_active") === "on";
 
-  if (!name) {
+  if (!name || !stateId) {
     return {
       success: false,
-      message: "Exam category name is required.",
+      message: "State and exam board name are required.",
     };
   }
 
   const { data: existingCategories, error: existingCategoriesError } = await supabase
     .from("exams")
-    .select("id, name");
+    .select("id, name")
+    .eq("state_id", stateId);
 
   if (existingCategoriesError) {
     return {
@@ -99,6 +101,7 @@ export async function createExam(
   const { error: insertError } = await supabase
     .from("exams")
     .insert({
+      state_id: stateId,
       name,
       slug,
       description: description || null,

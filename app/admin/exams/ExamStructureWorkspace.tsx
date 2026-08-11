@@ -1,17 +1,30 @@
 "use client";
 
 import Link from "next/link";
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import { DeletePaperButton } from "@/app/admin/papers/DeletePaperButton";
 import { DeleteSpecializationButton } from "@/app/admin/specializations/DeleteSpecializationButton";
 import { DeleteSubjectButton } from "@/app/admin/subjects/DeleteSubjectButton";
 import { CreateGroupForm } from "@/app/admin/groups/CreateGroupForm";
 import { DeleteGroupButton } from "@/app/admin/groups/DeleteGroupButton";
+import { ExamSymbol, StateSymbol } from "@/components/exams/CatalogSymbols";
 import { CreateExamForm } from "./CreateExamForm";
 import { DeleteExamButton } from "./DeleteExamButton";
+import { StateManager } from "./StateManager";
+
+type ExamState = {
+  id: string;
+  name: string;
+  code: string;
+  slug: string;
+  description: string | null;
+  isActive: boolean;
+  displayOrder: number;
+};
 
 type Category = {
   id: string;
+  stateId: string;
   name: string;
   slug: string;
   isActive: boolean;
@@ -49,60 +62,92 @@ type Subject = {
   isActive: boolean;
 };
 
+function stateCategoriesFor(categories: Category[], stateId: string) {
+  return categories.filter((category) => category.stateId === stateId);
+}
+
 export function ExamStructureWorkspace({
+  states,
   categories,
   exams,
   specializations,
   papers,
   subjects,
 }: {
+  states: ExamState[];
   categories: Category[];
   exams: Exam[];
   specializations: Specialization[];
   papers: Paper[];
   subjects: Subject[];
 }) {
+  const [selectedStateId, setSelectedStateId] = useState(states[0]?.id ?? "");
+  const resolvedStateId = states.some((state) => state.id === selectedStateId)
+    ? selectedStateId
+    : (states[0]?.id ?? "");
+  const selectedState = states.find((state) => state.id === resolvedStateId);
+  const stateCategories = categories.filter((category) => category.stateId === resolvedStateId);
   const [selectedCategoryId, setSelectedCategoryId] = useState(
-    categories[0]?.id ?? "",
+    stateCategories[0]?.id ?? "",
   );
   const [search, setSearch] = useState("");
-  const resolvedCategoryId = categories.some(
+  const resolvedCategoryId = stateCategories.some(
     (category) => category.id === selectedCategoryId,
   )
     ? selectedCategoryId
-    : (categories[0]?.id ?? "");
-  const selectedCategory = categories.find(
+    : (stateCategories[0]?.id ?? "");
+  const selectedCategory = stateCategories.find(
     (category) => category.id === resolvedCategoryId,
   );
-  const visibleExams = useMemo(() => {
-    const query = search.trim().toLowerCase();
-    return exams.filter(
-      (exam) =>
-        exam.categoryId === resolvedCategoryId &&
-        (!query || `${exam.name} ${exam.slug}`.toLowerCase().includes(query)),
-    );
-  }, [exams, resolvedCategoryId, search]);
+  const query = search.trim().toLowerCase();
+  const visibleExams = exams.filter(
+    (exam) =>
+      exam.categoryId === resolvedCategoryId &&
+      (!query || `${exam.name} ${exam.slug}`.toLowerCase().includes(query)),
+  );
 
   return (
     <div className="mt-8 space-y-6">
+      <StateManager states={states.map((state) => ({
+        ...state,
+        categoryCount: categories.filter((category) => category.stateId === state.id).length,
+      }))} />
+
+      <section className="overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm">
+        <div className="border-b bg-slate-50 px-6 py-5 sm:px-7">
+          <p className="text-xs font-black uppercase tracking-[0.14em] text-teal-700">Step 1 · Exam location</p>
+          <h2 className="font-display mt-2 text-xl">Choose the state workspace</h2>
+          <p className="mt-1 text-sm text-slate-600">Only boards and exams from the selected location appear below.</p>
+        </div>
+        <div className="grid gap-3 p-5 md:grid-cols-3 sm:p-7">{states.map((state) => {
+          const active = state.id === resolvedStateId;
+          const stateExams = exams.filter((exam) => categories.some((category) => category.id === exam.categoryId && category.stateId === state.id));
+          return <button key={state.id} type="button" onClick={() => { setSelectedStateId(state.id); setSelectedCategoryId(categories.find((category) => category.stateId === state.id)?.id ?? ""); setSearch(""); }} className={`rounded-2xl border p-5 text-left transition ${active ? "border-teal-500 bg-teal-50 ring-1 ring-teal-500" : "hover:-translate-y-0.5 hover:border-teal-200 hover:shadow-md"}`}>
+            <span className="flex items-start justify-between"><span className={`grid h-11 w-11 place-items-center rounded-xl ${active ? "bg-slate-950 text-teal-200" : "bg-slate-100 text-slate-700"}`}><StateSymbol slug={state.slug} /></span><span className="rounded-full bg-white px-3 py-1 text-xs font-black text-slate-600 shadow-sm">{state.code}</span></span>
+            <strong className="font-display mt-4 block text-lg">{state.name}</strong>
+            <span className="mt-1 block text-xs font-semibold text-slate-500">{stateCategoriesFor(categories, state.id).length} boards · {stateExams.length} exams</span>
+          </button>;
+        })}</div>
+      </section>
+
       <section className="overflow-hidden rounded-3xl border border-teal-100 bg-white shadow-sm">
         <div className="border-b border-teal-100 bg-gradient-to-r from-teal-50 via-white to-white px-6 py-5 sm:px-7">
           <p className="text-xs font-bold uppercase tracking-[0.14em] text-teal-700">
-            Choose a category
+            Step 2 · Choose a board
           </p>
-          <h2 className="mt-2 text-xl font-black">TGPSC, DSC, and other exam boards</h2>
+          <h2 className="font-display mt-2 text-xl">Boards in {selectedState?.name ?? "this state"}</h2>
           <p className="mt-1 text-sm text-slate-600">
             Select a category to manage only the Exams and content that belong to it.
           </p>
         </div>
 
-        {categories.length === 0 ? (
+        {stateCategories.length === 0 ? (
           <div className="p-7 text-sm text-slate-600">
             Add your first Exam Category below to begin.
           </div>
         ) : (
           <div className="grid gap-3 p-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 sm:p-7">
-            {categories.map((category) => {
+            {stateCategories.map((category) => {
               const categoryExams = exams.filter(
                 (exam) => exam.categoryId === category.id,
               );
@@ -122,8 +167,8 @@ export function ExamStructureWorkspace({
                   }`}
                 >
                   <span className="flex items-start justify-between gap-3">
-                    <span className="grid h-10 w-10 place-items-center rounded-xl bg-slate-950 text-sm font-black text-teal-200">
-                      {category.name.slice(0, 2).toUpperCase()}
+                    <span className="grid h-10 w-10 place-items-center rounded-xl bg-slate-950 text-teal-200">
+                      <ExamSymbol name={category.name} className="h-5 w-5" />
                     </span>
                     <Status active={category.isActive} />
                   </span>
@@ -153,8 +198,11 @@ export function ExamStructureWorkspace({
           </summary>
           <div className="border-t bg-slate-50 p-5 [&>section]:mt-0 [&>section]:bg-white">
             <CreateExamForm
+              states={states.map((state) => ({ id: state.id, name: state.name, code: state.code }))}
+              initialStateId={resolvedStateId}
               existingCategories={categories.map((category) => ({
                 id: category.id,
+                stateId: category.stateId,
                 name: category.name,
               }))}
             />
@@ -181,7 +229,7 @@ export function ExamStructureWorkspace({
             <div className="border-t border-teal-100 bg-teal-50/40 p-5 [&>section]:mt-0">
               <CreateGroupForm
                 key={selectedCategory.id}
-                categories={categories.map((category) => ({
+                categories={stateCategories.map((category) => ({
                   id: category.id,
                   name: category.name,
                 }))}

@@ -5,6 +5,7 @@ import { useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { PasswordInput } from "@/components/auth/PasswordInput";
 import { TurnstileChallenge } from "@/components/auth/TurnstileChallenge";
+import { loginWithPassword, type LoginResult } from "./actions";
 
 type Notice = {
   tone: "error" | "success" | "info";
@@ -49,71 +50,37 @@ export function LoginForm({
     setLoading(true);
     setNeedsConfirmation(false);
     setNotice(null);
-    const supabase = createClient();
     const normalizedEmail = email.trim().toLowerCase();
-    const {
-      data: { user },
-      error: loginError,
-    } = await supabase.auth.signInWithPassword({
-      email: normalizedEmail,
-      password,
-      options: { captchaToken: captchaToken ?? undefined },
-    });
+    let result: LoginResult;
+    try {
+      result = await loginWithPassword({
+        email: normalizedEmail,
+        password,
+        captchaToken: captchaToken ?? "",
+        nextPath,
+      });
+    } catch {
+      setCaptchaToken(null);
+      setCaptchaResetKey((value) => value + 1);
+      setNotice({ tone: "error", message: "The login service did not respond. Refresh the page and try again." });
+      setLoading(false);
+      return;
+    }
 
     setCaptchaToken(null);
     setCaptchaResetKey((value) => value + 1);
 
-    if (loginError || !user) {
-      const emailNotConfirmed = loginError?.code === "email_not_confirmed";
+    if (!result.success || !result.redirectTo) {
+      const emailNotConfirmed = result.code === "email_not_confirmed";
       setNeedsConfirmation(emailNotConfirmed);
       setNotice({
         tone: emailNotConfirmed ? "info" : "error",
-        message: emailNotConfirmed
-          ? "Your account exists, but the email is not confirmed yet. Confirm it or request a new email below."
-          : loginError?.code === "over_request_rate_limit"
-            ? "Too many sign-in attempts. Wait a few minutes, then try again."
-            : "The email or password is incorrect. Check both fields and try again.",
+        message: result.message ?? "Sign-in could not be completed. Please try again.",
       });
       setLoading(false);
       return;
     }
-
-    const { data: profile, error: profileError } = await supabase
-      .from("profiles")
-      .select("role")
-      .eq("id", user.id)
-      .single();
-
-    if (profileError || !profile) {
-      setNotice({
-        tone: "error",
-        message:
-          "You are signed in, but the student profile could not be loaded. Please sign out and try once more.",
-      });
-      setLoading(false);
-      return;
-    }
-
-    if (profile.role === "admin") {
-      const { data: assurance, error: assuranceError } =
-        await supabase.auth.mfa.getAuthenticatorAssuranceLevel();
-
-      if (assuranceError) {
-        setNotice({
-          tone: "error",
-          message: "Your password was accepted, but administrator security could not be checked. Please try again.",
-        });
-        setLoading(false);
-        return;
-      }
-
-      window.location.replace(
-        assurance?.currentLevel === "aal2" ? "/admin" : "/admin-mfa",
-      );
-      return;
-    }
-
-    window.location.replace(nextPath);
+    window.location.replace(result.redirectTo);
   }
 
   async function resendConfirmation() {

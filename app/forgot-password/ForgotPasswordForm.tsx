@@ -32,6 +32,8 @@ export function ForgotPasswordForm({
   const loginHref = `/login?next=${encodeURIComponent(nextPath)}`;
 
   function recoveryRedirectUrl() {
+    // Supabase's PKCE verifier is stored on the origin that requests the
+    // recovery email, so the link must return to that same origin.
     const redirectUrl = new URL("/auth/recovery", window.location.origin);
     redirectUrl.searchParams.set("next", nextPath);
     return redirectUrl.toString();
@@ -65,7 +67,7 @@ export function ForgotPasswordForm({
       setNotice({
         tone: "success",
         message:
-          "If this email has a Varadhi Prep account, a password-reset link has been sent. Check the inbox and spam folder.",
+          "If this email has a Varadhi Prep account, a password-reset link has been sent. Open the newest email on this same device and browser to create a new password.",
       });
     }
 

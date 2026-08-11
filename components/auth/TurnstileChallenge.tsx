@@ -14,7 +14,7 @@ type TurnstileApi = {
       size: "flexible";
       callback: (token: string) => void;
       "expired-callback": () => void;
-      "error-callback": () => void;
+      "error-callback": (errorCode: string) => boolean;
     },
   ) => string;
   remove: (widgetId: string) => void;
@@ -36,6 +36,7 @@ export function TurnstileChallenge({
   const containerRef = useRef<HTMLDivElement>(null);
   const widgetIdRef = useRef<string | null>(null);
   const [ready, setReady] = useState(false);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const siteKey =
     process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY ??
     (process.env.NODE_ENV === "development" ? DEVELOPMENT_SITE_KEY : "");
@@ -53,9 +54,20 @@ export function TurnstileChallenge({
       sitekey: siteKey,
       theme: "auto",
       size: "flexible",
-      callback: (token) => onToken(token),
+      callback: (token) => {
+        setErrorMessage(null);
+        onToken(token);
+      },
       "expired-callback": () => onToken(null),
-      "error-callback": () => onToken(null),
+      "error-callback": (errorCode) => {
+        onToken(null);
+        setErrorMessage(
+          errorCode === "110200"
+            ? "This address is not authorized in Cloudflare Turnstile. Add localhost to the widget hostnames."
+            : "Security verification could not load. Refresh the page and try again.",
+        );
+        return true;
+      },
     });
 
     return () => {
@@ -82,6 +94,7 @@ export function TurnstileChallenge({
         onReady={() => setReady(true)}
       />
       <div ref={containerRef} className="min-h-16" aria-label="Security verification" />
+      {errorMessage && <p role="alert" className="mt-2 rounded-lg bg-red-50 px-3 py-2 text-xs font-semibold text-red-700">{errorMessage}</p>}
       <p className="mt-2 text-center text-xs text-slate-500">
         Protected from automated abuse by Cloudflare Turnstile.
       </p>

@@ -29,6 +29,11 @@ export default async function ResetPasswordPage({
     redirect(`/forgot-password?next=${encodeURIComponent(nextPath)}&error=invalid`);
   }
 
+  const { data: assurance } =
+    await supabase.auth.mfa.getAuthenticatorAssuranceLevel();
+  const requiresMfa =
+    assurance?.nextLevel === "aal2" && assurance.currentLevel !== "aal2";
+
   return (
     <main className="min-h-screen bg-slate-50">
       <PublicHeader compact />
@@ -46,7 +51,7 @@ export default async function ResetPasswordPage({
             <li>• Never share your password or reset link</li>
           </ul>
         </aside>
-        <ResetPasswordForm nextPath={nextPath} />
+        <ResetPasswordForm nextPath={nextPath} requiresMfa={requiresMfa} />
       </div>
     </main>
   );
