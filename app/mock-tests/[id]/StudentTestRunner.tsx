@@ -26,7 +26,10 @@ function displayTime(total: number) {
 
 export function StudentTestRunner({ mockTestId, title, sessionId, expiresAt, questions }: Props) {
   const [deadline, setDeadline] = useState(expiresAt);
-  const [index, setIndex] = useState(0);
+  const [index, setIndex] = useState(() => {
+    const lastAnsweredIndex = questions.reduce((last, question, questionIndex) => question.selected_answer ? questionIndex : last, -1);
+    return lastAnsweredIndex >= 0 ? Math.min(lastAnsweredIndex + 1, questions.length - 1) : 0;
+  });
   const [answers, setAnswers] = useState<Record<string, Answer>>(() => Object.fromEntries(questions.flatMap((item) => item.selected_answer ? [[item.question_id, item.selected_answer]] : [])));
   const [reviewIds, setReviewIds] = useState<Set<string>>(() => new Set());
   const [remaining, setRemaining] = useState<number | null>(null);

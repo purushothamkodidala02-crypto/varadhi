@@ -106,6 +106,37 @@ export default async function MockTestDetailsPage({ params }: MockTestDetailsPro
   const languageMode = subjectResult.data?.content_language_mode ?? "bilingual";
   const languageLabel = languageMode === "bilingual" ? "English + Telugu" : languageMode === "telugu" ? "Telugu" : "English";
   const isLoggedIn = Boolean(authResult.data.user);
+  const [resumableSessionResult, previousAttemptResult] = isLoggedIn && authResult.data.user
+    ? await Promise.all([
+        supabase
+          .from("test_attempt_sessions")
+          .select("id")
+          .eq("user_id", authResult.data.user.id)
+          .eq("mock_test_id", id)
+          .is("submitted_at", null)
+          .gt("remaining_seconds", 0)
+          .order("started_at", { ascending: false })
+          .limit(1)
+          .maybeSingle(),
+        supabase
+          .from("test_attempts")
+          .select("id")
+          .eq("user_id", authResult.data.user.id)
+          .eq("mock_test_id", id)
+          .order("submitted_at", { ascending: false })
+          .limit(1)
+          .maybeSingle(),
+      ])
+    : [{ data: null }, { data: null }];
+  const hasResumableSession = Boolean(resumableSessionResult.data);
+  const hasPreviousAttempt = Boolean(previousAttemptResult.data);
+  const practiceButtonLabel = !isLoggedIn
+    ? "Sign in to start"
+    : hasResumableSession
+      ? "Resume practice"
+      : hasPreviousAttempt
+        ? "Retake test"
+        : "Start practice";
   const resourceName = `${test.title} ${paperDisplay?.shortLabel ?? "TGPSC"} Mock Test`;
   const resourceDescription =
     test.description ??
@@ -163,7 +194,7 @@ export default async function MockTestDetailsPage({ params }: MockTestDetailsPro
             <section className="mt-6 rounded-3xl border bg-white p-6 shadow-sm sm:p-8"><h2 className="text-2xl font-black">Instructions</h2>{test.instructions ? <div className="mt-5 whitespace-pre-line text-sm leading-7 text-slate-700">{test.instructions}</div> : <ul className="mt-5 space-y-3 text-sm leading-6 text-slate-700"><li className="flex gap-3"><span className="font-black text-teal-700">01</span>Answer each question before moving on, or return to it later during the attempt.</li><li className="flex gap-3"><span className="font-black text-teal-700">02</span>Your answers and remaining time are saved automatically.</li><li className="flex gap-3"><span className="font-black text-teal-700">03</span>Select Pause to stop the timer, then Resume whenever you are ready.</li><li className="flex gap-3"><span className="font-black text-teal-700">04</span>After submission, review your result or retake the test for more practice.</li></ul>}</section>
           </section>
 
-          <aside className="rounded-3xl bg-slate-950 p-6 text-white shadow-xl lg:sticky lg:top-6"><p className="text-xs font-bold uppercase tracking-[0.14em] text-teal-200">Ready to practise?</p><h2 className="mt-3 text-2xl font-black">Practice at your pace.</h2><p className="mt-3 text-sm leading-6 text-slate-300">Pause when needed, resume with your saved time, and retake after submission.</p><div className="mt-6 space-y-3 border-y border-slate-700 py-5 text-sm"><p className="flex justify-between gap-3"><span className="text-slate-400">Questions</span><strong>{questionCount ?? "—"}</strong></p><p className="flex justify-between gap-3"><span className="text-slate-400">Duration</span><strong>{test.duration_minutes} min</strong></p><p className="flex justify-between gap-3"><span className="text-slate-400">Access</span><strong>Free</strong></p></div><Link href={`/mock-tests/${id}/attempt`} className="mt-6 block rounded-xl bg-teal-300 px-5 py-3.5 text-center font-black text-slate-950 hover:bg-teal-200">{isLoggedIn ? "Start or resume practice" : "Sign in to start"}</Link><p className="mt-4 text-center text-xs leading-5 text-slate-400">{isLoggedIn ? "Your answers and remaining time are saved." : "Sign in or create an account, then return directly to this test."}</p></aside>
+          <aside className="rounded-3xl bg-slate-950 p-6 text-white shadow-xl lg:sticky lg:top-6"><p className="text-xs font-bold uppercase tracking-[0.14em] text-teal-200">Ready to practise?</p><h2 className="mt-3 text-2xl font-black">Practice at your pace.</h2><p className="mt-3 text-sm leading-6 text-slate-300">Pause when needed, resume with your saved time, and retake after submission.</p><div className="mt-6 space-y-3 border-y border-slate-700 py-5 text-sm"><p className="flex justify-between gap-3"><span className="text-slate-400">Questions</span><strong>{questionCount ?? "—"}</strong></p><p className="flex justify-between gap-3"><span className="text-slate-400">Duration</span><strong>{test.duration_minutes} min</strong></p><p className="flex justify-between gap-3"><span className="text-slate-400">Access</span><strong>Free</strong></p></div><Link href={`/mock-tests/${id}/attempt`} className="mt-6 block rounded-xl bg-teal-300 px-5 py-3.5 text-center font-black text-slate-950 hover:bg-teal-200">{practiceButtonLabel}</Link><p className="mt-4 text-center text-xs leading-5 text-slate-400">{!isLoggedIn ? "Sign in or create an account, then return directly to this test." : hasResumableSession ? "Continue with your saved answers and remaining time." : hasPreviousAttempt ? "A new attempt will start. Your earlier result remains saved." : "Your answers and remaining time will be saved automatically."}</p></aside>
         </div>
       </div>
     </main>
