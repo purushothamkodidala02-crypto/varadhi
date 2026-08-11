@@ -4,6 +4,8 @@ import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 
 type Answer = "A" | "B" | "C" | "D";
+const MAX_ANSWERS_PER_ATTEMPT = 500;
+const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
 export type SubmitAttemptResult = {
   success: boolean;
@@ -20,8 +22,11 @@ function cleanAnswers(answers: Record<string, Answer>) {
   const validAnswers = new Set<Answer>(["A", "B", "C", "D"]);
   const cleanedAnswers: Record<string, Answer> = {};
 
-  for (const [questionId, answer] of Object.entries(answers)) {
-    if (!questionId || !validAnswers.has(answer)) {
+  const entries = Object.entries(answers);
+  if (entries.length > MAX_ANSWERS_PER_ATTEMPT) return null;
+
+  for (const [questionId, answer] of entries) {
+    if (!UUID_PATTERN.test(questionId) || !validAnswers.has(answer)) {
       return null;
     }
     cleanedAnswers[questionId] = answer;
@@ -40,7 +45,7 @@ export async function saveAttemptProgress(
   } = await supabase.auth.getUser();
 
   const cleanedAnswers = cleanAnswers(answers);
-  if (!user || !sessionId || !cleanedAnswers) {
+  if (!user || !UUID_PATTERN.test(sessionId) || !cleanedAnswers) {
     return { success: false };
   }
 
@@ -55,7 +60,7 @@ export async function saveAttemptProgress(
 export async function syncAttemptTimer(sessionId: string): Promise<{ success: boolean; remaining?: number }> {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
-  if (!user || !sessionId) return { success: false };
+  if (!user || !UUID_PATTERN.test(sessionId)) return { success: false };
   const { data, error } = await supabase.rpc("sync_mock_test_session_timer", {
     requested_session_id: sessionId,
   });
@@ -69,7 +74,7 @@ export async function pauseAttempt(
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   const cleanedAnswers = cleanAnswers(answers);
-  if (!user || !sessionId || !cleanedAnswers) {
+  if (!user || !UUID_PATTERN.test(sessionId) || !cleanedAnswers) {
     return { success: false, message: "Unable to pause this attempt." };
   }
 
@@ -90,7 +95,7 @@ export async function pauseAttempt(
 export async function resumeAttempt(mockTestId: string, sessionId: string): Promise<{ success: boolean; message: string; expiresAt?: string }> {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
-  if (!user || !mockTestId || !sessionId) return { success: false, message: "Unable to resume this attempt." };
+  if (!user || !UUID_PATTERN.test(mockTestId) || !UUID_PATTERN.test(sessionId)) return { success: false, message: "Unable to resume this attempt." };
   const { data, error } = await supabase.rpc("start_mock_test_session", {
     requested_mock_test_id: mockTestId,
   });
@@ -116,7 +121,7 @@ export async function submitAttempt(
   }
 
   const cleanedAnswers = cleanAnswers(answers);
-  if (!sessionId || !cleanedAnswers) {
+  if (!UUID_PATTERN.test(sessionId) || !cleanedAnswers) {
     return { success: false, message: "One or more submitted answers are invalid." };
   }
 

@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useState } from "react";
 import { createClient } from "@/lib/supabase/client";
+import { TurnstileChallenge } from "@/components/auth/TurnstileChallenge";
 
 type Notice = {
   tone: "error" | "success";
@@ -26,6 +27,8 @@ export function ForgotPasswordForm({
   const [notice, setNotice] = useState<Notice | null>(
     initialError ? { tone: "error", message: initialError } : null,
   );
+  const [captchaToken, setCaptchaToken] = useState<string | null>(null);
+  const [captchaResetKey, setCaptchaResetKey] = useState(0);
   const loginHref = `/login?next=${encodeURIComponent(nextPath)}`;
 
   function recoveryRedirectUrl() {
@@ -42,8 +45,11 @@ export function ForgotPasswordForm({
     const supabase = createClient();
     const { error } = await supabase.auth.resetPasswordForEmail(
       email.trim().toLowerCase(),
-      { redirectTo: recoveryRedirectUrl() },
+      { redirectTo: recoveryRedirectUrl(), captchaToken: captchaToken ?? undefined },
     );
+
+    setCaptchaToken(null);
+    setCaptchaResetKey((value) => value + 1);
 
     if (error?.code === "over_email_send_rate_limit") {
       setNotice({
@@ -92,9 +98,10 @@ export function ForgotPasswordForm({
             className="mt-2 w-full rounded-xl border px-4 py-3 font-normal"
           />
         </label>
+        <TurnstileChallenge onToken={setCaptchaToken} resetKey={captchaResetKey} />
         <button
           type="submit"
-          disabled={loading}
+          disabled={loading || !captchaToken}
           className="w-full rounded-xl bg-slate-950 px-4 py-3 font-bold text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-50"
         >
           {loading ? "Sending reset link…" : "Send password-reset link"}

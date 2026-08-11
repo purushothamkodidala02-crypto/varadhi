@@ -3,6 +3,8 @@
 import Link from "next/link";
 import { useState } from "react";
 import { createClient } from "@/lib/supabase/client";
+import { PasswordInput } from "@/components/auth/PasswordInput";
+import { TurnstileChallenge } from "@/components/auth/TurnstileChallenge";
 
 type Notice = {
   tone: "error" | "success" | "info";
@@ -30,6 +32,8 @@ export function LoginForm({
   const [needsConfirmation, setNeedsConfirmation] = useState(false);
   const [loading, setLoading] = useState(false);
   const [resending, setResending] = useState(false);
+  const [captchaToken, setCaptchaToken] = useState<string | null>(null);
+  const [captchaResetKey, setCaptchaResetKey] = useState(0);
   const registerHref = `/register?next=${encodeURIComponent(nextPath)}`;
   const forgotPasswordHref = `/forgot-password?next=${encodeURIComponent(nextPath)}`;
 
@@ -53,7 +57,11 @@ export function LoginForm({
     } = await supabase.auth.signInWithPassword({
       email: normalizedEmail,
       password,
+      options: { captchaToken: captchaToken ?? undefined },
     });
+
+    setCaptchaToken(null);
+    setCaptchaResetKey((value) => value + 1);
 
     if (loginError || !user) {
       const emailNotConfirmed = loginError?.code === "email_not_confirmed";
@@ -100,8 +108,14 @@ export function LoginForm({
     const { error } = await supabase.auth.resend({
       type: "signup",
       email: email.trim().toLowerCase(),
-      options: { emailRedirectTo: confirmationRedirectUrl() },
+      options: {
+        emailRedirectTo: confirmationRedirectUrl(),
+        captchaToken: captchaToken ?? undefined,
+      },
     });
+
+    setCaptchaToken(null);
+    setCaptchaResetKey((value) => value + 1);
 
     setNotice(
       error
@@ -148,9 +162,10 @@ export function LoginForm({
               Forgot password?
             </Link>
           </div>
-          <input id="current_password" type="password" required autoComplete="current-password" value={password} onChange={(event) => setPassword(event.target.value)} placeholder="Enter your password" className="mt-2 w-full rounded-xl border px-4 py-3 font-normal" />
+          <PasswordInput id="current_password" required maxLength={72} autoComplete="current-password" value={password} onChange={(event) => setPassword(event.target.value)} placeholder="Enter your password" />
         </div>
-        <button type="submit" disabled={loading} className="w-full rounded-xl bg-slate-950 px-4 py-3 font-bold text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-50">
+        <TurnstileChallenge onToken={setCaptchaToken} resetKey={captchaResetKey} />
+        <button type="submit" disabled={loading || !captchaToken} className="w-full rounded-xl bg-slate-950 px-4 py-3 font-bold text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-50">
           {loading ? "Signing in…" : "Sign in and continue"}
         </button>
         {notice && (
@@ -159,7 +174,7 @@ export function LoginForm({
           </p>
         )}
         {needsConfirmation && (
-          <button type="button" onClick={resendConfirmation} disabled={resending} className="w-full rounded-xl border border-teal-200 bg-teal-50 px-4 py-3 text-sm font-bold text-teal-800 hover:bg-teal-100 disabled:opacity-50">
+          <button type="button" onClick={resendConfirmation} disabled={resending || !captchaToken} className="w-full rounded-xl border border-teal-200 bg-teal-50 px-4 py-3 text-sm font-bold text-teal-800 hover:bg-teal-100 disabled:opacity-50">
             {resending ? "Requesting confirmation…" : "Resend confirmation email"}
           </button>
         )}

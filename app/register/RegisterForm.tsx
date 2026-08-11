@@ -3,6 +3,8 @@
 import Link from "next/link";
 import { useState } from "react";
 import { createClient } from "@/lib/supabase/client";
+import { PasswordInput } from "@/components/auth/PasswordInput";
+import { TurnstileChallenge } from "@/components/auth/TurnstileChallenge";
 
 type Notice = {
   tone: "error" | "success" | "info";
@@ -23,6 +25,8 @@ export function RegisterForm({ nextPath }: { nextPath: string }) {
   const [awaitingConfirmation, setAwaitingConfirmation] = useState(false);
   const [loading, setLoading] = useState(false);
   const [resending, setResending] = useState(false);
+  const [captchaToken, setCaptchaToken] = useState<string | null>(null);
+  const [captchaResetKey, setCaptchaResetKey] = useState(0);
   const loginHref = `/login?next=${encodeURIComponent(nextPath)}`;
 
   function confirmationRedirectUrl() {
@@ -45,8 +49,12 @@ export function RegisterForm({ nextPath }: { nextPath: string }) {
       options: {
         emailRedirectTo: confirmationRedirectUrl(),
         data: { full_name: fullName.trim() },
+        captchaToken: captchaToken ?? undefined,
       },
     });
+
+    setCaptchaToken(null);
+    setCaptchaResetKey((value) => value + 1);
 
     if (error) {
       const mayAlreadyExist =
@@ -95,8 +103,14 @@ export function RegisterForm({ nextPath }: { nextPath: string }) {
     const { error } = await supabase.auth.resend({
       type: "signup",
       email,
-      options: { emailRedirectTo: confirmationRedirectUrl() },
+      options: {
+        emailRedirectTo: confirmationRedirectUrl(),
+        captchaToken: captchaToken ?? undefined,
+      },
     });
+
+    setCaptchaToken(null);
+    setCaptchaResetKey((value) => value + 1);
 
     setNotice(
       error
@@ -152,11 +166,14 @@ export function RegisterForm({ nextPath }: { nextPath: string }) {
               {notice.message}
             </p>
           )}
+          <div className="mt-5">
+            <TurnstileChallenge onToken={setCaptchaToken} resetKey={captchaResetKey} />
+          </div>
           <div className="mt-5 grid gap-3 sm:grid-cols-2">
             <Link href={loginHref} className="rounded-xl bg-slate-950 px-4 py-3 text-center text-sm font-bold text-white hover:bg-slate-800">
               Go to sign in
             </Link>
-            <button type="button" onClick={resendConfirmation} disabled={resending} className="rounded-xl border px-4 py-3 text-sm font-bold text-slate-700 hover:bg-slate-50 disabled:opacity-50">
+            <button type="button" onClick={resendConfirmation} disabled={resending || !captchaToken} className="rounded-xl border px-4 py-3 text-sm font-bold text-slate-700 hover:bg-slate-50 disabled:opacity-50">
               {resending ? "Requesting…" : "Resend email"}
             </button>
           </div>
@@ -176,10 +193,11 @@ export function RegisterForm({ nextPath }: { nextPath: string }) {
           </label>
           <label htmlFor="new_password" className="block text-sm font-bold text-slate-800">
             Password
-            <input id="new_password" type="password" required minLength={6} autoComplete="new-password" value={password} onChange={(event) => setPassword(event.target.value)} placeholder="At least 6 characters" className="mt-2 w-full rounded-xl border px-4 py-3 font-normal" />
-            <span className="mt-2 block text-xs font-normal text-slate-500">Use at least 6 characters and keep this password private.</span>
+            <PasswordInput id="new_password" required minLength={10} maxLength={72} autoComplete="new-password" value={password} onChange={(event) => setPassword(event.target.value)} placeholder="At least 10 characters" />
+            <span className="mt-2 block text-xs font-normal text-slate-500">Use at least 10 characters. A short phrase is easier to remember and harder to guess.</span>
           </label>
-          <button type="submit" disabled={loading} className="w-full rounded-xl bg-slate-950 px-4 py-3 font-bold text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-50">
+          <TurnstileChallenge onToken={setCaptchaToken} resetKey={captchaResetKey} />
+          <button type="submit" disabled={loading || !captchaToken} className="w-full rounded-xl bg-slate-950 px-4 py-3 font-bold text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-50">
             {loading ? "Creating account…" : "Create free account"}
           </button>
           {notice && (

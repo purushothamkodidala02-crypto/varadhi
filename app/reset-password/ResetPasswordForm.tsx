@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useState } from "react";
 import { createClient } from "@/lib/supabase/client";
+import { PasswordInput } from "@/components/auth/PasswordInput";
 
 export function ResetPasswordForm({ nextPath }: { nextPath: string }) {
   const [password, setPassword] = useState("");
@@ -15,8 +16,8 @@ export function ResetPasswordForm({ nextPath }: { nextPath: string }) {
     event.preventDefault();
     setError(null);
 
-    if (password.length < 6) {
-      setError("Use a password with at least 6 characters.");
+    if (password.length < 10) {
+      setError("Use a password with at least 10 characters.");
       return;
     }
 
@@ -60,30 +61,28 @@ export function ResetPasswordForm({ nextPath }: { nextPath: string }) {
       <form onSubmit={handleSubmit} className="mt-7 space-y-5">
         <label htmlFor="recovery_password" className="block text-sm font-bold text-slate-800">
           New password
-          <input
+          <PasswordInput
             id="recovery_password"
-            type="password"
             required
-            minLength={6}
+            minLength={10}
+            maxLength={72}
             autoComplete="new-password"
             value={password}
             onChange={(event) => setPassword(event.target.value)}
-            placeholder="At least 6 characters"
-            className="mt-2 w-full rounded-xl border px-4 py-3 font-normal"
+            placeholder="At least 10 characters"
           />
         </label>
         <label htmlFor="confirm_recovery_password" className="block text-sm font-bold text-slate-800">
           Confirm new password
-          <input
+          <PasswordInput
             id="confirm_recovery_password"
-            type="password"
             required
-            minLength={6}
+            minLength={10}
+            maxLength={72}
             autoComplete="new-password"
             value={confirmPassword}
             onChange={(event) => setConfirmPassword(event.target.value)}
             placeholder="Enter the password again"
-            className="mt-2 w-full rounded-xl border px-4 py-3 font-normal"
           />
         </label>
         <button
