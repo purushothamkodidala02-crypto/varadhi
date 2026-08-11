@@ -28,7 +28,7 @@ export function StudentTestRunner({ title, sessionId, expiresAt, questions }: Pr
   const [index, setIndex] = useState(0);
   const [answers, setAnswers] = useState<Record<string, Answer>>(() => Object.fromEntries(questions.flatMap((item) => item.selected_answer ? [[item.question_id, item.selected_answer]] : [])));
   const [reviewIds, setReviewIds] = useState<Set<string>>(() => new Set());
-  const [remaining, setRemaining] = useState(() => secondsLeft(expiresAt));
+  const [remaining, setRemaining] = useState<number | null>(null);
   const [language, setLanguage] = useState<"en" | "te">("en");
   const [saveState, setSaveState] = useState<"saved" | "saving" | "error">("saved");
   const [navigatorOpen, setNavigatorOpen] = useState(false);
@@ -39,7 +39,7 @@ export function StudentTestRunner({ title, sessionId, expiresAt, questions }: Pr
   const current = questions[index];
   const answered = useMemo(() => Object.keys(answers).length, [answers]);
   const unanswered = questions.length - answered;
-  const locked = remaining === 0 || submitting;
+  const locked = remaining === null || remaining === 0 || submitting;
 
   useEffect(() => {
     if (submission || submitting) return;
@@ -68,10 +68,14 @@ export function StudentTestRunner({ title, sessionId, expiresAt, questions }: Pr
 
   useEffect(() => {
     if (submission) return;
-    const timer = window.setInterval(() => {
+    const updateTimer = () => {
       const next = secondsLeft(expiresAt);
       setRemaining(next);
       if (next === 0 && !submitting) void finish();
+    };
+    updateTimer();
+    const timer = window.setInterval(() => {
+      updateTimer();
     }, 1000);
     return () => window.clearInterval(timer);
   }, [expiresAt, finish, submission, submitting]);
@@ -103,7 +107,7 @@ export function StudentTestRunner({ title, sessionId, expiresAt, questions }: Pr
       <div className="mx-auto max-w-6xl">
         <div className="flex items-center justify-between gap-4">
           <div className="min-w-0"><p className="truncate text-sm font-semibold text-slate-300">{title}</p><h1 className="mt-1 text-lg font-black">Question {index + 1} <span className="text-slate-400">of {questions.length}</span></h1></div>
-          <div className="flex items-center gap-2"><button type="button" onClick={() => setNavigatorOpen(true)} className="rounded-lg border border-slate-700 px-3 py-2 text-xs font-bold lg:hidden">Questions</button><div className={`rounded-xl px-4 py-2.5 font-mono text-lg font-black ${remaining <= 300 ? "bg-red-500" : "bg-white text-slate-950"}`}>{displayTime(remaining)}</div></div>
+          <div className="flex items-center gap-2"><button type="button" onClick={() => setNavigatorOpen(true)} className="rounded-lg border border-slate-700 px-3 py-2 text-xs font-bold lg:hidden">Questions</button><div className={`rounded-xl px-4 py-2.5 font-mono text-lg font-black ${remaining !== null && remaining <= 300 ? "bg-red-500" : "bg-white text-slate-950"}`}>{remaining === null ? "--:--" : displayTime(remaining)}</div></div>
         </div>
         <div className="mt-4 flex items-center gap-4"><div className="h-2 flex-1 overflow-hidden rounded-full bg-slate-700"><div className="h-full rounded-full bg-teal-300 transition-all" style={{ width: `${Math.round((answered / questions.length) * 100)}%` }} /></div><span className={`text-xs font-bold ${saveState === "error" ? "text-red-300" : "text-teal-100"}`}>{saveState === "saving" ? "Saving…" : saveState === "error" ? "Save failed" : "Answers saved"}</span></div>
       </div>

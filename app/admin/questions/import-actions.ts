@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import ExcelJS from "exceljs";
 import { createClient } from "@/lib/supabase/server";
 import type { CorrectAnswer, QuestionLifecycle } from "@/types/question";
 import type { SubjectContentLanguageMode } from "@/types/subject";
@@ -34,6 +35,16 @@ const optionalNumber = (value: string) => {
   const number = Number(normalized);
   return Number.isFinite(number) ? number : Number.NaN;
 };
+
+const cleanCellValue = (value: string) => value.replace(/\u00A0/g, " ").replace(/\r\n?/g, "\n").trim();
+const normalizeHeader = (value: string) => cleanCellValue(value).replace(/^\uFEFF/, "").toLowerCase().replace(/[\s-]+/g, "_");
+const normalizeLookup = (value: string) => cleanCellValue(value).replace(/\s+/g, " ").toLocaleLowerCase();
+
+function validateHeaders(headers: string[]) {
+  if (new Set(headers).size !== headers.length) throw new Error("Each file column heading must be unique.");
+  const missingHeaders = requiredHeaders.filter((header) => !headers.includes(header));
+  if (missingHeaders.length) throw new Error(`Missing file column${missingHeaders.length === 1 ? "" : "s"}: ${missingHeaders.join(", ")}.`);
+}
 
 function parseCsv(source: string): CsvRow[] {
   const rows: string[][] = [];
@@ -69,12 +80,35 @@ function parseCsv(source: string): CsvRow[] {
   if (row.some((value) => value.trim())) rows.push(row);
   if (rows.length < 2) throw new Error("The CSV needs a header row and at least one Question.");
 
-  const headers = rows.shift()!.map((header) => header.replace(/^\uFEFF/, "").trim().toLowerCase());
-  if (new Set(headers).size !== headers.length) throw new Error("Each CSV column heading must be unique.");
-  const missingHeaders = requiredHeaders.filter((header) => !headers.includes(header));
-  if (missingHeaders.length) throw new Error(`Missing CSV column${missingHeaders.length === 1 ? "" : "s"}: ${missingHeaders.join(", ")}.`);
+  const headers = rows.shift()!.map(normalizeHeader);
+  validateHeaders(headers);
 
-  return rows.map((values) => Object.fromEntries(headers.map((header, index) => [header, (values[index] ?? "").trim()])));
+  return rows.map((values) => Object.fromEntries(headers.map((header, index) => [header, cleanCellValue(values[index] ?? "")])));
+}
+
+async function parseExcel(file: File): Promise<CsvRow[]> {
+  const workbook = new ExcelJS.Workbook();
+  const fileBuffer = Buffer.from(await file.arrayBuffer()) as unknown as Parameters<typeof workbook.xlsx.load>[0];
+  await workbook.xlsx.load(fileBuffer);
+  const worksheet = workbook.getWorksheet("Varadhi Import") ?? workbook.worksheets[0];
+  if (!worksheet) throw new Error("The Excel file does not contain a worksheet.");
+
+  const headers = Array.from({ length: worksheet.columnCount }, (_, index) => normalizeHeader(worksheet.getCell(1, index + 1).text));
+  validateHeaders(headers);
+  const rows: CsvRow[] = [];
+  for (let rowNumber = 2; rowNumber <= worksheet.rowCount; rowNumber += 1) {
+    const values = headers.map((header, index) => [header, cleanCellValue(worksheet.getCell(rowNumber, index + 1).text)] as const);
+    if (values.some(([, value]) => value)) rows.push(Object.fromEntries(values));
+  }
+  if (!rows.length) throw new Error("The Excel sheet needs headings and at least one Question.");
+  return rows;
+}
+
+async function parseQuestionFile(file: File): Promise<CsvRow[]> {
+  const extension = file.name.toLowerCase().split(".").pop();
+  if (extension === "xlsx") return parseExcel(file);
+  if (extension === "csv") return parseCsv(await file.text());
+  throw new Error("Choose an Excel (.xlsx) or CSV (.csv) file.");
 }
 
 function languageValues(row: CsvRow, suffix: "en" | "te"): QuestionLanguageValues {
@@ -127,10 +161,10 @@ async function importQuestions(
   const { data: profile } = await supabase.from("profiles").select("role").eq("id", user.id).single();
   if (profile?.role !== "admin") return { success: false, message: "You are not authorized to import Questions." };
 
-  let categoryId = String(formData.get("import_exam_id") ?? "").trim();
-  let examId = String(formData.get("import_exam_group_id") ?? "").trim();
+  const categoryId = String(formData.get("import_exam_id") ?? "").trim();
+  const examId = String(formData.get("import_exam_group_id") ?? "").trim();
   let paperId = String(formData.get("import_paper_id") ?? "").trim();
-  const file = formData.get("questions_csv");
+  const file = formData.get("questions_file");
   let mockTest: MockImportTarget | null = null;
   if (mockTestId) {
     const { data } = await supabase
@@ -140,13 +174,13 @@ async function importQuestions(
       .maybeSingle();
     mockTest = data as MockImportTarget | null;
     if (!mockTest) return { success: false, message: "Mock Test not found." };
-    if (mockTest.status !== "draft") return { success: false, message: "Only draft Mock Tests can receive a CSV import." };
+    if (mockTest.status !== "draft") return { success: false, message: "Only draft Mock Tests can receive a file import." };
     paperId = mockTest.paper_id;
   } else if (!categoryId || !examId || !paperId) {
     return { success: false, message: "Choose an Exam Category, Exam, and Paper before importing." };
   }
-  if (!(file instanceof File) || !file.size) return { success: false, message: "Choose a CSV file to import." };
-  if (file.size > 2_500_000) return { success: false, message: "This CSV is too large. Import up to 2.5 MB at a time." };
+  if (!(file instanceof File) || !file.size) return { success: false, message: "Choose an Excel or CSV file to import." };
+  if (file.size > 2_500_000) return { success: false, message: "This file is too large. Import up to 2.5 MB at a time." };
 
   const [{ data: paper }, { data: exam }] = await Promise.all([
     supabase.from("papers").select("id, exam_group_id, default_correct_marks, default_negative_marks").eq("id", paperId).maybeSingle(),
@@ -160,9 +194,9 @@ async function importQuestions(
 
   let rows: CsvRow[];
   try {
-    rows = parseCsv(await file.text());
+    rows = await parseQuestionFile(file);
   } catch (error) {
-    return { success: false, message: error instanceof Error ? error.message : "The CSV could not be read." };
+    return { success: false, message: error instanceof Error ? error.message : "The Question file could not be read." };
   }
   if (rows.length > 500) return { success: false, message: "Import up to 500 Questions at one time." };
 
@@ -171,7 +205,7 @@ async function importQuestions(
     .select("id, name, content_language_mode")
     .eq("paper_id", paperId);
   if (subjectsError) return { success: false, message: subjectsError.message };
-  const subjectByName = new Map((subjects ?? []).map((subject) => [subject.name.trim().toLocaleLowerCase(), subject]));
+  const subjectByName = new Map((subjects ?? []).map((subject) => [normalizeLookup(subject.name), subject]));
   const importKeys = new Set<string>();
   const errors: string[] = [];
   const importRows: Record<string, unknown>[] = [];
@@ -180,7 +214,7 @@ async function importQuestions(
   rows.forEach((row, index) => {
     const rowNumber = index + 2;
     const importKey = (row.import_key ?? "").trim().toLocaleLowerCase();
-    const subject = subjectByName.get((row.subject ?? "").trim().toLocaleLowerCase());
+    const subject = subjectByName.get(normalizeLookup(row.subject ?? ""));
     const correctAnswer = (row.correct_answer ?? "").trim().toUpperCase() as CorrectAnswer;
     const lifecycle = ((row.content_lifecycle ?? "permanent").trim().toLowerCase() || "permanent") as QuestionLifecycle;
     const reviewOn = (row.review_on ?? "").trim();
