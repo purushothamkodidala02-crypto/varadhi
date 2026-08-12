@@ -4,15 +4,28 @@ import "./globals.css";
 
 export const metadata: Metadata = {
   metadataBase: new URL(SITE_URL),
+
   title: {
     default: "Varadhi Prep: Smart Mock Tests for Career Growth",
     template: "%s | Varadhi Prep",
   },
+
   description: SITE_DESCRIPTION,
+
   applicationName: SITE_NAME,
-  icons: { icon: "/varadhi-mark.svg" },
+
+  alternates: {
+    canonical: "/",
+  },
+
+  icons: {
+    icon: "/varadhi-mark.svg",
+  },
+
   manifest: "/manifest.webmanifest",
+
   category: "education",
+
   openGraph: {
     type: "website",
     locale: "en_IN",
@@ -22,14 +35,17 @@ export const metadata: Metadata = {
     description: SITE_DESCRIPTION,
     url: "/",
   },
+
   twitter: {
     card: "summary_large_image",
     title: "Varadhi Prep: Smart Mock Tests for Career Growth",
     description: SITE_DESCRIPTION,
   },
+
   robots: {
     index: true,
     follow: true,
+
     googleBot: {
       index: true,
       follow: true,
