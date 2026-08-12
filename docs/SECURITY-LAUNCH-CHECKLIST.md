@@ -4,6 +4,10 @@ Complete these dashboard settings before pointing `varadhiprep.in` to production
 
 ## Supabase Authentication
 
+- Set **Authentication → URL Configuration → Site URL** to `https://varadhiprep.in`. Allow `https://varadhiprep.in/auth/recovery**` and `http://localhost:3000/**` as redirect URLs.
+- In **Authentication → Email Templates → Reset password**, use the device-independent recovery link documented below. Disable click tracking for authentication emails in Brevo because rewritten or prefetched one-time links can fail.
+- Reset-password email link: `<a href="{{ .RedirectTo }}&amp;token_hash={{ .TokenHash }}&amp;type=recovery">Reset password</a>`. The recovery callback deliberately waits for a POST confirmation before consuming the one-time token.
+
 - Keep **Confirm email** enabled after Brevo SMTP is working.
 - Set minimum password length to **10**. Enable leaked-password protection when the Supabase plan supports it.
 - Create a free Cloudflare Turnstile Managed widget for `varadhiprep.in` and `www.varadhiprep.in`.

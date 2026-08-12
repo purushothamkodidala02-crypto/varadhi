@@ -67,7 +67,7 @@ export function ForgotPasswordForm({
       setNotice({
         tone: "success",
         message:
-          "If this email has a Varadhi Prep account, a password-reset link has been sent. Open the newest email on this same device and browser to create a new password.",
+          "If this email has a Varadhi Prep account, a password-reset link has been sent. The newest link can be opened on any phone, tablet, or computer.",
       });
     }
 

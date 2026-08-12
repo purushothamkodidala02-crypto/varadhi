@@ -57,3 +57,24 @@ test("launch policy enforces strong passwords and disables unverified paid tests
   assert.match(updateAction, /access_type: "free"/);
   assert.doesNotMatch(createForm, /value="paid"/);
 });
+
+test("password recovery works across devices without consuming tokens on email prefetch", async () => {
+  const [recoveryRoute, confirmationPage, forgotPasswordForm] = await Promise.all([
+    read("app/auth/recovery/route.ts"),
+    read("app/recover-account/page.tsx"),
+    read("app/forgot-password/ForgotPasswordForm.tsx"),
+  ]);
+
+  assert.match(recoveryRoute, /token_hash/);
+  assert.match(recoveryRoute, /type:\s*"recovery"/);
+  assert.match(recoveryRoute, /verifyOtp/);
+  assert.match(recoveryRoute, /export async function POST/);
+  assert.match(recoveryRoute, /mail security scanners frequently prefetch links/);
+  assert.doesNotMatch(
+    recoveryRoute.match(/export async function GET[\s\S]*?export async function POST/)?.[0] ?? "",
+    /verifyOtp/,
+  );
+  assert.match(confirmationPage, /method="post"/);
+  assert.match(confirmationPage, /action="\/auth\/recovery"/);
+  assert.match(forgotPasswordForm, /opened on any phone, tablet, or computer/);
+});
