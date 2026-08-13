@@ -10,8 +10,14 @@ export interface Question {
   option_b: string;
   option_c: string;
   option_d: string;
+  question_text_te: string | null;
+  option_a_te: string | null;
+  option_b_te: string | null;
+  option_c_te: string | null;
+  option_d_te: string | null;
   correct_answer: CorrectAnswer;
   explanation: string | null;
+  explanation_te: string | null;
   difficulty: string;
   image_url: string | null;
   source_reference: string | null;

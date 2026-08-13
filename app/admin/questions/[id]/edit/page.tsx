@@ -2,6 +2,62 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import type { Question } from "@/types/question";
+import type { SubjectContentLanguageMode } from "@/types/subject";
 import { EditQuestionForm } from "./EditQuestionForm";
 
-export default async function EditQuestionPage({ params }: PageProps<"/admin/questions/[id]/edit">) { const { id } = await params; const supabase = await createClient(); const [questionResult, subjectsResult, papersResult, groupsResult, categoriesResult] = await Promise.all([supabase.from("questions").select("id, subject_id, question_text, question_type, option_a, option_b, option_c, option_d, correct_answer, explanation, difficulty, image_url, source_reference, is_active, content_lifecycle, review_on, expires_on, created_at, updated_at").eq("id", id).maybeSingle(), supabase.from("subjects").select("id, paper_id, name").order("display_order"), supabase.from("papers").select("id, exam_group_id, name"), supabase.from("exam_groups").select("id, exam_id, name"), supabase.from("exams").select("id, name")]); if (!questionResult.data) notFound(); const papers = new Map((papersResult.data ?? []).map((item) => [item.id, item])); const groups = new Map((groupsResult.data ?? []).map((item) => [item.id, item])); const categories = new Map((categoriesResult.data ?? []).map((item) => [item.id, item])); const options = (subjectsResult.data ?? []).map((subject) => { const paper = papers.get(subject.paper_id); const group = paper ? groups.get(paper.exam_group_id) : undefined; const category = group ? categories.get(group.exam_id) : undefined; return { id: subject.id, label: `${category?.name ?? "Unknown category"} → ${group?.name ?? "Unknown Exam"} → ${paper?.name ?? "Unknown Paper"} → ${subject.name}` }; }); return <main><Link href="/admin/questions" className="text-sm font-semibold text-teal-700 hover:underline">← Back to Question Bank</Link><h1 className="mt-5 text-3xl font-black">Edit Question</h1><EditQuestionForm question={questionResult.data as Question} subjects={options} /></main>; }
+export default async function EditQuestionPage({
+  params,
+}: PageProps<"/admin/questions/[id]/edit">) {
+  const { id } = await params;
+  const supabase = await createClient();
+  const [questionResult, subjectsResult, papersResult, groupsResult, categoriesResult] =
+    await Promise.all([
+      supabase
+        .from("questions")
+        .select(
+          "id, subject_id, question_text, question_type, option_a, option_b, option_c, option_d, question_text_te, option_a_te, option_b_te, option_c_te, option_d_te, correct_answer, explanation, explanation_te, difficulty, image_url, source_reference, is_active, content_lifecycle, review_on, expires_on, created_at, updated_at",
+        )
+        .eq("id", id)
+        .maybeSingle(),
+      supabase
+        .from("subjects")
+        .select("id, paper_id, name, content_language_mode")
+        .order("display_order"),
+      supabase.from("papers").select("id, exam_group_id, name"),
+      supabase.from("exam_groups").select("id, exam_id, name"),
+      supabase.from("exams").select("id, name"),
+    ]);
+
+  if (!questionResult.data) notFound();
+
+  const papers = new Map((papersResult.data ?? []).map((item) => [item.id, item]));
+  const groups = new Map((groupsResult.data ?? []).map((item) => [item.id, item]));
+  const categories = new Map((categoriesResult.data ?? []).map((item) => [item.id, item]));
+  const options = (subjectsResult.data ?? []).map((subject) => {
+    const paper = papers.get(subject.paper_id);
+    const group = paper ? groups.get(paper.exam_group_id) : undefined;
+    const category = group ? categories.get(group.exam_id) : undefined;
+    return {
+      id: subject.id,
+      contentLanguageMode:
+        subject.content_language_mode as SubjectContentLanguageMode,
+      label: `${category?.name ?? "Unknown category"} → ${group?.name ?? "Unknown Exam"} → ${paper?.name ?? "Unknown Paper"} → ${subject.name}`,
+    };
+  });
+
+  return (
+    <main>
+      <Link
+        href="/admin/questions"
+        className="text-sm font-semibold text-teal-700 hover:underline"
+      >
+        ← Back to Question Bank
+      </Link>
+      <h1 className="mt-5 text-3xl font-black">Edit Question</h1>
+      <EditQuestionForm
+        question={questionResult.data as Question}
+        subjects={options}
+      />
+    </main>
+  );
+}

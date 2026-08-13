@@ -16,18 +16,31 @@ export type ReviewRow = {
   option_b: string;
   option_c: string;
   option_d: string;
+  content_language_mode: "bilingual" | "english" | "telugu";
+  question_text_te: string | null;
+  option_a_te: string | null;
+  option_b_te: string | null;
+  option_c_te: string | null;
+  option_d_te: string | null;
   selected_answer: string | null;
   correct_answer: string;
   is_correct: boolean;
   marks_awarded: number;
   explanation: string | null;
+  explanation_te: string | null;
 };
 
 export function AttemptReviewNavigator({ rows }: { rows: ReviewRow[] }) {
   const [index, setIndex] = useState(0);
+  const [language, setLanguage] = useState<"english" | "telugu">(
+    rows[0]?.content_language_mode === "telugu" ? "telugu" : "english",
+  );
   const questionRef = useRef<HTMLElement>(null);
   const activeNumberRef = useRef<HTMLButtonElement>(null);
   const row = rows[index];
+  const hasTelugu = Boolean(row.question_text_te);
+  const showTelugu = language === "telugu" && hasTelugu;
+  const questionText = showTelugu ? row.question_text_te ?? row.question_text : row.question_text;
 
   function showQuestion(nextIndex: number, scrollToCard = true) {
     const safeIndex = Math.max(0, Math.min(rows.length - 1, nextIndex));
@@ -40,6 +53,11 @@ export function AttemptReviewNavigator({ rows }: { rows: ReviewRow[] }) {
   useEffect(() => {
     activeNumberRef.current?.scrollIntoView({ behavior: "smooth", block: "nearest", inline: "center" });
   }, [index]);
+
+  useEffect(() => {
+    if (row.content_language_mode === "telugu") setLanguage("telugu");
+    if (row.content_language_mode === "english") setLanguage("english");
+  }, [row.content_language_mode]);
 
   useEffect(() => {
     function handleKeyDown(event: KeyboardEvent) {
@@ -63,11 +81,14 @@ export function AttemptReviewNavigator({ rows }: { rows: ReviewRow[] }) {
   }, [index, rows.length]);
 
   const options = [
-    ["A", row.option_a],
-    ["B", row.option_b],
-    ["C", row.option_c],
-    ["D", row.option_d],
+    ["A", showTelugu ? row.option_a_te ?? row.option_a : row.option_a],
+    ["B", showTelugu ? row.option_b_te ?? row.option_b : row.option_b],
+    ["C", showTelugu ? row.option_c_te ?? row.option_c : row.option_c],
+    ["D", showTelugu ? row.option_d_te ?? row.option_d : row.option_d],
   ] as const;
+  const explanation = showTelugu
+    ? row.explanation_te ?? row.explanation
+    : row.explanation;
 
   return (
     <section className="mt-8 sm:mt-10">
@@ -109,6 +130,15 @@ export function AttemptReviewNavigator({ rows }: { rows: ReviewRow[] }) {
         </div>
       </div>
 
+      {hasTelugu && row.content_language_mode === "bilingual" && (
+        <div className="mt-4 flex justify-end">
+          <div className="inline-flex rounded-xl bg-slate-200 p-1" role="group" aria-label="Review language">
+            <LanguageButton active={language === "english"} onClick={() => setLanguage("english")}>English</LanguageButton>
+            <LanguageButton active={language === "telugu"} onClick={() => setLanguage("telugu")} lang="te">తెలుగు</LanguageButton>
+          </div>
+        </div>
+      )}
+
       <div className="relative mt-4 sm:px-14">
         <div className="mb-3 flex items-center justify-between sm:hidden">
           <ReviewArrow direction="previous" disabled={index === 0} onClick={() => showQuestion(index - 1)} />
@@ -122,7 +152,7 @@ export function AttemptReviewNavigator({ rows }: { rows: ReviewRow[] }) {
         <div className="flex flex-wrap items-start justify-between gap-4 border-b border-slate-100 p-4 sm:px-6 sm:py-5">
           <div className="flex min-w-0 flex-1 gap-3 sm:gap-4">
             <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-slate-950 text-sm font-black text-white">{row.question_order}</span>
-            <FormattedQuestionText text={row.question_text} className="pt-1 leading-7 text-slate-950 sm:text-lg" />
+            <FormattedQuestionText text={questionText} className="pt-1 leading-7 text-slate-950 sm:text-lg" />
           </div>
           <QuestionStatus row={row} />
         </div>
@@ -135,12 +165,16 @@ export function AttemptReviewNavigator({ rows }: { rows: ReviewRow[] }) {
             <p className="text-sm font-bold text-slate-700">Marks awarded: {row.marks_awarded}</p>
             {!row.selected_answer && <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-bold text-slate-600">Not attempted</span>}
           </div>
-          {row.explanation && <div className="mt-5 rounded-2xl border border-teal-100 bg-teal-50 p-5 text-sm leading-7 text-teal-950"><p className="text-xs font-black uppercase tracking-wide text-teal-700">Explanation</p><p className="mt-2">{row.explanation}</p></div>}
+          {explanation && <div lang={showTelugu ? "te" : "en"} className="mt-5 rounded-2xl border border-teal-100 bg-teal-50 p-5 text-sm leading-7 text-teal-950"><p className="text-xs font-black uppercase tracking-wide text-teal-700">{showTelugu ? "వివరణ" : "Explanation"}</p><FormattedQuestionText text={explanation} className="mt-2" /></div>}
         </div>
         </article>
       </div>
     </section>
   );
+}
+
+function LanguageButton({ active, onClick, children, lang }: { active: boolean; onClick: () => void; children: React.ReactNode; lang?: string }) {
+  return <button type="button" lang={lang} onClick={onClick} aria-pressed={active} className={`rounded-lg px-4 py-2 text-sm font-black transition ${active ? "bg-white text-slate-950 shadow-sm" : "text-slate-600 hover:text-slate-950"}`}>{children}</button>;
 }
 
 function QuestionStatus({ row }: { row: ReviewRow }) {
