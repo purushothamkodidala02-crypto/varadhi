@@ -78,3 +78,11 @@ test("password recovery works across devices without consuming tokens on email p
   assert.match(confirmationPage, /action="\/auth\/recovery"/);
   assert.match(forgotPasswordForm, /opened on any phone, tablet, or computer/);
 });
+
+test("first-time mock-test screen does not claim progress is already saved", async () => {
+  const testPage = await read("app/mock-tests/[id]/page.tsx");
+
+  assert.doesNotMatch(testPage, /Saved during the attempt/);
+  assert.match(testPage, /hasResumableSession[\s\S]*Saved — ready to resume/);
+  assert.match(testPage, /Select Start test when you are ready/);
+});

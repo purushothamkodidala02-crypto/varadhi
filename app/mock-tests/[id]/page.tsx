@@ -367,6 +367,22 @@ export default async function MockTestDetailsPage({
   const hasResumableSession = Boolean(resumableSessionResult.data);
   const hasPreviousAttempt = Boolean(previousAttemptResult.data);
 
+  const testSummaryMetrics = [
+    ["Questions", questionCountLabel],
+    ["Duration", `${test.duration_minutes} minutes`],
+    ["Total marks", totalMarksLabel],
+    [
+      "Negative marking",
+      negativeMarks > 0
+        ? `Up to ${negativeMarks} per wrong answer`
+        : "No negative marking",
+    ],
+    ["Language", languageLabel],
+    ...(hasResumableSession
+      ? [["Progress", "Saved — ready to resume"]]
+      : []),
+  ];
+
   const testLabel = mockTestLabel(Number(test.series_number ?? 1));
 
   const resourceName = `${stateResult.data?.code ?? "State"} ${
@@ -504,19 +520,7 @@ export default async function MockTestDetailsPage({
               </p>
 
               <div className="mt-7 grid gap-4 sm:grid-cols-2">
-                {[
-                  ["Questions", questionCountLabel],
-                  ["Duration", `${test.duration_minutes} minutes`],
-                  ["Total marks", totalMarksLabel],
-                  [
-                    "Negative marking",
-                    negativeMarks > 0
-                      ? `Up to ${negativeMarks} per wrong answer`
-                      : "No negative marking",
-                  ],
-                  ["Language", languageLabel],
-                  ["Progress", "Saved during the attempt"],
-                ].map(([label, value]) => (
+                {testSummaryMetrics.map(([label, value]) => (
                   <div key={label} className="rounded-2xl bg-slate-50 p-4">
                     <p className="text-xs font-bold uppercase tracking-wide text-slate-500">
                       {label}
@@ -607,7 +611,7 @@ export default async function MockTestDetailsPage({
                   ? "Resume keeps your progress. Start test begins again after confirmation."
                   : hasPreviousAttempt
                     ? "Start a new attempt; your earlier submitted result remains saved."
-                    : "Your answers and remaining time will be saved automatically."}
+                    : "Select Start test when you are ready."}
             </p>
           </aside>
         </div>
