@@ -184,12 +184,21 @@ export async function generateMetadata({
       title: seoTitle,
       description: seoDescription,
       siteName: "Varadhi Prep",
+      images: [
+        {
+          url: `/mock-tests/${id}/opengraph-image`,
+          width: 1200,
+          height: 630,
+          alt: `${seoTitle} on Varadhi Prep`,
+        },
+      ],
     },
 
     twitter: {
       card: "summary_large_image",
       title: seoTitle,
       description: seoDescription,
+      images: [`/mock-tests/${id}/opengraph-image`],
     },
 
     robots: {
@@ -485,7 +494,7 @@ export default async function MockTestDetailsPage({
             </p>
 
             <h1 className="font-display mt-3 text-4xl leading-tight tracking-tight text-slate-950 sm:text-5xl">
-              {testLabel}
+              {resourceName}
             </h1>
 
             <p className="mt-5 max-w-3xl text-lg leading-8 text-slate-600">

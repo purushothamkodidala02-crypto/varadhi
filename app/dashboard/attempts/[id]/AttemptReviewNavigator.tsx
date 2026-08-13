@@ -39,7 +39,13 @@ export function AttemptReviewNavigator({ rows }: { rows: ReviewRow[] }) {
   const activeNumberRef = useRef<HTMLButtonElement>(null);
   const row = rows[index];
   const hasTelugu = Boolean(row.question_text_te);
-  const showTelugu = language === "telugu" && hasTelugu;
+  const effectiveLanguage =
+    row.content_language_mode === "telugu"
+      ? "telugu"
+      : row.content_language_mode === "english"
+        ? "english"
+        : language;
+  const showTelugu = effectiveLanguage === "telugu" && hasTelugu;
   const questionText = showTelugu ? row.question_text_te ?? row.question_text : row.question_text;
 
   function showQuestion(nextIndex: number, scrollToCard = true) {
@@ -53,11 +59,6 @@ export function AttemptReviewNavigator({ rows }: { rows: ReviewRow[] }) {
   useEffect(() => {
     activeNumberRef.current?.scrollIntoView({ behavior: "smooth", block: "nearest", inline: "center" });
   }, [index]);
-
-  useEffect(() => {
-    if (row.content_language_mode === "telugu") setLanguage("telugu");
-    if (row.content_language_mode === "english") setLanguage("english");
-  }, [row.content_language_mode]);
 
   useEffect(() => {
     function handleKeyDown(event: KeyboardEvent) {
