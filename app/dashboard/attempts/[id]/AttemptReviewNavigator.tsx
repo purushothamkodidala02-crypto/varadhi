@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { FormattedQuestionText } from "@/components/questions/FormattedQuestionText";
+import { QuestionMedia } from "@/components/questions/QuestionMedia";
 
 export type ReviewRow = {
   mock_test_title: string;
@@ -28,6 +29,7 @@ export type ReviewRow = {
   marks_awarded: number;
   explanation: string | null;
   explanation_te: string | null;
+  image_url: string | null;
 };
 
 export function AttemptReviewNavigator({ rows }: { rows: ReviewRow[] }) {
@@ -159,6 +161,7 @@ export function AttemptReviewNavigator({ rows }: { rows: ReviewRow[] }) {
         </div>
 
         <div className="p-4 sm:p-6">
+          {row.image_url && <QuestionMedia src={row.image_url} className="mb-5" />}
           <div className="grid gap-3">
             {options.map(([key, label]) => <OptionRow key={key} optionKey={key} label={label} correct={key === row.correct_answer} selected={key === row.selected_answer} />)}
           </div>

@@ -2,6 +2,11 @@
 
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
+import {
+  normalizeQuestionImageUrl,
+  removeQuestionImage,
+  uploadQuestionImage,
+} from "@/lib/questions/media";
 import type { CorrectAnswer, QuestionLifecycle } from "@/types/question";
 import type { SubjectContentLanguageMode } from "@/types/subject";
 
@@ -116,6 +121,16 @@ export async function createQuestion(
     return { success: false, message: "This Question already exists under the selected Subject." };
   }
 
+  const imageFile = formData.get("question_image");
+  const normalizedImage = normalizeQuestionImageUrl(formData.get("image_url"));
+  if (normalizedImage.error && (!(imageFile instanceof File) || imageFile.size === 0)) {
+    return { success: false, message: normalizedImage.error };
+  }
+  const uploadedImage = imageFile instanceof File && imageFile.size > 0
+    ? await uploadQuestionImage(supabase, user.id, imageFile)
+    : { url: normalizedImage.url, path: null, error: null };
+  if (uploadedImage.error) return { success: false, message: uploadedImage.error };
+
   const { error } = await supabase.from("questions").insert({
     subject_id: subjectId,
     question_text: canonical.question,
@@ -132,6 +147,7 @@ export async function createQuestion(
     correct_answer: correctAnswer,
     explanation: canonical.explanation,
     explanation_te: languageMode === "english" ? null : telugu.explanation,
+    image_url: uploadedImage.url,
     source_reference:
       String(formData.get("source_reference") ?? "").trim() || null,
     difficulty: "medium",
@@ -140,7 +156,10 @@ export async function createQuestion(
     review_on: lifecycle === "review" ? reviewOn : null,
     expires_on: lifecycle === "expires" ? expiresOn : null,
   });
-  if (error) return { success: false, message: error.message };
+  if (error) {
+    await removeQuestionImage(supabase, uploadedImage.path);
+    return { success: false, message: error.message };
+  }
 
   revalidatePath("/admin/questions");
   revalidatePath("/admin/mock-tests");

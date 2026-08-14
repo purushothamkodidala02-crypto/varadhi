@@ -86,3 +86,21 @@ test("first-time mock-test screen does not claim progress is already saved", asy
   assert.match(testPage, /hasResumableSession[\s\S]*Saved — ready to resume/);
   assert.match(testPage, /Select Start test when you are ready/);
 });
+
+test("question media imports, uploads, and attempt reviews stay connected", async () => {
+  const [migration, importer, runner, review] = await Promise.all([
+    read("supabase/migrations/20260814160000_add_question_media_workflow.sql"),
+    read("app/admin/questions/import-actions.ts"),
+    read("app/mock-tests/[id]/StudentTestRunner.tsx"),
+    read("app/dashboard/attempts/[id]/AttemptReviewNavigator.tsx"),
+  ]);
+
+  assert.match(migration, /question-media/);
+  assert.match(migration, /file_size_limit/);
+  assert.match(migration, /image_url = excluded\.image_url/);
+  assert.match(migration, /snapshot\.image_url/);
+  assert.match(importer, /normalizeQuestionImageUrl/);
+  assert.match(importer, /image_url: image\.url/);
+  assert.match(runner, /<QuestionMedia src=\{current\.image_url\}/);
+  assert.match(review, /<QuestionMedia src=\{row\.image_url\}/);
+});

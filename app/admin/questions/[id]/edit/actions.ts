@@ -2,6 +2,12 @@
 
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
+import {
+  normalizeQuestionImageUrl,
+  questionMediaPath,
+  removeQuestionImage,
+  uploadQuestionImage,
+} from "@/lib/questions/media";
 import type { CorrectAnswer, QuestionLifecycle } from "@/types/question";
 import type { SubjectContentLanguageMode } from "@/types/subject";
 
@@ -67,12 +73,15 @@ export async function updateQuestion(
     return { success: false, message: "Choose a valid question lifetime and date." };
   }
 
-  const { data: subject } = await supabase
-    .from("subjects")
-    .select("id, content_language_mode")
-    .eq("id", subjectId)
-    .maybeSingle();
-  if (!subject) {
+  const [{ data: subject }, { data: existingQuestion }] = await Promise.all([
+    supabase
+      .from("subjects")
+      .select("id, content_language_mode")
+      .eq("id", subjectId)
+      .maybeSingle(),
+    supabase.from("questions").select("id, image_url").eq("id", questionId).maybeSingle(),
+  ]);
+  if (!subject || !existingQuestion) {
     return { success: false, message: "The selected Subject could not be found." };
   }
 
@@ -103,6 +112,17 @@ export async function updateQuestion(
     return { success: false, message: "This Question already exists under the selected Subject." };
   }
 
+  const imageFile = formData.get("question_image");
+  const removeImage = formData.get("remove_image") === "on";
+  const normalizedImage = normalizeQuestionImageUrl(formData.get("image_url"));
+  if (!removeImage && normalizedImage.error && (!(imageFile instanceof File) || imageFile.size === 0)) {
+    return { success: false, message: normalizedImage.error };
+  }
+  const uploadedImage = imageFile instanceof File && imageFile.size > 0
+    ? await uploadQuestionImage(supabase, user.id, imageFile)
+    : { url: removeImage ? null : normalizedImage.url, path: null, error: null };
+  if (uploadedImage.error) return { success: false, message: uploadedImage.error };
+
   const { error } = await supabase
     .from("questions")
     .update({
@@ -120,6 +140,7 @@ export async function updateQuestion(
       correct_answer: correctAnswer,
       explanation: canonical.explanation,
       explanation_te: languageMode === "english" ? null : telugu.explanation,
+      image_url: uploadedImage.url,
       source_reference:
         String(formData.get("source_reference") ?? "").trim() || null,
       is_active: formData.get("is_active") === "on",
@@ -129,7 +150,13 @@ export async function updateQuestion(
     })
     .eq("id", questionId);
 
-  if (error) return { success: false, message: error.message };
+  if (error) {
+    await removeQuestionImage(supabase, uploadedImage.path);
+    return { success: false, message: error.message };
+  }
+  if (existingQuestion.image_url && existingQuestion.image_url !== uploadedImage.url) {
+    await removeQuestionImage(supabase, questionMediaPath(existingQuestion.image_url));
+  }
   revalidatePath("/admin/questions");
   revalidatePath(`/admin/questions/${questionId}/edit`);
   revalidatePath("/admin/mock-tests");

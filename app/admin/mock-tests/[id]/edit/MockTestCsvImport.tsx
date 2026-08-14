@@ -69,6 +69,9 @@ export function MockTestCsvImport({
             <p className="mt-3 text-sm leading-6 text-slate-700">
               Add these optional test columns when needed: <code className="rounded bg-white px-1.5 py-1 text-xs">question_order,marks,negative_marks</code>. Leave them blank to use file row order and this Paper&apos;s default scoring.
             </p>
+            <p className="mt-3 text-sm leading-6 text-slate-700">
+              For a chart, map, or diagram, add the optional <code className="rounded bg-white px-1.5 py-1 text-xs">image_url</code> column with a public HTTPS image link.
+            </p>
             <ul className="mt-3 list-disc space-y-1 pl-5 text-sm leading-6 text-slate-700">
               <li>The <strong>subject</strong> must already exist under this Paper.</li>
               <li>For a subject-wise mock, every row must use that selected Subject.</li>

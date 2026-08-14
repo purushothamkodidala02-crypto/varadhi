@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import ExcelJS from "exceljs";
 import { createClient } from "@/lib/supabase/server";
+import { normalizeQuestionImageUrl } from "@/lib/questions/media";
 import type { CorrectAnswer, QuestionLifecycle } from "@/types/question";
 import type { SubjectContentLanguageMode } from "@/types/subject";
 
@@ -226,6 +227,7 @@ async function importQuestions(
     const questionOrder = optionalNumber(row.question_order ?? "");
     const marks = optionalNumber(row.marks ?? "");
     const negativeMarks = optionalNumber(row.negative_marks ?? "");
+    const image = normalizeQuestionImageUrl(row.image_url ?? "");
 
     if (!importKey) errors.push(`Row ${rowNumber}: import_key is required.`);
     if (!subject) errors.push(`Row ${rowNumber}: Subject "${row.subject || "(blank)"}" does not exist in the chosen Paper.`);
@@ -235,6 +237,7 @@ async function importQuestions(
     if (!lifecycles.includes(lifecycle) || (lifecycle === "review" && !validDate(reviewOn)) || (lifecycle === "expires" && !validDate(expiresOn))) errors.push(`Row ${rowNumber}: check content_lifecycle and its date.`);
     if (sourceExamDate && !validDate(sourceExamDate)) errors.push(`Row ${rowNumber}: source_exam_date must use YYYY-MM-DD.`);
     if (isActive === null) errors.push(`Row ${rowNumber}: is_active must be true or false.`);
+    if (image.error) errors.push(`Row ${rowNumber}: ${image.error}`);
     if (mockTest && questionOrder !== null && (!Number.isInteger(questionOrder) || questionOrder < 1)) errors.push(`Row ${rowNumber}: question_order must be a whole number greater than zero.`);
     if (mockTest && marks !== null && (!Number.isFinite(marks) || marks <= 0)) errors.push(`Row ${rowNumber}: marks must be a number greater than zero.`);
     if (mockTest && negativeMarks !== null && (!Number.isFinite(negativeMarks) || negativeMarks < 0)) errors.push(`Row ${rowNumber}: negative_marks must be zero or a positive number.`);
@@ -275,6 +278,7 @@ async function importQuestions(
       option_c_te: languageMode === "english" ? null : telugu.options[2],
       option_d_te: languageMode === "english" ? null : telugu.options[3],
       explanation_te: languageMode === "english" ? null : telugu.explanation,
+      image_url: image.url,
       source_reference: (row.source_reference ?? "").trim() || null,
       source_exam_date: sourceExamDate || null,
       difficulty: ["easy", "medium", "hard"].includes((row.difficulty ?? "").trim().toLowerCase()) ? (row.difficulty ?? "").trim().toLowerCase() : "medium",

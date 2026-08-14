@@ -1,9 +1,9 @@
 "use client";
 
 import Link from "next/link";
-import Image from "next/image";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { containsTeluguText, FormattedQuestionText } from "@/components/questions/FormattedQuestionText";
+import { QuestionMedia } from "@/components/questions/QuestionMedia";
 import { pauseAttempt, resumeAttempt, saveAttemptProgress, saveReviewState, submitAttempt, syncAttemptTimer, type SubmitAttemptResult } from "./attempt-actions";
 
 type Answer = "A" | "B" | "C" | "D";
@@ -206,7 +206,7 @@ export function StudentTestRunner({ mockTestId, title, sessionId, expiresAt, que
         <section className="rounded-3xl border bg-white p-6 shadow-sm sm:p-8">
           <div className="flex flex-wrap items-start justify-between gap-3"><div><p className="text-xs font-bold uppercase tracking-[0.15em] text-teal-700">Multiple choice question</p><p className="mt-1 text-xs font-semibold text-slate-500">{current.marks} mark{Number(current.marks) === 1 ? "" : "s"}{Number(current.negative_marks) > 0 ? ` · −${current.negative_marks} for a wrong answer` : ""}</p></div>{bilingual && <div className="rounded-lg bg-slate-100 p-1 text-xs font-bold"><button type="button" onClick={() => setLanguage("en")} className={`rounded-md px-3 py-1.5 ${language === "en" ? "bg-white shadow-sm" : "text-slate-600"}`}>English</button><button type="button" onClick={() => setLanguage("te")} className={`rounded-md px-3 py-1.5 ${language === "te" ? "bg-white shadow-sm" : "text-slate-600"}`}>తెలుగు</button></div>}</div>
           <FormattedQuestionText text={questionText} className="mt-6 text-lg leading-8" />
-          {current.image_url && <Image src={current.image_url} alt="Question reference" width={1200} height={800} sizes="(max-width: 1024px) 100vw, 800px" className="mt-6 h-auto max-h-80 w-auto max-w-full rounded-xl border object-contain" />}
+          {current.image_url && <QuestionMedia src={current.image_url} className="mt-6" />}
           <div className="mt-7 grid gap-3">{options.map(([key, text]) => { const selected = answers[current.question_id] === key; const teluguOption = containsTeluguText(text); return <label key={key} className={`flex cursor-pointer gap-4 rounded-2xl border p-4 transition hover:border-teal-300 ${selected ? "border-teal-600 bg-teal-50" : "bg-white"} ${locked ? "pointer-events-none opacity-60" : ""}`}><input className="sr-only" type="radio" name={current.question_id} value={key} checked={selected} disabled={locked} onChange={() => { setSaveState("saving"); setAnswers((value) => ({ ...value, [current.question_id]: key })); queueSave(`answer:${current.question_id}`, () => saveAttemptProgress(sessionId, current.question_id, key)); }} /><span className={`grid h-8 w-8 shrink-0 place-items-center rounded-lg text-sm font-black ${selected ? "bg-teal-700 text-white" : "bg-slate-100 text-slate-600"}`}>{key}</span><span lang={teluguOption ? "te" : undefined} className={`whitespace-pre-line pt-1 text-sm font-medium leading-6 text-slate-800 ${teluguOption ? "font-telugu" : ""}`}>{text}</span></label>; })}</div>
           <div className="mt-6 flex flex-wrap items-center justify-between gap-3 border-t pt-5"><button type="button" onClick={clearAnswer} disabled={!answers[current.question_id] || locked} className="text-sm font-bold text-slate-500 hover:text-red-700 disabled:opacity-40">Clear answer</button><button type="button" onClick={toggleReview} disabled={locked} className={`rounded-xl px-4 py-2.5 text-sm font-bold ${reviewIds.has(current.question_id) ? "bg-amber-100 text-amber-900" : "border text-slate-700"}`}>{reviewIds.has(current.question_id) ? "Marked for review" : "Mark for review"}</button></div>
         </section>

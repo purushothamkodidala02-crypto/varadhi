@@ -48,6 +48,7 @@ export function QuestionCsvImport({ categories, exams, specializations, papers }
           <summary className="cursor-pointer text-sm font-bold">Excel headings and language rules</summary>
           <p className="mt-3 text-sm leading-6 text-slate-700">Keep the headings in row 1. The system reads the <strong>Varadhi Import</strong> sheet when available, otherwise the first sheet.</p>
           <p className="mt-3 text-sm leading-6 text-slate-700">Required headings: <code className="rounded bg-white px-1.5 py-1 text-xs">import_key, subject, question_en, option_a_en, option_b_en, option_c_en, option_d_en, question_te, option_a_te, option_b_te, option_c_te, option_d_te, correct_answer</code></p>
+          <p className="mt-3 text-sm leading-6 text-slate-700">Optional image heading: <code className="rounded bg-white px-1.5 py-1 text-xs">image_url</code>. Add a public HTTPS link to a PNG, JPG, WebP, chart, map, or diagram. Leave it blank for text-only Questions.</p>
           <ul className="mt-3 list-disc space-y-1 pl-5 text-sm text-slate-700">
             <li>Extra spaces at the start or end of cells are removed automatically.</li>
             <li><strong>General subjects:</strong> fill both English and Telugu fields.</li>

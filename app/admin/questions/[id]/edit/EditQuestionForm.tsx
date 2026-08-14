@@ -2,6 +2,7 @@
 
 import { useActionState, useMemo, useState } from "react";
 import { SearchableSelect } from "@/components/admin/SearchableSelect";
+import { QuestionImageField } from "@/components/admin/QuestionImageField";
 import type { Question, QuestionLifecycle } from "@/types/question";
 import type { SubjectContentLanguageMode } from "@/types/subject";
 import { updateQuestion, type UpdateQuestionState } from "./actions";
@@ -94,6 +95,8 @@ export function EditQuestionForm({
             />
           )}
         </div>
+
+        <QuestionImageField currentUrl={question.image_url} />
 
         <div className="grid gap-5 md:grid-cols-2">
           <label className="block text-sm font-bold">

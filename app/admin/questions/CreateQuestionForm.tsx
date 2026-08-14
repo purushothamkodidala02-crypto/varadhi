@@ -2,6 +2,7 @@
 
 import { useActionState, useMemo, useState } from "react";
 import { SearchableSelect } from "@/components/admin/SearchableSelect";
+import { QuestionImageField } from "@/components/admin/QuestionImageField";
 import type { QuestionLifecycle } from "@/types/question";
 import type { SubjectContentLanguageMode } from "@/types/subject";
 import { createQuestion, type CreateQuestionState } from "./actions";
@@ -135,6 +136,7 @@ export function CreateQuestionForm({
               <div className="mt-4 space-y-5">
                 {languageMode !== "telugu" && <LanguageFields language="English" suffix="" />}
                 {languageMode !== "english" && <LanguageFields language="తెలుగు" suffix="_te" lang="te" />}
+                <QuestionImageField />
                 <label className="block text-sm font-bold">Correct answer<SearchableSelect name="correct_answer" value={correctAnswer} onChange={setCorrectAnswer} options={["A", "B", "C", "D"].map((letter) => ({ value: letter, label: `Option ${letter}` }))} placeholder="Choose the correct option" /></label>
                 <label className="block text-sm font-bold">Source reference <span className="font-normal text-slate-500">(optional)</span><input name="source_reference" placeholder="For example: TGPSC Group 2 Paper I, 2025" className="mt-2 w-full rounded-xl border px-4 py-3 font-normal" /></label>
               </div>
