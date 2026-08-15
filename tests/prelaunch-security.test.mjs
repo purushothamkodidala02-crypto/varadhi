@@ -104,3 +104,12 @@ test("question media imports, uploads, and attempt reviews stay connected", asyn
   assert.match(runner, /<QuestionMedia src=\{current\.image_url\}/);
   assert.match(review, /<QuestionMedia src=\{row\.image_url\}/);
 });
+
+test("assertion-reason questions accept short labels and render standard labels", async () => {
+  const formatter = await read("components/questions/FormattedQuestionText.tsx");
+
+  assert.match(formatter, /Assertion\(\?:\\s\*\\\(\[A\]\\\)\)\?/);
+  assert.match(formatter, /Reason\(\?:\\s\*\\\(\[R\]\\\)\)\?/);
+  assert.match(formatter, /return "Assertion \(A\)"/);
+  assert.match(formatter, /return "Reason \(R\)"/);
+});

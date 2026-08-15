@@ -4,7 +4,7 @@ type FormattedQuestionTextProps = {
 };
 
 const labelledSection =
-  /^(Assertion\s*\([A]\)|(?:వాదన|ప్రకటన|ప్రతిపాదన)\s*\([A]\)|Reason\s*\([R]\)|కారణం\s*\([R]\)|(?:Statement|Conclusion|List)\s+(?:I{1,4}|V|\d+)|(?:ప్రకటన|వాక్యం|తీర్మానం|జాబితా)\s+(?:I{1,4}|V|\d+|[౦-౯]+))\s*:\s*(.*)$/i;
+  /^(Assertion(?:\s*\([A]\))?|(?:వాదన|ప్రకటన|ప్రతిపాదన)(?:\s*\([A]\))?|Reason(?:\s*\([R]\))?|కారణం(?:\s*\([R]\))?|(?:Statement|Conclusion|List)\s+(?:I{1,4}|V|\d+)|(?:ప్రకటన|వాక్యం|తీర్మానం|జాబితా)\s+(?:I{1,4}|V|\d+|[౦-౯]+))\s*:\s*(.*)$/i;
 
 const instructionStart =
   /^(?:(?:Choose|Select|Which|How\s+many\s+of|Pick)\b|(?:సరైన|సరికాని|కింది|క్రింది).*(?:ఎంచుకోండి|గుర్తించండి))/i;
@@ -38,11 +38,11 @@ function questionLines(text: string) {
       "$1\n",
     )
     .replace(
-      /[ \t]+(?=(?:Assertion\s*\([A]\)|(?:వాదన|ప్రకటన|ప్రతిపాదన)\s*\([A]\)|Reason\s*\([R]\)|కారణం\s*\([R]\)|(?:Statement|Conclusion|List)\s+(?:I{1,4}|V|\d+)|(?:ప్రకటన|వాక్యం|తీర్మానం|జాబితా)\s+(?:I{1,4}|V|\d+|[౦-౯]+))\s*:)/gi,
+      /[ \t]+(?=(?:Assertion(?:\s*\([A]\))?|(?:వాదన|ప్రకటన|ప్రతిపాదన)(?:\s*\([A]\))?|Reason(?:\s*\([R]\))?|కారణం(?:\s*\([R]\))?|(?:Statement|Conclusion|List)\s+(?:I{1,4}|V|\d+)|(?:ప్రకటన|వాక్యం|తీర్మానం|జాబితా)\s+(?:I{1,4}|V|\d+|[౦-౯]+))\s*:)/gi,
       "\n",
     )
     .replace(
-      /;[ \t]*(?=(?:Assertion\s*\([A]\)|Reason\s*\([R]\))\s*:)/gi,
+      /;[ \t]*(?=(?:Assertion(?:\s*\([A]\))?|Reason(?:\s*\([R]\))?)\s*:)/gi,
       "\n",
     )
     .replace(
@@ -95,6 +95,14 @@ function questionLines(text: string) {
     }
     return merged;
   }, []);
+}
+
+function normalizedSectionLabel(label: string) {
+  if (/^Assertion$/i.test(label)) return "Assertion (A)";
+  if (/^Reason$/i.test(label)) return "Reason (R)";
+  if (/^(?:వాదన|ప్రకటన|ప్రతిపాదన)$/i.test(label)) return `${label} (A)`;
+  if (/^కారణం$/i.test(label)) return `${label} (R)`;
+  return label;
 }
 
 const matchQuestion = /^(?:Match\b|.*\bmatch\b|జతపరచండి|.*జతపరచండి)/i;
@@ -159,7 +167,7 @@ export function FormattedQuestionText({
               <span className="text-slate-950">{line}</span>
             ) : labelled ? (
               <>
-                <span className="text-slate-950">{labelled[1]}:</span>{" "}
+                <span className="text-slate-950">{normalizedSectionLabel(labelled[1])}:</span>{" "}
                 {labelled[2]}
               </>
             ) : numbered ? (
