@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import ExcelJS from "exceljs";
 import { createClient } from "@/lib/supabase/server";
+import { QUESTION_IMPORT_REQUIRED_HEADERS } from "@/lib/questions/import-format";
 import { normalizeQuestionImageUrl } from "@/lib/questions/media";
 import type { CorrectAnswer, QuestionLifecycle } from "@/types/question";
 import type { SubjectContentLanguageMode } from "@/types/subject";
@@ -23,10 +24,6 @@ type MockImportTarget = {
   status: string;
 };
 
-const requiredHeaders = [
-  "import_key", "subject", "question_en", "option_a_en", "option_b_en", "option_c_en", "option_d_en",
-  "question_te", "option_a_te", "option_b_te", "option_c_te", "option_d_te", "correct_answer",
-];
 const answers: CorrectAnswer[] = ["A", "B", "C", "D"];
 const lifecycles: QuestionLifecycle[] = ["permanent", "review", "expires"];
 const validDate = (value: string) => /^\d{4}-\d{2}-\d{2}$/.test(value) && !Number.isNaN(Date.parse(`${value}T00:00:00Z`));
@@ -43,7 +40,7 @@ const normalizeLookup = (value: string) => cleanCellValue(value).replace(/\s+/g,
 
 function validateHeaders(headers: string[]) {
   if (new Set(headers).size !== headers.length) throw new Error("Each file column heading must be unique.");
-  const missingHeaders = requiredHeaders.filter((header) => !headers.includes(header));
+  const missingHeaders = QUESTION_IMPORT_REQUIRED_HEADERS.filter((header) => !headers.includes(header));
   if (missingHeaders.length) throw new Error(`Missing file column${missingHeaders.length === 1 ? "" : "s"}: ${missingHeaders.join(", ")}.`);
 }
 

@@ -155,3 +155,23 @@ test("assertion-reason questions accept short labels and render standard labels"
   assert.match(formatter, /return "Assertion \(A\)"/);
   assert.match(formatter, /return "Reason \(R\)"/);
 });
+
+test("admins can export mock-test questions in the accepted import format", async () => {
+  const [importer, format, exportRoute, testList] = await Promise.all([
+    read("app/admin/questions/import-actions.ts"),
+    read("lib/questions/import-format.ts"),
+    read("app/admin/mock-tests/[id]/questions-export/route.ts"),
+    read("app/admin/mock-tests/ExistingMockTestsTable.tsx"),
+  ]);
+
+  assert.match(importer, /QUESTION_IMPORT_REQUIRED_HEADERS/);
+  assert.match(format, /QUESTION_IMPORT_EXPORT_HEADERS/);
+  assert.match(format, /"question_order"/);
+  assert.match(format, /"negative_marks"/);
+  assert.match(format, /"image_url"/);
+  assert.match(exportRoute, /getWorksheet|addWorksheet\("Varadhi Import"/);
+  assert.match(exportRoute, /profile\?\.role !== "admin"/);
+  assert.match(exportRoute, /\.order\("question_order"\)/);
+  assert.match(exportRoute, /application\/vnd\.openxmlformats-officedocument\.spreadsheetml\.sheet/);
+  assert.match(testList, /Download questions/);
+});
