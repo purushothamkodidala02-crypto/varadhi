@@ -148,8 +148,8 @@ export function AttemptReviewNavigator({ rows }: { rows: ReviewRow[] }) {
           <p className="text-sm font-bold text-slate-600">Question {index + 1} of {rows.length}</p>
           <ReviewArrow direction="next" disabled={index === rows.length - 1} onClick={() => showQuestion(index + 1)} />
         </div>
-        <ReviewArrow direction="previous" disabled={index === 0} onClick={() => showQuestion(index - 1)} className="absolute left-0 top-1/2 hidden -translate-y-1/2 sm:grid" />
-        <ReviewArrow direction="next" disabled={index === rows.length - 1} onClick={() => showQuestion(index + 1)} className="absolute right-0 top-1/2 hidden -translate-y-1/2 sm:grid" />
+        <ReviewArrow direction="previous" disabled={index === 0} onClick={() => showQuestion(index - 1)} className="absolute left-0 top-6 hidden sm:grid" />
+        <ReviewArrow direction="next" disabled={index === rows.length - 1} onClick={() => showQuestion(index + 1)} className="absolute right-0 top-6 hidden sm:grid" />
 
         <article ref={questionRef} className="scroll-mt-24 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm sm:rounded-3xl" aria-live="polite">
         <div className="flex flex-wrap items-start justify-between gap-4 border-b border-slate-100 p-4 sm:px-6 sm:py-5">
@@ -193,7 +193,7 @@ function OptionRow({ optionKey, label, correct, selected }: { optionKey: string;
 
 function ReviewArrow({ direction, disabled, onClick, className = "" }: { direction: "previous" | "next"; disabled: boolean; onClick: () => void; className?: string }) {
   const previous = direction === "previous";
-  return <button type="button" onClick={onClick} disabled={disabled} aria-label={previous ? "Previous question" : "Next question"} title={previous ? "Previous question" : "Next question"} className={`grid h-11 w-11 place-items-center rounded-full border border-slate-200 bg-white text-slate-950 shadow-lg transition hover:-translate-y-0.5 hover:border-teal-400 hover:bg-teal-50 disabled:cursor-not-allowed disabled:opacity-30 disabled:hover:translate-y-0 ${className}`}><svg aria-hidden="true" viewBox="0 0 24 24" className={`h-5 w-5 fill-none stroke-current stroke-2 ${previous ? "" : "rotate-180"}`}><path d="m15 5-7 7 7 7" strokeLinecap="round" strokeLinejoin="round" /></svg></button>;
+  return <button type="button" onClick={onClick} disabled={disabled} aria-label={previous ? "Previous question" : "Next question"} title={previous ? "Previous question" : "Next question"} className={`grid h-11 w-11 place-items-center rounded-full border border-slate-200 bg-white text-slate-950 shadow-lg transition-colors hover:border-teal-400 hover:bg-teal-50 disabled:cursor-not-allowed disabled:opacity-30 ${className}`}><svg aria-hidden="true" viewBox="0 0 24 24" className={`h-5 w-5 fill-none stroke-current stroke-2 ${previous ? "" : "rotate-180"}`}><path d="m15 5-7 7 7 7" strokeLinecap="round" strokeLinejoin="round" /></svg></button>;
 }
 
 function Legend({ tone, label }: { tone: "emerald" | "red"; label: string }) {
