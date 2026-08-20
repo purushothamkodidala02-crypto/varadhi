@@ -13,7 +13,7 @@ export async function PublicHeader({ compact = false }: PublicHeaderProps) {
   const navigation = [
     { href: "/mock-tests", label: "Mock tests", icon: "tests" as const },
     ...(!compact ? [{ href: "/#how-it-works", label: "How it works", icon: "guide" as const }] : []),
-    { href: "mailto:support@varadhiprep.in", label: "Support", icon: "support" as const },
+    { href: "/support", label: "Support", icon: "support" as const },
     ...(user ? [{ href: "/dashboard", label: "My progress", icon: "progress" as const }] : []),
   ];
 
@@ -91,9 +91,9 @@ const navigationToneStyles = {
     icon: "bg-teal-300 text-slate-950",
   },
   support: {
-    desktop: "bg-amber-50 text-amber-900 hover:border-amber-200 hover:bg-amber-100",
-    mobile: "bg-amber-50/70 text-amber-900 hover:border-amber-200 hover:bg-amber-100",
-    icon: "bg-amber-200/70 text-amber-900",
+    desktop: "bg-cyan-50 text-cyan-900 hover:border-cyan-200 hover:bg-cyan-100",
+    mobile: "bg-cyan-50/70 text-cyan-900 hover:border-cyan-200 hover:bg-cyan-100",
+    icon: "bg-cyan-200/70 text-cyan-900",
   },
 } as const;
 
