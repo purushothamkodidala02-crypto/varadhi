@@ -15,7 +15,12 @@ export const metadata: Metadata = {
   applicationName: SITE_NAME,
 
   icons: {
-    icon: "/varadhi-mark.svg",
+    icon: [
+      { url: "/varadhi-icon-96.png", type: "image/png", sizes: "96x96" },
+      { url: "/varadhi-logo-512.png", type: "image/png", sizes: "512x512" },
+    ],
+    shortcut: "/varadhi-icon-96.png",
+    apple: [{ url: "/varadhi-icon-192.png", type: "image/png", sizes: "192x192" }],
   },
 
   manifest: "/manifest.webmanifest",

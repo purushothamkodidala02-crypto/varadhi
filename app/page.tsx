@@ -56,7 +56,13 @@ export default async function Home() {
     "@type": "Organization",
     name: "Varadhi Prep",
     url: absoluteUrl("/"),
-    logo: absoluteUrl("/varadhi-mark.svg"),
+    logo: {
+      "@type": "ImageObject",
+      url: absoluteUrl("/varadhi-logo-512.png"),
+      contentUrl: absoluteUrl("/varadhi-logo-512.png"),
+      width: 512,
+      height: 512,
+    },
     email: "support@varadhiprep.in",
     contactPoint: {
       "@type": "ContactPoint",

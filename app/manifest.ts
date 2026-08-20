@@ -9,6 +9,9 @@ export default function manifest(): MetadataRoute.Manifest {
     display: "standalone",
     background_color: "#f8fafc",
     theme_color: "#020617",
-    icons: [{ src: "/varadhi-mark.svg", sizes: "any", type: "image/svg+xml" }],
+    icons: [
+      { src: "/varadhi-icon-192.png", sizes: "192x192", type: "image/png" },
+      { src: "/varadhi-logo-512.png", sizes: "512x512", type: "image/png" },
+    ],
   };
 }
