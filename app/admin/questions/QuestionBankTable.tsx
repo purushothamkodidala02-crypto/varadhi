@@ -35,14 +35,6 @@ export type QuestionBankRow = {
   subjectName: string;
 };
 
-const emptyLocation: LocationFilterValue = {
-  categoryId: "",
-  examId: "",
-  specializationId: "",
-  paperId: "",
-  subjectId: "",
-};
-
 function statusOf(question: QuestionBankRow) {
   const today = indiaDateKey();
 
@@ -80,17 +72,23 @@ export function QuestionBankTable({
   specializations,
   papers,
   subjects,
+  initialLocation,
+  initialSearch,
+  initialPage,
 }: {
   categories: LocationCategory[];
   exams: LocationExam[];
   specializations: LocationSpecialization[];
   papers: LocationPaper[];
   subjects: LocationSubject[];
+  initialLocation: LocationFilterValue;
+  initialSearch: string;
+  initialPage: number;
 }) {
-  const [location, setLocation] = useState(emptyLocation);
-  const [search, setSearch] = useState("");
+  const [location, setLocation] = useState(initialLocation);
+  const [search, setSearch] = useState(initialSearch);
   const [questions, setQuestions] = useState<QuestionBankRow[]>([]);
-  const [page, setPage] = useState(1);
+  const [page, setPage] = useState(initialPage);
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(false);
   const [loadError, setLoadError] = useState("");
@@ -174,6 +172,22 @@ export function QuestionBankTable({
   }, [exams, location.categoryId, page, papers, search, specializations, subjects, visibleSubjectIds]);
 
   const totalPages = Math.max(1, Math.ceil(total / pageSize));
+  const questionBankUrl = useMemo(() => {
+    const params = new URLSearchParams();
+    if (location.categoryId) params.set("category", location.categoryId);
+    if (location.examId) params.set("exam", location.examId);
+    if (location.specializationId) params.set("specialization", location.specializationId);
+    if (location.paperId) params.set("paper", location.paperId);
+    if (location.subjectId) params.set("subject", location.subjectId);
+    if (search.trim()) params.set("q", search.trim().slice(0, 100));
+    if (page > 1) params.set("page", String(page));
+    const query = params.toString();
+    return query ? `/admin/questions?${query}` : "/admin/questions";
+  }, [location, page, search]);
+
+  useEffect(() => {
+    window.history.replaceState(window.history.state, "", questionBankUrl);
+  }, [questionBankUrl]);
 
   return (
     <section className="mt-10 overflow-hidden rounded-2xl border bg-white">
@@ -272,7 +286,7 @@ export function QuestionBankTable({
                     <td className="px-5 py-5">
                       <div className="flex justify-end gap-2">
                         <Link
-                          href={`/admin/questions/${question.id}/edit`}
+                          href={`/admin/questions/${question.id}/edit?returnTo=${encodeURIComponent(questionBankUrl)}`}
                           className="rounded-lg px-2.5 py-1.5 text-sm font-bold text-teal-700 hover:bg-teal-50"
                         >
                           Edit

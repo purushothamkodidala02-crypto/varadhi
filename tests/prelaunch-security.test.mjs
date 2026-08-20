@@ -87,6 +87,18 @@ test("first-time mock-test screen does not claim progress is already saved", asy
   assert.match(testPage, /Select Start test when you are ready/);
 });
 
+test("question bank preserves filters while editing an existing question", async () => {
+  const [questionBank, editPage] = await Promise.all([
+    read("app/admin/questions/QuestionBankTable.tsx"),
+    read("app/admin/questions/[id]/edit/page.tsx"),
+  ]);
+
+  assert.match(questionBank, /window\.history\.replaceState/);
+  assert.match(questionBank, /returnTo=\$\{encodeURIComponent\(questionBankUrl\)\}/);
+  assert.match(editPage, /returnTo\.startsWith\("\/admin\/questions\?"\)/);
+  assert.match(editPage, /href=\{backHref\}/);
+});
+
 test("question media imports, uploads, and attempt reviews stay connected", async () => {
   const [migration, importer, runner, review] = await Promise.all([
     read("supabase/migrations/20260814160000_add_question_media_workflow.sql"),

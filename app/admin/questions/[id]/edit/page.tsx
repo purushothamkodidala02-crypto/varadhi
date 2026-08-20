@@ -7,8 +7,15 @@ import { EditQuestionForm } from "./EditQuestionForm";
 
 export default async function EditQuestionPage({
   params,
+  searchParams,
 }: PageProps<"/admin/questions/[id]/edit">) {
   const { id } = await params;
+  const { returnTo } = await searchParams;
+  const backHref =
+    typeof returnTo === "string" &&
+    (returnTo === "/admin/questions" || returnTo.startsWith("/admin/questions?"))
+      ? returnTo
+      : "/admin/questions";
   const supabase = await createClient();
   const [questionResult, subjectsResult, papersResult, groupsResult, categoriesResult] =
     await Promise.all([
@@ -48,7 +55,7 @@ export default async function EditQuestionPage({
   return (
     <main>
       <Link
-        href="/admin/questions"
+        href={backHref}
         className="text-sm font-semibold text-teal-700 hover:underline"
       >
         ← Back to Question Bank
