@@ -13,6 +13,7 @@ export async function PublicHeader({ compact = false }: PublicHeaderProps) {
   const navigation = [
     { href: "/mock-tests", label: "Mock tests", icon: "tests" as const },
     ...(!compact ? [{ href: "/#how-it-works", label: "How it works", icon: "guide" as const }] : []),
+    { href: "mailto:support@varadhiprep.in", label: "Support", icon: "support" as const },
     ...(user ? [{ href: "/dashboard", label: "My progress", icon: "progress" as const }] : []),
   ];
 
@@ -89,10 +90,16 @@ const navigationToneStyles = {
     mobile: "bg-slate-950 text-white hover:border-teal-300 hover:bg-slate-800",
     icon: "bg-teal-300 text-slate-950",
   },
+  support: {
+    desktop: "bg-amber-50 text-amber-900 hover:border-amber-200 hover:bg-amber-100",
+    mobile: "bg-amber-50/70 text-amber-900 hover:border-amber-200 hover:bg-amber-100",
+    icon: "bg-amber-200/70 text-amber-900",
+  },
 } as const;
 
-function NavigationIcon({ name }: { name: "tests" | "guide" | "progress" }) {
+function NavigationIcon({ name }: { name: "tests" | "guide" | "support" | "progress" }) {
   if (name === "tests") return <svg aria-hidden="true" viewBox="0 0 24 24" className="h-[1.15rem] w-[1.15rem] fill-none stroke-current stroke-[1.8]"><path d="M7 3.5h8l3 3V20H7z" strokeLinejoin="round" /><path d="M15 3.5V7h3M9.5 11h6M9.5 14.5h6" strokeLinecap="round" /></svg>;
   if (name === "guide") return <svg aria-hidden="true" viewBox="0 0 24 24" className="h-[1.15rem] w-[1.15rem] fill-none stroke-current stroke-[1.8]"><circle cx="12" cy="12" r="8.5" /><path d="M12 10.5V16M12 7.8v.2" strokeLinecap="round" /></svg>;
+  if (name === "support") return <svg aria-hidden="true" viewBox="0 0 24 24" className="h-[1.15rem] w-[1.15rem] fill-none stroke-current stroke-[1.8]"><rect x="3.5" y="5.5" width="17" height="13" rx="2" /><path d="m5 7 7 5.5L19 7" strokeLinecap="round" strokeLinejoin="round" /></svg>;
   return <svg aria-hidden="true" viewBox="0 0 24 24" className="h-[1.15rem] w-[1.15rem] fill-none stroke-current stroke-[1.8]"><path d="M5 19V9m7 10V5m7 14v-7" strokeLinecap="round" /><path d="M3.5 19.5h17" strokeLinecap="round" /></svg>;
 }
