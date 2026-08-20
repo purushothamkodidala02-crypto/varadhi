@@ -1,7 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { useCallback, useEffect, useId, useRef, useState } from "react";
+import { useCallback, useEffect, useId, useRef, useState, useSyncExternalStore } from "react";
+import { createPortal } from "react-dom";
 import { createClient } from "@/lib/supabase/client";
 
 type NavigationIconName = "home" | "tests" | "support" | "progress";
@@ -12,8 +13,13 @@ type NavigationItem = {
   icon: NavigationIconName;
 };
 
+const subscribeToClient = () => () => {};
+const getClientSnapshot = () => true;
+const getServerSnapshot = () => false;
+
 export function PublicNavigationMenu({ items }: { items: NavigationItem[] }) {
   const [open, setOpen] = useState(false);
+  const mounted = useSyncExternalStore(subscribeToClient, getClientSnapshot, getServerSnapshot);
   const [hasUser, setHasUser] = useState(false);
   const menuId = useId();
   const triggerRef = useRef<HTMLButtonElement>(null);
@@ -79,7 +85,7 @@ export function PublicNavigationMenu({ items }: { items: NavigationItem[] }) {
         </span>
       </button>
 
-      <div className={`fixed inset-0 z-[70] ${open ? "pointer-events-auto" : "pointer-events-none"}`} aria-hidden={!open}>
+      {mounted && createPortal(<div className={`fixed inset-0 z-[100] ${open ? "pointer-events-auto" : "pointer-events-none"}`} aria-hidden={!open}>
         <button
           type="button"
           aria-label="Close navigation menu"
@@ -135,7 +141,7 @@ export function PublicNavigationMenu({ items }: { items: NavigationItem[] }) {
             Need help? Email <a href="mailto:support@varadhiprep.in" className="font-bold text-teal-700">support@varadhiprep.in</a>
           </div>
         </aside>
-      </div>
+      </div>, document.body)}
     </>
   );
 }

@@ -125,6 +125,8 @@ test("navigation and question-management links remain accessible", async () => {
 
   assert.match(navigation, /inert=\{!open\}/);
   assert.match(navigation, /aria-modal="true"/);
+  assert.match(navigation, /createPortal/);
+  assert.match(navigation, /document\.body/);
   assert.match(createQuestion, /id="add-question"/);
   assert.match(packageJson, /"nanoid":\s*"3\.3\.18"/);
 });
