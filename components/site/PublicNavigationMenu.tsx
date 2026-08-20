@@ -59,7 +59,7 @@ export function PublicNavigationMenu({ items }: { items: NavigationItem[] }) {
         <aside
           id={menuId}
           aria-label="Site navigation"
-          className={`absolute right-0 top-0 flex h-dvh w-[min(21rem,88vw)] flex-col border-l border-slate-200 bg-white shadow-2xl transition-transform duration-300 ease-out ${open ? "translate-x-0" : "translate-x-full"}`}
+          className={`absolute left-0 top-0 flex h-dvh w-[min(21rem,88vw)] flex-col border-r border-slate-200 bg-white shadow-2xl transition-transform duration-300 ease-out ${open ? "translate-x-0" : "-translate-x-full"}`}
         >
           <div className="flex items-center justify-between border-b border-slate-200 px-5 py-4">
             <div>
