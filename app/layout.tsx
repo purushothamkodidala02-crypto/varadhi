@@ -14,10 +14,6 @@ export const metadata: Metadata = {
 
   applicationName: SITE_NAME,
 
-  alternates: {
-    canonical: "/",
-  },
-
   icons: {
     icon: "/varadhi-mark.svg",
   },
@@ -33,7 +29,6 @@ export const metadata: Metadata = {
     siteName: SITE_NAME,
     title: "Varadhi Prep: Smart Mock Tests for Career Growth",
     description: SITE_DESCRIPTION,
-    url: "/",
   },
 
   twitter: {

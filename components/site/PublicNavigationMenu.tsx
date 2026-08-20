@@ -1,7 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useId, useState } from "react";
+import { useCallback, useEffect, useId, useRef, useState } from "react";
+import { createClient } from "@/lib/supabase/client";
 
 type NavigationIconName = "home" | "tests" | "support" | "progress";
 
@@ -13,15 +14,44 @@ type NavigationItem = {
 
 export function PublicNavigationMenu({ items }: { items: NavigationItem[] }) {
   const [open, setOpen] = useState(false);
+  const [hasUser, setHasUser] = useState(false);
   const menuId = useId();
+  const triggerRef = useRef<HTMLButtonElement>(null);
+  const closeButtonRef = useRef<HTMLButtonElement>(null);
+  const visibleItems = hasUser
+    ? [...items, { href: "/dashboard", label: "My progress", icon: "progress" as const }]
+    : items;
+
+  const closeMenu = useCallback(() => {
+    setOpen(false);
+    window.requestAnimationFrame(() => triggerRef.current?.focus());
+  }, []);
+
+  useEffect(() => {
+    let active = true;
+    const supabase = createClient();
+    void supabase.auth.getUser().then(({ data }) => {
+      if (active) setHasUser(Boolean(data.user));
+    });
+    const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => {
+      if (active) setHasUser(Boolean(session?.user));
+    });
+    return () => {
+      active = false;
+      listener.subscription.unsubscribe();
+    };
+  }, []);
 
   useEffect(() => {
     if (!open) return;
 
     const previousOverflow = document.body.style.overflow;
     document.body.style.overflow = "hidden";
+    closeButtonRef.current?.focus();
     const closeOnEscape = (event: KeyboardEvent) => {
-      if (event.key === "Escape") setOpen(false);
+      if (event.key === "Escape") {
+        closeMenu();
+      }
     };
     window.addEventListener("keydown", closeOnEscape);
 
@@ -29,11 +59,12 @@ export function PublicNavigationMenu({ items }: { items: NavigationItem[] }) {
       document.body.style.overflow = previousOverflow;
       window.removeEventListener("keydown", closeOnEscape);
     };
-  }, [open]);
+  }, [closeMenu, open]);
 
   return (
     <>
       <button
+        ref={triggerRef}
         type="button"
         onClick={() => setOpen(true)}
         aria-expanded={open}
@@ -52,13 +83,16 @@ export function PublicNavigationMenu({ items }: { items: NavigationItem[] }) {
         <button
           type="button"
           aria-label="Close navigation menu"
-          onClick={() => setOpen(false)}
+          onClick={closeMenu}
           className={`absolute inset-0 bg-slate-950/45 backdrop-blur-[2px] transition-opacity ${open ? "opacity-100" : "opacity-0"}`}
           tabIndex={open ? 0 : -1}
         />
         <aside
           id={menuId}
+          role="dialog"
+          aria-modal="true"
           aria-label="Site navigation"
+          inert={!open}
           className={`absolute left-0 top-0 flex h-dvh w-[min(21rem,88vw)] flex-col border-r border-slate-200 bg-white shadow-2xl transition-transform duration-300 ease-out ${open ? "translate-x-0" : "-translate-x-full"}`}
         >
           <div className="flex items-center justify-between border-b border-slate-200 px-5 py-4">
@@ -67,8 +101,9 @@ export function PublicNavigationMenu({ items }: { items: NavigationItem[] }) {
               <p className="text-xs font-semibold text-slate-500">Navigation</p>
             </div>
             <button
+              ref={closeButtonRef}
               type="button"
-              onClick={() => setOpen(false)}
+              onClick={closeMenu}
               aria-label="Close navigation menu"
               className="grid h-10 w-10 place-items-center rounded-xl bg-slate-100 text-xl font-semibold text-slate-700 hover:bg-slate-200"
             >
@@ -77,7 +112,7 @@ export function PublicNavigationMenu({ items }: { items: NavigationItem[] }) {
           </div>
 
           <nav className="font-brand flex-1 space-y-2 overflow-y-auto p-4" aria-label="Sidebar navigation">
-            {items.map((item) => {
+            {visibleItems.map((item) => {
               const tone = navigationToneStyles[item.icon];
               return (
                 <Link

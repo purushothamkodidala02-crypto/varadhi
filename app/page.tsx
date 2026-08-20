@@ -51,10 +51,24 @@ export default async function Home() {
       "query-input": "required name=search_term_string",
     },
   };
+  const organizationJsonLd = {
+    "@context": "https://schema.org",
+    "@type": "Organization",
+    name: "Varadhi Prep",
+    url: absoluteUrl("/"),
+    logo: absoluteUrl("/varadhi-mark.svg"),
+    email: "support@varadhiprep.in",
+    contactPoint: {
+      "@type": "ContactPoint",
+      contactType: "customer support",
+      email: "support@varadhiprep.in",
+      availableLanguage: ["English", "Telugu"],
+    },
+  };
 
   return (
     <main className="min-h-screen bg-white text-slate-950">
-      <JsonLd data={websiteJsonLd} />
+      <JsonLd data={[websiteJsonLd, organizationJsonLd]} />
       <PublicHeader />
 
       <section className="border-b bg-[#f4f7f8]">

@@ -99,6 +99,36 @@ test("question bank preserves filters while editing an existing question", async
   assert.match(editPage, /href=\{backHref\}/);
 });
 
+test("public pages expose route-specific SEO metadata and crawl targets", async () => {
+  const [layout, catalog, support, sitemap, robots] = await Promise.all([
+    read("app/layout.tsx"),
+    read("app/mock-tests/page.tsx"),
+    read("app/support/page.tsx"),
+    read("app/sitemap.ts"),
+    read("app/robots.ts"),
+  ]);
+
+  assert.doesNotMatch(layout, /alternates:\s*\{\s*canonical:\s*"\/"/);
+  assert.match(catalog, /openGraph:[\s\S]*url:\s*"\/mock-tests"/);
+  assert.match(support, /title:\s*"Contact Support"/);
+  assert.match(support, /"@type":\s*"ContactPage"/);
+  assert.match(sitemap, /absoluteUrl\("\/support"\)/);
+  assert.match(robots, /host:\s*absoluteUrl\("\/"\)/);
+});
+
+test("navigation and question-management links remain accessible", async () => {
+  const [navigation, createQuestion, packageJson] = await Promise.all([
+    read("components/site/PublicNavigationMenu.tsx"),
+    read("app/admin/questions/CreateQuestionForm.tsx"),
+    read("package.json"),
+  ]);
+
+  assert.match(navigation, /inert=\{!open\}/);
+  assert.match(navigation, /aria-modal="true"/);
+  assert.match(createQuestion, /id="add-question"/);
+  assert.match(packageJson, /"nanoid":\s*"3\.3\.18"/);
+});
+
 test("question media imports, uploads, and attempt reviews stay connected", async () => {
   const [migration, importer, runner, review] = await Promise.all([
     read("supabase/migrations/20260814160000_add_question_media_workflow.sql"),

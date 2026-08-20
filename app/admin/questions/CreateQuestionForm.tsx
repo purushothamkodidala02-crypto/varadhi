@@ -96,7 +96,7 @@ export function CreateQuestionForm({
   }
 
   return (
-    <section className="mt-8 overflow-hidden rounded-3xl border bg-white shadow-sm">
+    <section id="add-question" className="mt-8 scroll-mt-24 overflow-hidden rounded-3xl border bg-white shadow-sm">
       <div className="border-b bg-slate-50 px-7 py-5">
         <p className="text-xs font-bold uppercase tracking-[0.14em] text-teal-700">New question</p>
         <h2 className="mt-2 text-2xl font-black">Classify, then add the question</h2>

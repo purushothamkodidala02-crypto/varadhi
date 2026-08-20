@@ -29,6 +29,11 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       changeFrequency: "daily",
       priority: 0.9,
     },
+    {
+      url: absoluteUrl("/support"),
+      changeFrequency: "yearly",
+      priority: 0.5,
+    },
   ];
 
   const testPages: MetadataRoute.Sitemap = tests.map((test) => ({

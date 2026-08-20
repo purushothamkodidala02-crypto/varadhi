@@ -52,17 +52,33 @@ type CatalogTest = {
 
 export async function generateMetadata({ searchParams }: MockTestsPageProps): Promise<Metadata> {
   const filters = await searchParams;
+  const title = "State Exam Mock Tests for Telangana & Andhra Pradesh";
+  const description =
+    "Choose your state, exam and paper to find the right mock-test series. Practise Telangana and Andhra Pradesh exams in English and Telugu.";
   const isFiltered = Boolean(
     filters.state || filters.exam || filters.paper || filters.q || filters.type ||
       (filters.page && filters.page !== "1"),
   );
 
   return {
-    title: "State Exam Mock Tests for Telangana & Andhra Pradesh",
-    description:
-      "Choose your state, exam and paper to find the right mock-test series. Practise Telangana and Andhra Pradesh exams in English and Telugu.",
+    title,
+    description,
     alternates: { canonical: "/mock-tests" },
     robots: isFiltered ? { index: false, follow: true } : undefined,
+    openGraph: {
+      type: "website",
+      url: "/mock-tests",
+      title,
+      description,
+      siteName: "Varadhi Prep",
+      images: [{ url: "/opengraph-image", width: 1200, height: 630, alt: "Varadhi Prep state exam mock tests" }],
+    },
+    twitter: {
+      card: "summary_large_image",
+      title,
+      description,
+      images: ["/opengraph-image"],
+    },
   };
 }
 
