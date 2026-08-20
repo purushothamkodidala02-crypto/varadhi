@@ -12,8 +12,8 @@ export async function PublicHeader({ compact = false }: PublicHeaderProps) {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   const navigation = [
+    { href: "/", label: "Home", icon: "home" as const },
     { href: "/mock-tests", label: "Mock tests", icon: "tests" as const },
-    ...(!compact ? [{ href: "/#how-it-works", label: "How it works", icon: "guide" as const }] : []),
     { href: "/support", label: "Support", icon: "support" as const },
     ...(user ? [{ href: "/dashboard", label: "My progress", icon: "progress" as const }] : []),
   ];

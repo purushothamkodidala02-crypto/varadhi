@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useEffect, useId, useState } from "react";
 
-type NavigationIconName = "tests" | "guide" | "support" | "progress";
+type NavigationIconName = "home" | "tests" | "support" | "progress";
 
 type NavigationItem = {
   href: string;
@@ -106,13 +106,13 @@ export function PublicNavigationMenu({ items }: { items: NavigationItem[] }) {
 }
 
 const navigationToneStyles = {
+  home: {
+    link: "border-slate-200 bg-white text-slate-900 hover:border-slate-300 hover:bg-slate-50",
+    icon: "bg-slate-900 text-white",
+  },
   tests: {
     link: "border-teal-100 bg-teal-50 text-teal-900 hover:border-teal-200 hover:bg-teal-100",
     icon: "bg-teal-200/70 text-teal-800",
-  },
-  guide: {
-    link: "border-slate-200 bg-slate-50 text-slate-800 hover:bg-slate-100",
-    icon: "bg-slate-200 text-slate-800",
   },
   progress: {
     link: "border-slate-900 bg-slate-950 text-white hover:border-teal-400 hover:bg-slate-800",
@@ -125,8 +125,8 @@ const navigationToneStyles = {
 } as const;
 
 function NavigationIcon({ name }: { name: NavigationIconName }) {
+  if (name === "home") return <svg aria-hidden="true" viewBox="0 0 24 24" className="h-5 w-5 fill-none stroke-current stroke-[1.8]"><path d="m4 10 8-6 8 6v9.5h-6v-6h-4v6H4z" strokeLinejoin="round" /></svg>;
   if (name === "tests") return <svg aria-hidden="true" viewBox="0 0 24 24" className="h-5 w-5 fill-none stroke-current stroke-[1.8]"><path d="M7 3.5h8l3 3V20H7z" strokeLinejoin="round" /><path d="M15 3.5V7h3M9.5 11h6M9.5 14.5h6" strokeLinecap="round" /></svg>;
-  if (name === "guide") return <svg aria-hidden="true" viewBox="0 0 24 24" className="h-5 w-5 fill-none stroke-current stroke-[1.8]"><circle cx="12" cy="12" r="8.5" /><path d="M12 10.5V16M12 7.8v.2" strokeLinecap="round" /></svg>;
   if (name === "support") return <svg aria-hidden="true" viewBox="0 0 24 24" className="h-5 w-5 fill-none stroke-current stroke-[1.8]"><rect x="3.5" y="5.5" width="17" height="13" rx="2" /><path d="m5 7 7 5.5L19 7" strokeLinecap="round" strokeLinejoin="round" /></svg>;
   return <svg aria-hidden="true" viewBox="0 0 24 24" className="h-5 w-5 fill-none stroke-current stroke-[1.8]"><path d="M5 19V9m7 10V5m7 14v-7" strokeLinecap="round" /><path d="M3.5 19.5h17" strokeLinecap="round" /></svg>;
 }
