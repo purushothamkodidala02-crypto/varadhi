@@ -118,13 +118,15 @@ test("public pages expose route-specific SEO metadata and crawl targets", async 
 });
 
 test("permanent public slugs cover every catalogue level and legacy URLs redirect", async () => {
-  const [home, catalog, examRoute, testRoute, helpers, resolver, sitemap, migration] = await Promise.all([
+  const [home, catalog, examRoute, testRoute, helpers, resolver, requestRedirect, proxy, sitemap, migration] = await Promise.all([
     read("app/page.tsx"),
     read("app/mock-tests/page.tsx"),
     read("app/mock-tests/[id]/[exam]/page.tsx"),
     read("app/mock-tests/[id]/[exam]/[paper]/[test]/page.tsx"),
     read("lib/public-urls.ts"),
     read("lib/public-route-data.ts"),
+    read("lib/public-redirect.ts"),
+    read("proxy.ts"),
     read("app/sitemap.ts"),
     read("supabase/migrations/20260821193000_add_permanent_public_slug_history.sql"),
   ]);
@@ -141,6 +143,9 @@ test("permanent public slugs cover every catalogue level and legacy URLs redirec
   assert.match(testRoute, /generateMockTestMetadata/);
   assert.match(resolver, /public_slug_aliases/);
   assert.match(resolver, /getMockTestPublicContextById/);
+  assert.match(requestRedirect, /public_slug_aliases/);
+  assert.match(requestRedirect, /UUID_PATTERN/);
+  assert.match(proxy, /NextResponse\.redirect\(permanentDestination, 308\)/);
   assert.match(sitemap, /categoryUrl/);
   assert.match(sitemap, /subjectUrl/);
   assert.match(sitemap, /mockTestUrl/);

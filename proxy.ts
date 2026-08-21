@@ -1,5 +1,6 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
+import { resolvePublicPermanentRedirect } from "@/lib/public-redirect";
 
 function buildContentSecurityPolicy(nonce: string) {
   const isDevelopment = process.env.NODE_ENV === "development";
@@ -30,6 +31,10 @@ function buildContentSecurityPolicy(nonce: string) {
 }
 
 export async function proxy(request: NextRequest) {
+  const permanentDestination = await resolvePublicPermanentRedirect(request);
+  if (permanentDestination && permanentDestination.href !== request.nextUrl.href) {
+    return NextResponse.redirect(permanentDestination, 308);
+  }
   const nonce = btoa(crypto.randomUUID());
   const contentSecurityPolicy = buildContentSecurityPolicy(nonce);
   const requestHeaders = new Headers(request.headers);
