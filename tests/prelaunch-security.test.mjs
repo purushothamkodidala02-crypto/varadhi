@@ -362,6 +362,9 @@ test("mock-test question targets and destructive operations are database protect
   assert.match(importer, /questionMediaPath/);
   assert.match(assignments, /Fill remaining with latest/);
   assert.match(assignments, /moveAssignedQuestion/);
+  assert.match(assignments, /options=\{availableQuestions\.map/);
+  assert.match(assignments, /No unassigned Question matches those words/);
+  assert.doesNotMatch(assignments, /matchingQuestions\.slice/);
   assert.match(deleteAction, /delete_question_safely/);
   assert.match(deleteAction, /makeQuestionUnavailable/);
 });

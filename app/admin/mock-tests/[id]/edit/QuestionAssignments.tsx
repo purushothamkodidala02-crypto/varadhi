@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useActionState, useMemo, useState } from "react";
+import { useActionState, useState } from "react";
 import { SearchableSelect } from "@/components/admin/SearchableSelect";
 import { FormattedQuestionText } from "@/components/questions/FormattedQuestionText";
 import { PendingButtonContent } from "@/components/feedback/LoadingSpinner";
@@ -126,14 +126,7 @@ export function QuestionAssignments({
     assignQuestionWithTestId,
     initialState,
   );
-  const [questionSearch, setQuestionSearch] = useState("");
   const [selectedQuestionId, setSelectedQuestionId] = useState("");
-  const matchingQuestions = useMemo(() => {
-    const query = questionSearch.trim().toLowerCase();
-    return availableQuestions
-      .filter((question) => !query || question.text.toLowerCase().includes(query))
-      .slice(0, 100);
-  }, [availableQuestions, questionSearch]);
   const selectedQuestion = availableQuestions.find(
     (question) => question.id === selectedQuestionId,
   );
@@ -181,34 +174,19 @@ export function QuestionAssignments({
           <div className="mt-5 grid gap-4 md:grid-cols-6">
             <label className="block text-sm font-bold text-slate-800 md:col-span-6">
               Search the question bank
-              <input
-                type="search"
-                value={questionSearch}
-                onChange={(event) => {
-                  setQuestionSearch(event.target.value);
-                  setSelectedQuestionId("");
-                }}
-                placeholder="Type a word from the question..."
-                className="mt-2 w-full rounded-xl border px-4 py-3 font-normal"
-              />
-            </label>
-            <label className="block text-sm font-bold text-slate-800 md:col-span-6">
-              Choose question
               <SearchableSelect
                 name="question_id"
                 value={selectedQuestionId}
                 onChange={setSelectedQuestionId}
-                options={matchingQuestions.map((question) => ({
+                options={availableQuestions.map((question) => ({
                   value: question.id,
                   label: question.text,
                 }))}
-                placeholder={
-                  matchingQuestions.length === 0
-                    ? "No matching questions"
-                    : "Search and choose a question"
-                }
+                placeholder="Type words from a Question, then choose it"
                 disabled={availableQuestions.length === 0}
+                emptyMessage="No unassigned Question matches those words."
               />
+              <span className="mt-2 block text-xs font-normal text-slate-500">Searches all {availableQuestions.length} active, unassigned Questions available for this Mock Test.</span>
             </label>
             {selectedQuestion && (
               <div className="rounded-xl bg-teal-50 px-4 py-3 text-sm leading-6 text-teal-900 md:col-span-6">
