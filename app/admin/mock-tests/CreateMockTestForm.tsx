@@ -1,6 +1,7 @@
 "use client";
 
 import { useActionState, useMemo, useState } from "react";
+import { PendingButtonContent } from "@/components/feedback/LoadingSpinner";
 import { MockSymbol, StateSymbol } from "@/components/exams/CatalogSymbols";
 import { mockTestLabel } from "@/lib/exam-catalog";
 import { SearchableSelect } from "@/components/admin/SearchableSelect";
@@ -73,7 +74,7 @@ export function CreateMockTestForm({ states, categories, exams, specializations,
       <label className="block text-sm font-bold md:col-span-2">Description <span className="font-normal text-slate-500">(optional)</span><textarea name="description" rows={3} placeholder="Tell students what this mock covers" className="mt-2 w-full rounded-xl border px-4 py-3 font-normal" /></label>
       <label className="block text-sm font-bold">Duration in minutes<input name="duration_minutes" type="number" min="1" required defaultValue={paper?.duration ?? 150} key={paperId || "duration"} className="mt-2 w-full rounded-xl border px-4 py-3 font-normal" /></label>
       <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-4 text-sm text-emerald-950"><strong>Student access: Free</strong><p className="mt-1 leading-5">Paid tests stay disabled until a verified payment flow is available.</p><input type="hidden" name="access_type" value="free" /></div>
-      <div className="md:col-span-2"><button disabled={pending || !paperId || (scope === "subject" && !subjectId)} className="rounded-xl bg-slate-950 px-5 py-3 text-sm font-black text-white shadow-lg disabled:opacity-50">{pending ? "Creating draft…" : `Create ${paper ? mockTestLabel(nextSeries) : "mock test"}`}</button>{result.message && <p className={`mt-4 text-sm font-semibold ${result.success ? "text-emerald-700" : "text-red-700"}`}>{result.message}</p>}</div>
+      <div className="md:col-span-2"><button disabled={pending || !paperId || (scope === "subject" && !subjectId)} aria-busy={pending} className="rounded-xl bg-slate-950 px-5 py-3 text-sm font-black text-white shadow-lg disabled:opacity-50"><PendingButtonContent pending={pending} pendingLabel="Creating draft…">Create {paper ? mockTestLabel(nextSeries) : "mock test"}</PendingButtonContent></button>{result.message && <p aria-live="polite" className={`mt-4 text-sm font-semibold ${result.success ? "text-emerald-700" : "text-red-700"}`}>{result.message}</p>}</div>
     </form>
   </section>;
 }

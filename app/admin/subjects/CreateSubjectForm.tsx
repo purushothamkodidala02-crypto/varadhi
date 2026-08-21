@@ -1,6 +1,7 @@
 "use client";
 
 import { useActionState, useMemo, useState } from "react";
+import { PendingButtonContent } from "@/components/feedback/LoadingSpinner";
 import { SearchableSelect } from "@/components/admin/SearchableSelect";
 import { createSubjects, type CreateSubjectState } from "./actions";
 import { SubjectListInput } from "./SubjectListInput";
@@ -108,7 +109,7 @@ export function CreateSubjectForm({
         <SubjectListInput key={subjectResetKey} />
 
         <button disabled={pending || !paperId} className="rounded-xl bg-slate-950 px-5 py-3 text-sm font-bold text-white disabled:opacity-50">
-          {pending ? "Adding..." : "Add Subjects"}
+          <PendingButtonContent pending={pending} pendingLabel="Adding subjects…">Add Subjects</PendingButtonContent>
         </button>
         {state.message && <p aria-live="polite" className={`text-sm font-semibold ${state.success ? "text-emerald-700" : "text-red-700"}`}>{state.message}</p>}
       </form>

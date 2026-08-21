@@ -5,6 +5,7 @@ import { useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { PasswordInput } from "@/components/auth/PasswordInput";
 import { TurnstileChallenge } from "@/components/auth/TurnstileChallenge";
+import { LongPendingNotice, PendingButtonContent } from "@/components/feedback/LoadingSpinner";
 import { loginWithPassword, type LoginResult } from "./actions";
 
 type Notice = {
@@ -151,18 +152,22 @@ export function LoginForm({
           <PasswordInput id="current_password" required maxLength={72} autoComplete="current-password" value={password} onChange={(event) => setPassword(event.target.value)} placeholder="Enter your password" />
         </div>
         <TurnstileChallenge onToken={setCaptchaToken} resetKey={captchaResetKey} />
-        <button type="submit" disabled={loading || !captchaToken} className="w-full rounded-xl bg-slate-950 px-4 py-3 font-bold text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-50">
-          {loading ? "Signing in…" : "Sign in and continue"}
+        <button type="submit" disabled={loading || !captchaToken} aria-busy={loading} className="w-full rounded-xl bg-slate-950 px-4 py-3 font-bold text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-50">
+          <PendingButtonContent pending={loading} pendingLabel="Signing in…">Sign in and continue</PendingButtonContent>
         </button>
+        <LongPendingNotice pending={loading} />
         {notice && (
           <p aria-live="polite" className={`rounded-xl border px-4 py-3 text-sm font-medium ${noticeStyles[notice.tone]}`}>
             {notice.message}
           </p>
         )}
         {needsConfirmation && (
-          <button type="button" onClick={resendConfirmation} disabled={resending || !captchaToken} className="w-full rounded-xl border border-teal-200 bg-teal-50 px-4 py-3 text-sm font-bold text-teal-800 hover:bg-teal-100 disabled:opacity-50">
-            {resending ? "Requesting confirmation…" : "Resend confirmation email"}
-          </button>
+          <div>
+            <button type="button" onClick={resendConfirmation} disabled={resending || !captchaToken} aria-busy={resending} className="w-full rounded-xl border border-teal-200 bg-teal-50 px-4 py-3 text-sm font-bold text-teal-800 hover:bg-teal-100 disabled:opacity-50">
+              <PendingButtonContent pending={resending} pendingLabel="Requesting confirmation…">Resend confirmation email</PendingButtonContent>
+            </button>
+            <LongPendingNotice pending={resending} />
+          </div>
         )}
       </form>
       <div className="mt-6 border-t border-slate-100 pt-5">

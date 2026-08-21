@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useActionState, useEffect, useMemo, useRef, useState } from "react";
+import { PendingButtonContent } from "@/components/feedback/LoadingSpinner";
 import { createExam, type CreateExamState } from "./actions";
 
 type ExistingCategory = { id: string; stateId: string; name: string };
@@ -172,7 +173,7 @@ export function CreateExamForm({
           disabled={pending || Boolean(existingMatch)}
           className="rounded-lg bg-black px-5 py-3 font-medium text-white disabled:cursor-not-allowed disabled:opacity-50"
         >
-          {pending ? "Adding..." : "Add Exam Category"}
+          <PendingButtonContent pending={pending} pendingLabel="Adding category…">Add Exam Category</PendingButtonContent>
         </button>
 
         {state.message && (

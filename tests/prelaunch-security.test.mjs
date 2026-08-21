@@ -176,5 +176,68 @@ test("admins can export mock-test questions in the accepted import format", asyn
   assert.match(exportRoute, /profile\?\.role !== "admin"/);
   assert.match(exportRoute, /\.order\("question_order"\)/);
   assert.match(exportRoute, /application\/vnd\.openxmlformats-officedocument\.spreadsheetml\.sheet/);
-  assert.match(testList, /Download questions/);
+  assert.match(testList, /DownloadQuestionsButton/);
+});
+
+test("loading feedback is accessible and prevents duplicate operations", async () => {
+  const [
+    layout,
+    navigationProgress,
+    pendingSubmitButton,
+    routeLoading,
+    testStartActions,
+    testRunner,
+    downloadQuestions,
+    errorBoundary,
+  ] = await Promise.all([
+    read("app/layout.tsx"),
+    read("components/feedback/NavigationProgress.tsx"),
+    read("components/feedback/PendingSubmitButton.tsx"),
+    read("components/feedback/RouteLoading.tsx"),
+    read("app/mock-tests/[id]/TestStartActions.tsx"),
+    read("app/mock-tests/[id]/StudentTestRunner.tsx"),
+    read("app/admin/mock-tests/DownloadQuestionsButton.tsx"),
+    read("app/error.tsx"),
+  ]);
+
+  assert.match(layout, /<NavigationProgress/);
+  assert.match(navigationProgress, /role="status"/);
+  assert.match(navigationProgress, /aria-live="polite"/);
+  assert.match(navigationProgress, /motion-reduce:animate-none/);
+  assert.match(navigationProgress, /This is taking longer than expected/);
+  assert.match(pendingSubmitButton, /useFormStatus/);
+  assert.match(pendingSubmitButton, /disabled=\{disabled \|\| pending\}/);
+  assert.match(pendingSubmitButton, /aria-busy=\{pending\}/);
+  assert.match(routeLoading, /aria-busy="true"/);
+  assert.match(routeLoading, /motion-reduce:animate-none/);
+  assert.match(testStartActions, /pendingLabel="Starting test…"/);
+  assert.match(testStartActions, /pendingLabel="Resuming test…"/);
+  assert.match(testRunner, /aria-busy=\{submitting\}/);
+  assert.match(testRunner, /PendingButtonContent/);
+  assert.match(downloadQuestions, /if \(pending\) return/);
+  assert.match(downloadQuestions, /disabled=\{pending\}/);
+  assert.match(downloadQuestions, /try again/i);
+  assert.match(errorBoundary, /<RetryButton/);
+});
+
+test("student, authentication, and admin route groups have loading boundaries", async () => {
+  const loadingFiles = [
+    "app/loading.tsx",
+    "app/mock-tests/loading.tsx",
+    "app/mock-tests/[id]/loading.tsx",
+    "app/mock-tests/[id]/attempt/loading.tsx",
+    "app/dashboard/loading.tsx",
+    "app/login/loading.tsx",
+    "app/register/loading.tsx",
+    "app/forgot-password/loading.tsx",
+    "app/reset-password/loading.tsx",
+    "app/recover-account/loading.tsx",
+    "app/admin-mfa/loading.tsx",
+    "app/admin/loading.tsx",
+  ];
+
+  const boundaries = await Promise.all(loadingFiles.map(read));
+  for (const boundary of boundaries) {
+    assert.match(boundary, /RouteLoading/);
+  }
 });

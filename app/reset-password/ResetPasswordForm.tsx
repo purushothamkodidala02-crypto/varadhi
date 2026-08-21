@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { PasswordInput } from "@/components/auth/PasswordInput";
+import { LongPendingNotice, PendingButtonContent } from "@/components/feedback/LoadingSpinner";
 import { MAX_PASSWORD_LENGTH, MIN_PASSWORD_LENGTH, passwordLengthMessage } from "@/lib/auth/password-policy";
 
 export function ResetPasswordForm({
@@ -214,16 +215,14 @@ export function ResetPasswordForm({
             checkingMfa ||
             (mfaRequired && (!factorId || mfaCode.length !== 6))
           }
+          aria-busy={loading}
           className="w-full rounded-xl bg-slate-950 px-4 py-3 font-bold text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-50"
         >
-          {loading
-            ? mfaRequired
-              ? "Verifying and updating…"
-              : "Updating password…"
-            : mfaRequired
-              ? "Verify code and save new password"
-              : "Save new password"}
+          <PendingButtonContent pending={loading} pendingLabel={mfaRequired ? "Verifying and updating…" : "Updating password…"}>
+            {mfaRequired ? "Verify code and save new password" : "Save new password"}
+          </PendingButtonContent>
         </button>
+        <LongPendingNotice pending={loading} />
         {error && (
           <p
             aria-live="polite"

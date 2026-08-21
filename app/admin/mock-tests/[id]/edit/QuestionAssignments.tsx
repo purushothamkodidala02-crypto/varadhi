@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useActionState, useMemo, useState } from "react";
 import { SearchableSelect } from "@/components/admin/SearchableSelect";
 import { FormattedQuestionText } from "@/components/questions/FormattedQuestionText";
+import { PendingButtonContent } from "@/components/feedback/LoadingSpinner";
 import {
   assignQuestion,
   removeAssignedQuestion,
@@ -65,9 +66,10 @@ function RemoveAssignmentButton({
         type="button"
         onClick={removeAssignment}
         disabled={pending}
+        aria-busy={pending}
         className="rounded-lg px-2.5 py-1.5 text-sm font-bold text-red-700 hover:bg-red-50 disabled:opacity-50"
       >
-        {pending ? "Removing..." : "Remove"}
+        <PendingButtonContent pending={pending} pendingLabel="Removing…">Remove</PendingButtonContent>
       </button>
       {message && (
         <p className="mt-1 max-w-48 text-right text-xs leading-5 text-red-700">
@@ -230,9 +232,10 @@ export function QuestionAssignments({
             <button
               type="submit"
               disabled={pending || !selectedQuestionId}
+              aria-busy={pending}
               className="rounded-xl bg-slate-950 px-5 py-3 text-sm font-bold text-white hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-50"
             >
-              {pending ? "Adding question..." : "Add to mock test"}
+              <PendingButtonContent pending={pending} pendingLabel="Adding question…">Add to mock test</PendingButtonContent>
             </button>
             <p className="text-sm text-slate-500">
               Draft tests can be changed until you publish them.

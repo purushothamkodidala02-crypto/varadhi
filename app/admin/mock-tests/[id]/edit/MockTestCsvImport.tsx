@@ -1,6 +1,7 @@
 "use client";
 
 import { useActionState } from "react";
+import { LongPendingNotice, PendingButtonContent } from "@/components/feedback/LoadingSpinner";
 import {
   importQuestionsIntoMockTest,
   type ImportQuestionsState,
@@ -83,10 +84,12 @@ export function MockTestCsvImport({
           <div className="mt-5 flex flex-wrap items-center gap-4">
             <button
               disabled={pending}
+              aria-busy={pending}
               className="rounded-xl bg-teal-700 px-5 py-3 text-sm font-bold text-white hover:bg-teal-800 disabled:cursor-not-allowed disabled:opacity-50"
             >
-              {pending ? "Checking and building test..." : "Import file and add to mock test"}
+              <PendingButtonContent pending={pending} pendingLabel="Checking and building test…">Import file and add to mock test</PendingButtonContent>
             </button>
+            <LongPendingNotice pending={pending} />
             <p className="text-sm text-slate-500">You can still add or remove individual Questions below.</p>
           </div>
 

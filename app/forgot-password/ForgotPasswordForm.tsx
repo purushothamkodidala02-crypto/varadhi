@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { TurnstileChallenge } from "@/components/auth/TurnstileChallenge";
+import { LongPendingNotice, PendingButtonContent } from "@/components/feedback/LoadingSpinner";
 
 type Notice = {
   tone: "error" | "success";
@@ -104,10 +105,12 @@ export function ForgotPasswordForm({
         <button
           type="submit"
           disabled={loading || !captchaToken}
+          aria-busy={loading}
           className="w-full rounded-xl bg-slate-950 px-4 py-3 font-bold text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-50"
         >
-          {loading ? "Sending reset link…" : "Send password-reset link"}
+          <PendingButtonContent pending={loading} pendingLabel="Sending reset link…">Send password-reset link</PendingButtonContent>
         </button>
+        <LongPendingNotice pending={loading} />
         {notice && (
           <p
             aria-live="polite"

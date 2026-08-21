@@ -1,6 +1,7 @@
 "use client";
 
 import { useActionState, useMemo, useState } from "react";
+import { PendingButtonContent } from "@/components/feedback/LoadingSpinner";
 import { SearchableSelect } from "@/components/admin/SearchableSelect";
 import { QuestionImageField } from "@/components/admin/QuestionImageField";
 import type { QuestionLifecycle } from "@/types/question";
@@ -144,7 +145,7 @@ export function CreateQuestionForm({
           </section>
         </div>
         <div className="mt-6">
-          <button disabled={pending || !subjectId || !lifecycle || !correctAnswer} className="rounded-xl bg-slate-950 px-5 py-3 text-sm font-bold text-white disabled:opacity-50">{pending ? "Saving..." : "Save Question"}</button>
+          <button disabled={pending || !subjectId || !lifecycle || !correctAnswer} aria-busy={pending} className="rounded-xl bg-slate-950 px-5 py-3 text-sm font-bold text-white disabled:opacity-50"><PendingButtonContent pending={pending} pendingLabel="Saving question…">Save Question</PendingButtonContent></button>
           {state.message && <p className={`mt-4 text-sm font-semibold ${state.success ? "text-emerald-700" : "text-red-700"}`}>{state.message}</p>}
         </div>
       </form>

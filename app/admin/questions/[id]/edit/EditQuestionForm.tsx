@@ -1,6 +1,7 @@
 "use client";
 
 import { useActionState, useMemo, useState } from "react";
+import { PendingButtonContent } from "@/components/feedback/LoadingSpinner";
 import { SearchableSelect } from "@/components/admin/SearchableSelect";
 import { QuestionImageField } from "@/components/admin/QuestionImageField";
 import type { Question, QuestionLifecycle } from "@/types/question";
@@ -151,8 +152,8 @@ export function EditQuestionForm({
           <input name="is_active" type="checkbox" defaultChecked={question.is_active} className="h-4 w-4" />
           Ready to use in mock tests
         </label>
-        <button disabled={pending} className="rounded-xl bg-slate-950 px-5 py-3 text-sm font-bold text-white disabled:opacity-50">
-          {pending ? "Saving..." : "Save Question"}
+        <button disabled={pending} aria-busy={pending} className="rounded-xl bg-slate-950 px-5 py-3 text-sm font-bold text-white disabled:opacity-50">
+          <PendingButtonContent pending={pending} pendingLabel="Saving question…">Save Question</PendingButtonContent>
         </button>
         {state.message && (
           <p className={`text-sm font-semibold ${state.success ? "text-emerald-700" : "text-red-700"}`}>

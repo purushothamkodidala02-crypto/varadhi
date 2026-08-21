@@ -1,6 +1,7 @@
 "use client";
 
 import { useActionState, useMemo, useState } from "react";
+import { LongPendingNotice, PendingButtonContent } from "@/components/feedback/LoadingSpinner";
 import { SearchableSelect } from "@/components/admin/SearchableSelect";
 import { importQuestionsFromCsv, type ImportQuestionsState } from "./import-actions";
 
@@ -56,7 +57,8 @@ export function QuestionCsvImport({ categories, exams, specializations, papers }
             <li>The Subject name must already exist under the selected Paper.</li>
           </ul>
         </details>
-        <button disabled={pending || !paperId} className="mt-6 rounded-xl bg-teal-700 px-5 py-3 text-sm font-bold text-white hover:bg-teal-800 disabled:cursor-not-allowed disabled:opacity-50">{pending ? "Checking and importing..." : "Import Excel or CSV"}</button>
+        <button disabled={pending || !paperId} aria-busy={pending} className="mt-6 rounded-xl bg-teal-700 px-5 py-3 text-sm font-bold text-white hover:bg-teal-800 disabled:cursor-not-allowed disabled:opacity-50"><PendingButtonContent pending={pending} pendingLabel="Checking and importing…">Import Excel or CSV</PendingButtonContent></button>
+        <LongPendingNotice pending={pending} />
         {state.message && <p aria-live="polite" className={`mt-4 text-sm font-semibold ${state.success ? "text-emerald-700" : "text-red-700"}`}>{state.message}</p>}
       </form>
     </section>

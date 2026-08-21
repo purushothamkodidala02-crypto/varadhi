@@ -1,6 +1,7 @@
 "use client";
 
 import { useActionState } from "react";
+import { PendingButtonContent } from "@/components/feedback/LoadingSpinner";
 import type { Exam } from "@/types/exam";
 import {
   updateExam,
@@ -133,7 +134,7 @@ export function EditExamForm({
           disabled={pending}
           className="rounded-lg bg-black px-5 py-3 font-medium text-white disabled:cursor-not-allowed disabled:opacity-50"
         >
-          {pending ? "Saving..." : "Save Changes"}
+          <PendingButtonContent pending={pending} pendingLabel="Saving changes…">Save Changes</PendingButtonContent>
         </button>
 
         {state.message && (

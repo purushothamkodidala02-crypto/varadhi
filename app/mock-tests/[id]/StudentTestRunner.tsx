@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { containsTeluguText, FormattedQuestionText } from "@/components/questions/FormattedQuestionText";
 import { QuestionMedia } from "@/components/questions/QuestionMedia";
+import { LoadingSpinner, LongPendingNotice, PendingButtonContent } from "@/components/feedback/LoadingSpinner";
 import { pauseAttempt, resumeAttempt, saveAttemptProgress, saveReviewState, submitAttempt, syncAttemptTimer, type SubmitAttemptResult } from "./attempt-actions";
 
 type Answer = "A" | "B" | "C" | "D";
@@ -272,7 +273,7 @@ function QuestionNavigator({ questions, currentIndex, answers, reviewIds, locked
 }
 
 function SubmissionDialog({ answered, review, unanswered, submitting, onCancel, onSubmit }: { answered: number; review: number; unanswered: number; submitting: boolean; onCancel: () => void; onSubmit: () => void }) {
-  return <div className="fixed inset-0 z-50 grid place-items-center bg-slate-950/70 px-5" role="dialog" aria-modal="true"><section className="w-full max-w-lg rounded-3xl bg-white p-7 shadow-2xl"><p className="text-xs font-bold uppercase tracking-[0.14em] text-teal-700">Final submission</p><h2 className="mt-2 text-2xl font-black">Finish this mock test?</h2><p className="mt-3 text-sm text-slate-600">You cannot change your answers after submission.</p><div className="mt-6 grid grid-cols-3 gap-3"><Metric value={answered} label="Answered" tone="text-emerald-800" /><Metric value={review} label="Review" tone="text-amber-800" /><Metric value={unanswered} label="Unanswered" tone="text-slate-700" /></div>{unanswered > 0 && <p className="mt-5 rounded-xl bg-amber-50 p-4 text-sm font-semibold text-amber-900">You still have {unanswered} unanswered question{unanswered === 1 ? "" : "s"}.</p>}<div className="mt-7 flex justify-end gap-3"><button type="button" onClick={onCancel} className="rounded-xl border px-4 py-3 text-sm font-bold">Continue test</button><button type="button" onClick={onSubmit} disabled={submitting} className="rounded-xl bg-teal-700 px-4 py-3 text-sm font-bold text-white disabled:opacity-50">{submitting ? "Submitting…" : "Submit test"}</button></div></section></div>;
+  return <div className="fixed inset-0 z-50 grid place-items-center bg-slate-950/70 px-5" role="dialog" aria-modal="true" aria-busy={submitting}><section className="w-full max-w-lg rounded-3xl bg-white p-7 shadow-2xl"><p className="text-xs font-bold uppercase tracking-[0.14em] text-teal-700">Final submission</p><h2 className="mt-2 text-2xl font-black">Finish this mock test?</h2><p className="mt-3 text-sm text-slate-600">You cannot change your answers after submission.</p><div className="mt-6 grid grid-cols-3 gap-3"><Metric value={answered} label="Answered" tone="text-emerald-800" /><Metric value={review} label="Review" tone="text-amber-800" /><Metric value={unanswered} label="Unanswered" tone="text-slate-700" /></div>{unanswered > 0 && <p className="mt-5 rounded-xl bg-amber-50 p-4 text-sm font-semibold text-amber-900">You still have {unanswered} unanswered question{unanswered === 1 ? "" : "s"}.</p>}<div className="mt-7 flex justify-end gap-3"><button type="button" onClick={onCancel} disabled={submitting} className="rounded-xl border px-4 py-3 text-sm font-bold disabled:opacity-50">Continue test</button><button type="button" onClick={onSubmit} disabled={submitting} aria-busy={submitting} className="min-w-36 rounded-xl bg-teal-700 px-4 py-3 text-sm font-bold text-white disabled:cursor-wait disabled:opacity-70"><PendingButtonContent pending={submitting} pendingLabel="Submitting…">Submit test</PendingButtonContent></button></div><LongPendingNotice pending={submitting} /></section></div>;
 }
 
 function SubmissionResult({ mockTestId, title, result, onRetry }: { mockTestId: string; title: string; result: SubmitAttemptResult; onRetry: () => void }) {
@@ -288,7 +289,7 @@ function PracticeTimerControl({ remaining, paused, busy, disabled, onToggle }: {
   return (
     <div className={`flex items-stretch rounded-2xl border p-1 shadow-inner transition ${paused ? "border-teal-400/60 bg-teal-300/10" : urgent ? "border-red-400/50 bg-red-500/10" : "border-slate-700 bg-slate-900"}`}>
       <button type="button" onClick={onToggle} disabled={disabled} aria-label={paused ? "Resume test timer" : "Pause test timer"} title={paused ? "Resume timer" : "Pause timer"} className={`inline-flex min-w-11 items-center justify-center gap-2 rounded-xl px-3 text-xs font-black transition disabled:cursor-not-allowed disabled:opacity-50 ${paused ? "bg-teal-300 text-slate-950 hover:bg-teal-200" : "text-white hover:bg-slate-800"}`}>
-        {paused ? (
+        {busy ? <LoadingSpinner className="h-4 w-4" /> : paused ? (
           <svg aria-hidden="true" viewBox="0 0 24 24" className="h-4 w-4 fill-current"><path d="M8 5.2v13.6c0 .9 1 1.4 1.7.9l9.1-6.8a1.1 1.1 0 0 0 0-1.8L9.7 4.3A1.1 1.1 0 0 0 8 5.2Z" /></svg>
         ) : (
           <svg aria-hidden="true" viewBox="0 0 24 24" className="h-4 w-4 fill-current"><rect x="6" y="5" width="4.5" height="14" rx="1.2" /><rect x="13.5" y="5" width="4.5" height="14" rx="1.2" /></svg>

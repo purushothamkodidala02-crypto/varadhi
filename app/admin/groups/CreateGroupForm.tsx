@@ -1,6 +1,7 @@
 "use client";
 
 import { useActionState, useEffect, useMemo, useRef, useState } from "react";
+import { PendingButtonContent } from "@/components/feedback/LoadingSpinner";
 import { SearchableSelect } from "@/components/admin/SearchableSelect";
 import { createGroup, type CreateGroupState } from "./actions";
 import { PaperListInput } from "./PaperListInput";
@@ -82,7 +83,7 @@ export function CreateGroupForm({ categories, existingExams, initialCategoryId =
         <SpecializationPapersInput />
         <PaperListInput inputName="papers_json" initialRows={0} title="Direct / common Papers" description="Add Papers that belong directly to this Exam. Use this for Group 1, Group 2, and Group 4, or for a Paper shared by every Specialisation." />
         <label className="flex items-center gap-3"><input name="is_active" type="checkbox" defaultChecked className="h-4 w-4" /><span className="text-sm font-medium">Available to students</span></label>
-        <button type="submit" disabled={pending || categories.length === 0 || !examId || duplicate} className="rounded-lg bg-slate-950 px-5 py-3 font-bold text-white disabled:cursor-not-allowed disabled:opacity-50">{pending ? "Creating..." : "Create Exam"}</button>
+        <button type="submit" disabled={pending || categories.length === 0 || !examId || duplicate} aria-busy={pending} className="rounded-lg bg-slate-950 px-5 py-3 font-bold text-white disabled:cursor-not-allowed disabled:opacity-50"><PendingButtonContent pending={pending} pendingLabel="Creating exam…">Create Exam</PendingButtonContent></button>
         {state.message && <p aria-live="polite" className={state.success ? "text-sm font-semibold text-green-700" : "text-sm font-semibold text-red-600"}>{state.message}</p>}
       </form>
     </section>

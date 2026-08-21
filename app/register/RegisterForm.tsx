@@ -5,6 +5,7 @@ import { useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { PasswordInput } from "@/components/auth/PasswordInput";
 import { TurnstileChallenge } from "@/components/auth/TurnstileChallenge";
+import { LongPendingNotice, PendingButtonContent } from "@/components/feedback/LoadingSpinner";
 import { MAX_PASSWORD_LENGTH, MIN_PASSWORD_LENGTH } from "@/lib/auth/password-policy";
 
 type Notice = {
@@ -179,13 +180,15 @@ export function RegisterForm({ nextPath }: { nextPath: string }) {
             <Link href={loginHref} className="rounded-xl bg-slate-950 px-4 py-3 text-center text-sm font-bold text-white hover:bg-slate-800">
               Go to sign in
             </Link>
-            <button type="button" onClick={resendConfirmation} disabled={resending || !captchaToken} className="rounded-xl border px-4 py-3 text-sm font-bold text-slate-700 hover:bg-slate-50 disabled:opacity-50">
-              {resending ? "Requesting…" : "Resend email"}
+            <button type="button" onClick={resendConfirmation} disabled={resending || !captchaToken} aria-busy={resending} className="rounded-xl border px-4 py-3 text-sm font-bold text-slate-700 hover:bg-slate-50 disabled:opacity-50">
+              <PendingButtonContent pending={resending} pendingLabel="Requesting…">Resend email</PendingButtonContent>
             </button>
+            <LongPendingNotice pending={resending} />
           </div>
           <button type="button" onClick={useDifferentEmail} className="mt-4 w-full text-sm font-bold text-teal-700 hover:text-teal-800">
             Use a different email
           </button>
+          <LongPendingNotice pending={loading} />
         </div>
       ) : (
         <form onSubmit={handleRegister} className="mt-7 space-y-5">
@@ -203,9 +206,10 @@ export function RegisterForm({ nextPath }: { nextPath: string }) {
             <span className="mt-2 block text-xs font-normal text-slate-500">Minimum {MIN_PASSWORD_LENGTH} characters. A longer password or short phrase is safer.</span>
           </label>
           <TurnstileChallenge onToken={setCaptchaToken} resetKey={captchaResetKey} />
-          <button type="submit" disabled={loading || !captchaToken} className="w-full rounded-xl bg-slate-950 px-4 py-3 font-bold text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-50">
-            {loading ? "Creating account…" : "Create free account"}
+          <button type="submit" disabled={loading || !captchaToken} aria-busy={loading} className="w-full rounded-xl bg-slate-950 px-4 py-3 font-bold text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-50">
+            <PendingButtonContent pending={loading} pendingLabel="Creating account…">Create free account</PendingButtonContent>
           </button>
+          <LongPendingNotice pending={loading} />
           {notice && (
             <p aria-live="polite" className={`rounded-xl border px-4 py-3 text-sm font-medium ${noticeStyles[notice.tone]}`}>
               {notice.message}

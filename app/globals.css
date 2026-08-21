@@ -67,3 +67,8 @@ button,
 a {
   -webkit-tap-highlight-color: transparent;
 }
+@keyframes navigation-progress {
+  0% { transform: translateX(-110%); }
+  55% { transform: translateX(150%); }
+  100% { transform: translateX(330%); }
+}

@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { PendingSubmitButton } from "@/components/feedback/PendingSubmitButton";
 import { beginMockTest } from "./start-actions";
 
 export function TestStartActions({
@@ -27,12 +28,9 @@ export function TestStartActions({
     const startAction = beginMockTest.bind(null, testId, "resume");
     return (
       <form action={startAction} className="mt-6">
-        <button
-          type="submit"
-          className="block w-full rounded-xl bg-teal-300 px-5 py-3.5 text-center font-black text-slate-950 hover:bg-teal-200"
-        >
+        <PendingSubmitButton pendingLabel="Starting test…" className="block w-full rounded-xl bg-teal-300 px-5 py-3.5 text-center font-black text-slate-950 hover:bg-teal-200 disabled:cursor-wait disabled:opacity-70">
           Start test
-        </button>
+        </PendingSubmitButton>
       </form>
     );
   }
@@ -43,12 +41,9 @@ export function TestStartActions({
   return (
     <div className="mt-6 grid gap-3">
       <form action={resumeAction}>
-        <button
-          type="submit"
-          className="block w-full rounded-xl bg-teal-300 px-5 py-3.5 text-center font-black text-slate-950 hover:bg-teal-200"
-        >
+        <PendingSubmitButton pendingLabel="Resuming test…" className="block w-full rounded-xl bg-teal-300 px-5 py-3.5 text-center font-black text-slate-950 hover:bg-teal-200 disabled:cursor-wait disabled:opacity-70">
           Resume test
-        </button>
+        </PendingSubmitButton>
       </form>
       <form
         action={restartAction}
@@ -62,12 +57,9 @@ export function TestStartActions({
           }
         }}
       >
-        <button
-          type="submit"
-          className="block w-full rounded-xl border border-slate-600 px-5 py-3.5 text-center font-black text-white hover:border-white hover:bg-white/10"
-        >
+        <PendingSubmitButton pendingLabel="Restarting test…" className="block w-full rounded-xl border border-slate-600 px-5 py-3.5 text-center font-black text-white hover:border-white hover:bg-white/10 disabled:cursor-wait disabled:opacity-70">
           Start test
-        </button>
+        </PendingSubmitButton>
       </form>
     </div>
   );

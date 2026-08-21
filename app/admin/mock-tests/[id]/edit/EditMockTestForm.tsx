@@ -1,6 +1,7 @@
 "use client";
 
 import { useActionState, useMemo, useState } from "react";
+import { PendingButtonContent } from "@/components/feedback/LoadingSpinner";
 import { SearchableSelect } from "@/components/admin/SearchableSelect";
 import type { MockTest } from "@/types/mock-test";
 import { mockTestLabel } from "@/lib/exam-catalog";
@@ -126,9 +127,10 @@ export function EditMockTestForm({
         <div className="md:col-span-2">
           <button
             disabled={pending}
+            aria-busy={pending}
             className="rounded-xl bg-slate-950 px-5 py-3 text-sm font-bold text-white disabled:opacity-50"
           >
-            {pending ? "Saving..." : "Save Mock Test"}
+            <PendingButtonContent pending={pending} pendingLabel="Saving mock test…">Save Mock Test</PendingButtonContent>
           </button>
           {state.message && (
             <p

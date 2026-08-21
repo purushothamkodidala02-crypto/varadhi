@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import type { MockTestStatus } from "@/types/mock-test";
+import { PendingButtonContent } from "@/components/feedback/LoadingSpinner";
 import { archiveMockTest, deleteDraftMockTest, publishMockTest, restoreMockTestAsDraft } from "./manage-actions";
 
 export function MockTestManagementButtons({ mockTestId, mockTestTitle, status, ready }: { mockTestId: string; mockTestTitle: string; status: MockTestStatus; ready: boolean }) {
@@ -30,5 +31,5 @@ export function MockTestManagementButtons({ mockTestId, mockTestTitle, status, r
 }
 
 function ActionButton({ pending, disabled = false, onClick, label, className, message }: { pending: boolean; disabled?: boolean; onClick: () => void; label: string; className: string; message?: string }) {
-  return <div><button type="button" onClick={onClick} disabled={pending || disabled} className={`rounded-lg px-3 py-2 text-sm font-bold disabled:cursor-not-allowed disabled:opacity-45 ${className}`}>{pending ? "Working…" : label}</button>{message && <p className="mt-2 max-w-64 text-xs text-red-700">{message}</p>}</div>;
+  return <div><button type="button" onClick={onClick} disabled={pending || disabled} aria-busy={pending} className={`rounded-lg px-3 py-2 text-sm font-bold disabled:cursor-not-allowed disabled:opacity-45 ${className}`}><PendingButtonContent pending={pending} pendingLabel="Working…">{label}</PendingButtonContent></button>{message && <p aria-live="polite" className="mt-2 max-w-64 text-xs text-red-700">{message}</p>}</div>;
 }
