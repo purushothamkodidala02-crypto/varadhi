@@ -10,7 +10,7 @@ export const getHomeCatalogData = unstable_cache(
       await Promise.all([
         supabase.from("exam_states").select("id, name, code, slug, description, display_order").eq("is_active", true).order("display_order"),
         supabase.from("exams").select("id, state_id, name").eq("is_active", true).order("display_order"),
-        supabase.from("exam_groups").select("id, exam_id, name").eq("is_active", true).order("display_order"),
+        supabase.from("exam_groups").select("id, exam_id, name, slug").eq("is_active", true).order("display_order"),
         supabase.from("papers").select("id, exam_group_id").eq("is_active", true),
         supabase.from("mock_tests").select("id, paper_id").eq("status", "published").eq("access_type", "free"),
       ]);

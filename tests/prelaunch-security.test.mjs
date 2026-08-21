@@ -117,6 +117,28 @@ test("public pages expose route-specific SEO metadata and crawl targets", async 
   assert.match(robots, /host:\s*absoluteUrl\("\/"\)/);
 });
 
+test("exam collections use readable indexable URLs while legacy IDs redirect", async () => {
+  const [home, catalog, collectionRoute, helpers, sitemap] = await Promise.all([
+    read("app/page.tsx"),
+    read("app/mock-tests/page.tsx"),
+    read("app/mock-tests/[id]/[exam]/page.tsx"),
+    read("lib/exam-catalog.ts"),
+    read("app/sitemap.ts"),
+  ]);
+
+  assert.match(helpers, /examCollectionSlug/);
+  assert.match(helpers, /replace\(\/\\s\*\\\(\[\^\)\]\*\\\)\\s\*\$\//);
+  assert.match(helpers, /`\$\{slug\}-mock-tests`/);
+  assert.match(home, /href=\{examCollectionPath\(state\?\.slug/);
+  assert.doesNotMatch(home, /exam=\$\{exam\.id\}/);
+  assert.match(catalog, /examCollectionSlug\(exam\.name\) === filters\.exam/);
+  assert.match(catalog, /redirect\(examCollectionHref/);
+  assert.match(collectionRoute, /alternates:\s*\{ canonical \}/);
+  assert.match(collectionRoute, /Mock Tests in/);
+  assert.match(sitemap, /collectionPages/);
+  assert.match(sitemap, /examCollectionPath\(state\.slug, exam\.name\)/);
+});
+
 test("navigation and question-management links remain accessible", async () => {
   const [navigation, createQuestion, packageJson] = await Promise.all([
     read("components/site/PublicNavigationMenu.tsx"),

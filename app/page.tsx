@@ -5,6 +5,7 @@ import { ExamSymbol, MockSymbol, StateSymbol } from "@/components/exams/CatalogS
 import { JsonLd } from "@/components/seo/JsonLd";
 import { PublicHeader } from "@/components/site/PublicHeader";
 import { getHomeCatalogData } from "@/lib/catalog-data";
+import { examCollectionPath } from "@/lib/exam-catalog";
 import { absoluteUrl, SITE_DESCRIPTION } from "@/lib/site";
 
 export const metadata: Metadata = {
@@ -111,7 +112,7 @@ export default async function Home() {
             const category = categoryById.get(exam.exam_id);
             const state = states.find((item) => item.id === category?.state_id);
             const paperCount = papers.filter((paper) => paper.exam_group_id === exam.id).length;
-            return <Link key={exam.id} href={`/mock-tests?state=${state?.slug ?? ""}&exam=${exam.id}`} className="group rounded-2xl border bg-white p-5 transition hover:border-teal-300 hover:shadow-lg"><div className="flex items-center justify-between"><span className="grid h-10 w-10 place-items-center rounded-xl bg-slate-100 text-slate-700"><ExamSymbol name={exam.name} className="h-5 w-5" /></span><span className="text-[10px] font-black uppercase tracking-wide text-teal-700">{state?.code} · {category?.name}</span></div><h3 className="font-display mt-4 leading-6">{exam.name}</h3><p className="mt-2 text-xs font-semibold text-slate-500">{paperCount} papers · {testCountByExam.get(exam.id)} tests</p></Link>;
+            return <Link key={exam.id} href={examCollectionPath(state?.slug ?? "", exam.name)} className="group rounded-2xl border bg-white p-5 transition hover:border-teal-300 hover:shadow-lg"><div className="flex items-center justify-between"><span className="grid h-10 w-10 place-items-center rounded-xl bg-slate-100 text-slate-700"><ExamSymbol name={exam.name} className="h-5 w-5" /></span><span className="text-[10px] font-black uppercase tracking-wide text-teal-700">{state?.code} · {category?.name}</span></div><h3 className="font-display mt-4 leading-6">{exam.name}</h3><p className="mt-2 text-xs font-semibold text-slate-500">{paperCount} papers · {testCountByExam.get(exam.id)} tests</p></Link>;
           })}</div></div>}
         </div>
       </section>

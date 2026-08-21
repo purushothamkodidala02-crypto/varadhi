@@ -31,6 +31,16 @@ export function toCatalogSlug(value: string) {
     .replace(/^-+|-+$/g, "");
 }
 
+export function examCollectionSlug(examName: string) {
+  const descriptiveName = examName.replace(/\s*\([^)]*\)\s*$/, "");
+  const slug = toCatalogSlug(descriptiveName);
+  return slug.endsWith("-mock-tests") ? slug : `${slug}-mock-tests`;
+}
+
+export function examCollectionPath(stateSlug: string, examName: string) {
+  return `/mock-tests/${toCatalogSlug(stateSlug)}/${examCollectionSlug(examName)}`;
+}
+
 export function inferExamKind(name: string) {
   const normalized = name.toLowerCase();
   if (/police|constable|\bsi\b|sub[- ]?inspector/.test(normalized)) return "police" as const;

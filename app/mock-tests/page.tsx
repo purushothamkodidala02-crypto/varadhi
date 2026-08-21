@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { redirect } from "next/navigation";
 import {
   ExamSymbol,
   MockSymbol,
@@ -8,10 +9,10 @@ import {
 } from "@/components/exams/CatalogSymbols";
 import { PublicHeader } from "@/components/site/PublicHeader";
 import { getMockTestCatalogData } from "@/lib/catalog-data";
-import { mockTestLabel } from "@/lib/exam-catalog";
+import { examCollectionPath, examCollectionSlug, mockTestLabel } from "@/lib/exam-catalog";
 import { buildPaperDisplayMap, type OrderedPaper } from "@/lib/papers";
 
-type Filters = {
+export type Filters = {
   state?: string;
   exam?: string;
   paper?: string;
@@ -20,7 +21,9 @@ type Filters = {
   page?: string;
 };
 
-type MockTestsPageProps = { searchParams: Promise<Filters> };
+export type MockTestsPageProps = {
+  searchParams: Promise<Filters>;
+};
 
 type MockTestStats = {
   mock_test_id: string;
@@ -91,6 +94,16 @@ function catalogHref(filters: Filters) {
   return `/mock-tests${query ? `?${query}` : ""}`;
 }
 
+function examCollectionHref(stateSlug: string, examName: string, filters: Filters = {}) {
+  const params = new URLSearchParams();
+  for (const key of ["paper", "q", "type", "page"] as const) {
+    const value = filters[key];
+    if (value && value !== "all") params.set(key, value);
+  }
+  const query = params.toString();
+  return `${examCollectionPath(stateSlug, examName)}${query ? `?${query}` : ""}`;
+}
+
 export default async function MockTestsPage({ searchParams }: MockTestsPageProps) {
   const filters = await searchParams;
   const catalog = await getMockTestCatalogData();
@@ -125,7 +138,12 @@ export default async function MockTestsPage({ searchParams }: MockTestsPageProps
   const stateExams = selectedState
     ? exams.filter((exam) => categoryById.get(exam.exam_id)?.state_id === selectedState.id && tests.some((test) => test.exam.id === exam.id))
     : [];
-  const selectedExam = stateExams.find((exam) => exam.id === filters.exam);
+  const selectedExam = stateExams.find((exam) =>
+    exam.id === filters.exam || exam.slug === filters.exam || examCollectionSlug(exam.name) === filters.exam
+  );
+  if (selectedState && selectedExam && filters.exam !== examCollectionSlug(selectedExam.name)) {
+    redirect(examCollectionHref(selectedState.slug, selectedExam.name, filters));
+  }
   const examPapers = selectedExam ? papers.filter((paper) => paper.exam_group_id === selectedExam.id && tests.some((test) => test.paper.id === paper.id)) : [];
   const selectedPaper = examPapers.find((paper) => paper.id === filters.paper);
   const selectedCategory = selectedExam ? categoryById.get(selectedExam.exam_id) : undefined;
@@ -173,10 +191,10 @@ export default async function MockTestsPage({ searchParams }: MockTestsPageProps
               <MockSymbol className="h-4 w-4" /> Smart mock-test catalogue
             </p>
             <h1 className="font-display mt-5 max-w-3xl text-4xl leading-[1.05] tracking-tight sm:text-5xl">
-              Your state. Your exam. The exact paper you need.
+              {selectedExam && selectedState ? `${selectedExam.name} mock tests for ${selectedState.name}` : "Your state. Your exam. The exact paper you need."}
             </h1>
             <p className="mt-5 max-w-2xl text-base leading-7 text-slate-300 sm:text-lg">
-              Move through four clear steps. No mixed AP and TG exams, no unrelated papers, and no confusing test names.
+              {selectedExam ? `Choose the correct ${selectedExam.name} paper, take a timed mock test and review every answer.` : "Move through four clear steps. No mixed AP and TG exams, no unrelated papers, and no confusing test names."}
             </p>
           </div>
           <form action="/mock-tests" className="rounded-2xl border border-white/10 bg-white/5 p-3 backdrop-blur">
@@ -204,7 +222,7 @@ export default async function MockTestsPage({ searchParams }: MockTestsPageProps
         ) : isSearching ? (
           <CatalogSection eyebrow="Search results" title={`${matchingTests.length} result${matchingTests.length === 1 ? "" : "s"} for “${filters.q?.trim()}”`} action={<Link href={catalogHref({ state: selectedState?.slug })} className="text-sm font-bold text-teal-800">Clear search</Link>}>
             <TestGrid tests={paginatedTests} />
-            <CatalogPagination filters={filters} page={currentPage} totalPages={totalPages} />
+            <CatalogPagination filters={filters} page={currentPage} totalPages={totalPages} examContext={selectedState && selectedExam ? { stateSlug: selectedState.slug, examName: selectedExam.name } : undefined} />
           </CatalogSection>
         ) : !selectedState ? (
           <CatalogSection eyebrow="Step 1" title="Choose your exam location" description="TG and AP content stays completely separate. Central exams have their own space.">
@@ -227,7 +245,7 @@ export default async function MockTestsPage({ searchParams }: MockTestsPageProps
               const category = categoryById.get(exam.exam_id);
               const examTests = tests.filter((test) => test.exam.id === exam.id);
               const paperCount = new Set(examTests.map((test) => test.paper.id)).size;
-              return <Link key={exam.id} href={catalogHref({ state: selectedState.slug, exam: exam.id })} className="group flex min-h-56 flex-col rounded-3xl border border-slate-200 bg-white p-6 shadow-sm transition hover:-translate-y-1 hover:border-teal-300 hover:shadow-xl hover:shadow-slate-950/5">
+              return <Link key={exam.id} href={examCollectionPath(selectedState.slug, exam.name)} className="group flex min-h-56 flex-col rounded-3xl border border-slate-200 bg-white p-6 shadow-sm transition hover:-translate-y-1 hover:border-teal-300 hover:shadow-xl hover:shadow-slate-950/5">
                 <span className="flex items-center justify-between"><span className="grid h-11 w-11 place-items-center rounded-2xl bg-teal-50 text-teal-800"><ExamSymbol name={exam.name} /></span><span className="rounded-full bg-slate-100 px-3 py-1 text-[11px] font-black uppercase tracking-wide text-slate-600">{category?.name}</span></span>
                 <h2 className="font-display mt-5 text-xl leading-7">{exam.name}</h2>
                 <p className="mt-2 text-sm text-slate-500">{selectedState.code} · {category?.name}</p>
@@ -241,7 +259,7 @@ export default async function MockTestsPage({ searchParams }: MockTestsPageProps
               const display = paperDisplayById.get(paper.id);
               const specialization = paper.specialization_id ? specializationById.get(paper.specialization_id) : undefined;
               const paperTests = tests.filter((test) => test.paper.id === paper.id);
-              return <Link key={paper.id} href={catalogHref({ state: selectedState.slug, exam: selectedExam.id, paper: paper.id })} className="group flex items-center gap-5 rounded-3xl border border-slate-200 bg-white p-5 shadow-sm transition hover:-translate-y-0.5 hover:border-teal-300 hover:shadow-lg">
+              return <Link key={paper.id} href={examCollectionHref(selectedState.slug, selectedExam.name, { paper: paper.id })} className="group flex items-center gap-5 rounded-3xl border border-slate-200 bg-white p-5 shadow-sm transition hover:-translate-y-0.5 hover:border-teal-300 hover:shadow-lg">
                 <span className="grid h-14 w-14 shrink-0 place-items-center rounded-2xl bg-slate-950 text-teal-200"><PaperSymbol /></span>
                 <span className="min-w-0 flex-1"><span className="text-xs font-black uppercase tracking-[0.12em] text-teal-700">{display?.shortLabel ?? "Paper"}{specialization ? ` · ${specialization.name}` : ""}</span><strong className="font-display mt-1 block text-lg leading-6">{paper.name}</strong><span className="mt-2 block text-sm font-semibold text-slate-500">{paperTests.length} mock test{paperTests.length === 1 ? "" : "s"}</span></span>
                 <span className="text-xl font-black text-teal-800 transition group-hover:translate-x-1">→</span>
@@ -249,12 +267,12 @@ export default async function MockTestsPage({ searchParams }: MockTestsPageProps
             })}</div>}
           </CatalogSection>
         ) : (
-          <CatalogSection eyebrow={`${selectedState.code} · ${selectedExam.name} · ${paperDisplayById.get(selectedPaper.id)?.shortLabel}`} title="Choose a mock test" description="Tests use one predictable series: Mock Test 01, Mock Test 02, Mock Test 03…" action={<Link href={catalogHref({ state: selectedState.slug, exam: selectedExam.id })} className="text-sm font-bold text-teal-800">Change paper</Link>}>
+          <CatalogSection eyebrow={`${selectedState.code} · ${selectedExam.name} · ${paperDisplayById.get(selectedPaper.id)?.shortLabel}`} title="Choose a mock test" description="Tests use one predictable series: Mock Test 01, Mock Test 02, Mock Test 03…" action={<Link href={examCollectionPath(selectedState.slug, selectedExam.name)} className="text-sm font-bold text-teal-800">Change paper</Link>}>
             <div className="mb-5 flex flex-wrap gap-2">
-              {([['all', 'All tests'], ['paper', 'Full paper'], ['subject', 'Subject practice']] as const).map(([value, label]) => <Link key={value} href={catalogHref({ state: selectedState.slug, exam: selectedExam.id, paper: selectedPaper.id, type: value })} className={`rounded-full px-4 py-2 text-xs font-black ${(!filters.type && value === 'all') || filters.type === value ? 'bg-slate-950 text-white' : 'border bg-white text-slate-600'}`}>{label}</Link>)}
+              {([['all', 'All tests'], ['paper', 'Full paper'], ['subject', 'Subject practice']] as const).map(([value, label]) => <Link key={value} href={examCollectionHref(selectedState.slug, selectedExam.name, { paper: selectedPaper.id, type: value })} className={`rounded-full px-4 py-2 text-xs font-black ${(!filters.type && value === 'all') || filters.type === value ? 'bg-slate-950 text-white' : 'border bg-white text-slate-600'}`}>{label}</Link>)}
             </div>
             <TestGrid tests={paginatedTests} />
-            <CatalogPagination filters={filters} page={currentPage} totalPages={totalPages} />
+            <CatalogPagination filters={filters} page={currentPage} totalPages={totalPages} examContext={{ stateSlug: selectedState.slug, examName: selectedExam.name }} />
           </CatalogSection>
         )}
       </div>
@@ -278,12 +296,16 @@ function TestGrid({ tests }: { tests: CatalogTest[] }) {
   return <div className="grid gap-5 md:grid-cols-2 lg:grid-cols-3">{tests.map((test) => <article key={test.id} className="group flex flex-col overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm transition hover:-translate-y-1 hover:border-teal-300 hover:shadow-xl hover:shadow-slate-950/5"><div className="h-1.5 bg-gradient-to-r from-teal-500 to-teal-300" /><div className="flex flex-1 flex-col p-6"><div className="flex items-start justify-between gap-3"><span className="grid h-11 w-11 place-items-center rounded-2xl bg-slate-950 text-teal-200"><MockSymbol /></span><span className={`rounded-full px-3 py-1 text-xs font-black ${test.access_type === "free" ? "bg-emerald-100 text-emerald-800" : "bg-amber-100 text-amber-900"}`}>{test.access_type === "free" ? "Free" : `₹${test.price_inr ?? "Paid"}`}</span></div><p className="mt-5 text-[11px] font-black uppercase tracking-[0.12em] text-teal-700">{test.state.code} · {test.exam.name} · {test.paperDisplay?.shortLabel ?? "Paper"}</p><h3 className="font-display mt-2 text-2xl">{mockTestLabel(Number(test.series_number ?? 1))}</h3>{test.subject && <p className="mt-1 text-sm font-bold text-slate-700">{test.subject.name}</p>}<p className="mt-3 flex-1 text-sm leading-6 text-slate-600">{test.description ?? "Focused exam practice with saved progress and detailed answer review."}</p><div className="mt-6 grid grid-cols-3 divide-x rounded-2xl bg-slate-50 py-3 text-center"><Metric value={test.questions ?? "—"} label="Questions" /><Metric value={test.duration_minutes} label="Minutes" /><Metric value={test.marks === null ? "—" : Number(test.marks).toFixed(2).replace(/\.00$/, "")} label="Marks" /></div><Link href={`/mock-tests/${test.id}`} className="mt-5 flex items-center justify-between rounded-xl bg-slate-950 px-4 py-3 text-sm font-black text-white transition group-hover:bg-teal-700"><span>View test details</span><span>→</span></Link></div></article>)}</div>;
 }
 
-function CatalogPagination({ filters, page, totalPages }: { filters: Filters; page: number; totalPages: number }) {
+function CatalogPagination({ filters, page, totalPages, examContext }: { filters: Filters; page: number; totalPages: number; examContext?: { stateSlug: string; examName: string } }) {
   if (totalPages <= 1) return null;
+  const pageHref = (nextPage?: number) => {
+    const nextFilters = { ...filters, page: nextPage && nextPage > 1 ? String(nextPage) : undefined };
+    return examContext ? examCollectionHref(examContext.stateSlug, examContext.examName, nextFilters) : catalogHref(nextFilters);
+  };
   return <nav aria-label="Mock-test pages" className="mt-8 flex items-center justify-center gap-3">
-    <Link href={catalogHref({ ...filters, page: page > 2 ? String(page - 1) : undefined })} aria-disabled={page === 1} className={`rounded-xl border bg-white px-4 py-2.5 text-sm font-bold ${page === 1 ? "pointer-events-none opacity-40" : "hover:border-teal-300"}`}>Previous</Link>
+    <Link href={pageHref(page - 1)} aria-disabled={page === 1} className={`rounded-xl border bg-white px-4 py-2.5 text-sm font-bold ${page === 1 ? "pointer-events-none opacity-40" : "hover:border-teal-300"}`}>Previous</Link>
     <span className="text-sm font-semibold text-slate-600">Page {page} of {totalPages}</span>
-    <Link href={catalogHref({ ...filters, page: page < totalPages ? String(page + 1) : undefined })} aria-disabled={page === totalPages} className={`rounded-xl border bg-white px-4 py-2.5 text-sm font-bold ${page === totalPages ? "pointer-events-none opacity-40" : "hover:border-teal-300"}`}>Next</Link>
+    <Link href={pageHref(Math.min(totalPages, page + 1))} aria-disabled={page === totalPages} className={`rounded-xl border bg-white px-4 py-2.5 text-sm font-bold ${page === totalPages ? "pointer-events-none opacity-40" : "hover:border-teal-300"}`}>Next</Link>
   </nav>;
 }
 
