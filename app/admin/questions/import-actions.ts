@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import ExcelJS from "exceljs";
 import { createClient } from "@/lib/supabase/server";
 import { QUESTION_IMPORT_REQUIRED_HEADERS } from "@/lib/questions/import-format";
-import { normalizeQuestionImageUrl } from "@/lib/questions/media";
+import { normalizeQuestionImageUrl, questionMediaPath, removeQuestionImage } from "@/lib/questions/media";
 import type { CorrectAnswer, QuestionLifecycle } from "@/types/question";
 import type { SubjectContentLanguageMode } from "@/types/subject";
 
@@ -22,6 +22,7 @@ type MockImportTarget = {
   subject_id: string | null;
   test_scope: "paper" | "subject";
   status: string;
+  target_question_count: number;
 };
 
 const answers: CorrectAnswer[] = ["A", "B", "C", "D"];
@@ -149,9 +150,18 @@ export async function importQuestionsIntoMockTest(
   return importQuestions(formData, mockTestId);
 }
 
+export async function replaceQuestionsInMockTest(
+  mockTestId: string,
+  _previous: ImportQuestionsState,
+  formData: FormData,
+): Promise<ImportQuestionsState> {
+  return importQuestions(formData, mockTestId, "replace");
+}
+
 async function importQuestions(
   formData: FormData,
   mockTestId?: string,
+  mode: "add" | "replace" = "add",
 ): Promise<ImportQuestionsState> {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
@@ -167,12 +177,14 @@ async function importQuestions(
   if (mockTestId) {
     const { data } = await supabase
       .from("mock_tests")
-      .select("id, paper_id, subject_id, test_scope, status")
+      .select("id, paper_id, subject_id, test_scope, status, target_question_count")
       .eq("id", mockTestId)
       .maybeSingle();
     mockTest = data as MockImportTarget | null;
     if (!mockTest) return { success: false, message: "Mock Test not found." };
     if (mockTest.status !== "draft") return { success: false, message: "Only draft Mock Tests can receive a file import." };
+    const { count: attemptCount } = await supabase.from("test_attempts").select("id", { count: "exact", head: true }).eq("mock_test_id", mockTest.id);
+    if ((attemptCount ?? 0) > 0) return { success: false, message: "This Mock Test has student attempts and its Questions are locked." };
     paperId = mockTest.paper_id;
   } else if (!categoryId || !examId || !paperId) {
     return { success: false, message: "Choose an Exam Category, Exam, and Paper before importing." };
@@ -197,6 +209,7 @@ async function importQuestions(
     return { success: false, message: error instanceof Error ? error.message : "The Question file could not be read." };
   }
   if (rows.length > 500) return { success: false, message: "Import up to 500 Questions at one time." };
+  if (mockTest && mode === "replace" && rows.length !== mockTest.target_question_count) return { success: false, message: `Nothing was replaced. The file has ${rows.length} row${rows.length === 1 ? "" : "s"}, but this Mock Test requires exactly ${mockTest.target_question_count}.` };
 
   const { data: subjects, error: subjectsError } = await supabase
     .from("subjects")
@@ -298,36 +311,45 @@ async function importQuestions(
         return {
           subject_id: preference.key.slice(0, separator),
           import_key: preference.key.slice(separator + 1),
-          question_order: preference.questionOrder,
+          question_order: mode === "replace" ? preference.questionOrder ?? preference.rowNumber - 1 : preference.questionOrder,
           marks: preference.marks ?? paper.default_correct_marks ?? 1,
           negative_marks: preference.negativeMarks ?? paper.default_negative_marks ?? 0,
         };
       })
     : [];
-  const { data: importResult, error } = await supabase.rpc("import_questions_atomic", {
-    requested_paper_id: paperId,
-    requested_mock_test_id: mockTest?.id ?? null,
-    requested_questions: importRows,
-    requested_assignments: atomicAssignments,
-  });
+  const rpcName = mockTest && mode === "replace" ? "replace_mock_test_questions_atomic" : "import_questions_atomic";
+  const { data: importResult, error } = await supabase.rpc(rpcName, {
+      requested_paper_id: paperId,
+      requested_mock_test_id: mockTest?.id ?? null,
+      requested_questions: importRows,
+      requested_assignments: atomicAssignments,
+    });
   if (error) {
     const orderConflict = error.code === "23505" && error.message.includes("question_order");
+    const targetReached = error.message.includes("target number of Questions");
     return {
       success: false,
       message: orderConflict
         ? "Nothing was imported. One or more Question order numbers are already in use."
+        : targetReached
+          ? "Nothing was imported. The file would exceed this Mock Test's target. Remove rows or increase the draft target first."
         : `Nothing was imported. ${error.message}`,
     };
   }
-  const summary = importResult?.[0] ?? { added: 0, updated: 0, assigned: 0, already_assigned: 0 };
+  const summary = importResult?.[0] ?? { added: 0, updated: 0, assigned: 0, already_assigned: 0, deleted_orphans: 0, orphan_image_urls: [] };
   const added = Number(summary.added);
   const updated = Number(summary.updated);
   const assigned = Number(summary.assigned);
   const alreadyAssigned = Number(summary.already_assigned);
+  if (mode === "replace") {
+    const imageUrls = Array.isArray(summary.orphan_image_urls) ? summary.orphan_image_urls : [];
+    await Promise.all(imageUrls.map((url: string) => removeQuestionImage(supabase, questionMediaPath(url))));
+  }
   revalidatePath("/admin/questions");
   revalidatePath("/admin/mock-tests");
   if (mockTest) {
     revalidatePath(`/admin/mock-tests/${mockTest.id}/edit`);
+    if (mode === "replace") return { success: true, message: `Replacement completed safely: ${assigned} Questions assigned, ${added} added to the Question Bank, ${updated} updated, and ${Number(summary.deleted_orphans ?? 0)} unused old Question${Number(summary.deleted_orphans ?? 0) === 1 ? "" : "s"} removed.` };
     return { success: true, message: `${added} Question${added === 1 ? "" : "s"} added, ${updated} updated, and ${assigned} assigned to this Mock Test from ${file.name}.${alreadyAssigned ? ` ${alreadyAssigned} already assigned Question${alreadyAssigned === 1 ? " was" : "s were"} kept.` : ""}` };
   }
   return { success: true, message: `${added} Question${added === 1 ? "" : "s"} added and ${updated} updated from ${file.name}.` };

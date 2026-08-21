@@ -113,6 +113,11 @@ export function EditMockTestForm({
             className="mt-2 w-full rounded-xl border px-4 py-3 font-normal"
           />
         </label>
+        <label className="block text-sm font-bold">
+          Target questions
+          <input name="target_question_count" type="number" min="1" max="500" required defaultValue={mockTest.target_question_count} className="mt-2 w-full rounded-xl border px-4 py-3 font-normal" />
+          <span className="mt-1 block text-xs font-normal text-slate-500">Locked after publishing or after the first student attempt.</span>
+        </label>
         <input type="hidden" name="status" value={mockTest.status} />
         <label className="block text-sm font-bold">
           Student access

@@ -4,6 +4,17 @@ import { PublicHeader } from "@/components/site/PublicHeader";
 import { createClient } from "@/lib/supabase/server";
 import { AttemptReviewNavigator, type ReviewRow } from "./AttemptReviewNavigator";
 
+type AttemptSummary = {
+  mock_test_id: string;
+  submitted_at: string;
+  score: number;
+  total_marks: number;
+  correct_answers: number;
+  incorrect_answers: number;
+  unanswered_questions: number;
+  detailed_review_available: boolean;
+};
+
 export default async function AttemptReviewPage({
   params,
 }: PageProps<"/dashboard/attempts/[id]">) {
@@ -12,9 +23,22 @@ export default async function AttemptReviewPage({
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) redirect("/login?next=/dashboard");
 
-  const { data, error } = await supabase.rpc("get_attempt_review", {
-    requested_attempt_id: id,
-  });
+  const [attemptResult, reviewResult] = await Promise.all([
+    supabase
+      .from("test_attempts")
+      .select("mock_test_id, submitted_at, score, total_marks, correct_answers, incorrect_answers, unanswered_questions, detailed_review_available")
+      .eq("id", id)
+      .maybeSingle(),
+    supabase.rpc("get_attempt_review", { requested_attempt_id: id }),
+  ]);
+  const attempt = attemptResult.data as AttemptSummary | null;
+  if (!attempt) notFound();
+  if (!attempt.detailed_review_available) {
+    const { data: mockTest } = await supabase.from("mock_tests").select("title").eq("id", attempt.mock_test_id).maybeSingle();
+    return <ExpiredAttemptReview attempt={attempt} title={mockTest?.title ?? "Mock test"} />;
+  }
+
+  const { data, error } = reviewResult;
   const rows = (data ?? []) as ReviewRow[];
   if (error || rows.length === 0) notFound();
 
@@ -106,6 +130,32 @@ export default async function AttemptReviewPage({
           >
             Browse mock tests
           </Link>
+        </section>
+      </div>
+    </main>
+  );
+}
+
+function ExpiredAttemptReview({ attempt, title }: { attempt: AttemptSummary; title: string }) {
+  return (
+    <main className="min-h-screen bg-[#f5f8f8]">
+      <PublicHeader />
+      <div className="mx-auto max-w-4xl px-5 py-8 sm:px-8 sm:py-12">
+        <Link href="/dashboard" className="inline-flex items-center gap-2 text-sm font-bold text-teal-700 hover:text-teal-800">Back to dashboard</Link>
+        <section className="mt-6 rounded-[2rem] bg-slate-950 p-7 text-white shadow-2xl shadow-slate-950/15 sm:p-9">
+          <p className="text-xs font-bold uppercase tracking-[0.15em] text-teal-200">Attempt summary</p>
+          <h1 className="mt-4 text-3xl font-black tracking-tight">{title}</h1>
+          <p className="mt-3 text-sm text-slate-300">Submitted {new Intl.DateTimeFormat("en-IN", { dateStyle: "medium", timeStyle: "short" }).format(new Date(attempt.submitted_at))}</p>
+        </section>
+        <section className="mt-5 grid grid-cols-2 gap-3 sm:grid-cols-4">
+          <SummaryMetric label="Score" value={`${attempt.score} / ${attempt.total_marks}`} tone="teal" />
+          <SummaryMetric label="Correct" value={String(attempt.correct_answers)} tone="emerald" />
+          <SummaryMetric label="Incorrect" value={String(attempt.incorrect_answers)} tone="red" />
+          <SummaryMetric label="Unanswered" value={String(attempt.unanswered_questions)} tone="slate" />
+        </section>
+        <section className="mt-6 rounded-3xl border border-amber-200 bg-amber-50 p-6 text-amber-950 sm:p-8">
+          <h2 className="text-xl font-black">Detailed answer review is no longer stored</h2>
+          <p className="mt-3 max-w-2xl text-sm leading-6">Your score and exam summary remain in your account permanently. Question-by-question answers are retained for 365 days or for your latest 100 attempts, whichever keeps them longer.</p>
         </section>
       </div>
     </main>

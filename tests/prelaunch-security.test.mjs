@@ -273,6 +273,8 @@ test("loading feedback is accessible and prevents duplicate operations", async (
   assert.match(navigationProgress, /window\.location\.href === activeNavigation\.sourceHref/);
   assert.match(navigationProgress, /window\.setInterval\(clearIfUrlChanged, 100\)/);
   assert.match(navigationProgress, /new FormData\(form\)/);
+  assert.match(navigationProgress, /form\.getAttribute\("method"\)/);
+  assert.match(navigationProgress, /declaredMethod !== "get"/);
   assert.match(pendingSubmitButton, /useFormStatus/);
   assert.match(pendingSubmitButton, /disabled=\{disabled \|\| pending\}/);
   assert.match(pendingSubmitButton, /aria-busy=\{pending\}/);
@@ -308,4 +310,58 @@ test("student, authentication, and admin route groups have loading boundaries", 
   for (const boundary of boundaries) {
     assert.match(boundary, /RouteLoading/);
   }
+});
+
+test("student attempt history keeps lifetime summaries and limits detailed snapshots", async () => {
+  const [migration, dashboard, reviewPage] = await Promise.all([
+    read("supabase/migrations/20260821220000_add_attempt_history_retention.sql"),
+    read("app/dashboard/page.tsx"),
+    read("app/dashboard/attempts/[id]/page.tsx"),
+  ]);
+
+  assert.match(migration, /detailed_review_available boolean not null default true/);
+  assert.match(migration, /get_student_attempt_history_summary/);
+  assert.match(migration, /attempt_rank > 100/);
+  assert.match(migration, /interval '365 days'/);
+  assert.match(migration, /interval '30 days'/);
+  assert.match(migration, /cron\.schedule/);
+  assert.match(dashboard, /const attemptsPerPage = 20/);
+  assert.match(dashboard, /\.range\(\(page - 1\) \* attemptsPerPage/);
+  assert.match(dashboard, /attempt\.detailed_review_available/);
+  assert.match(dashboard, /Summary only/);
+  assert.match(reviewPage, /Detailed answer review is no longer stored/);
+  assert.match(reviewPage, /latest 100 attempts/);
+});
+
+test("mock-test question targets and destructive operations are database protected", async () => {
+  const [migration, createAction, editPage, importer, assignments, deleteAction] = await Promise.all([
+    read("supabase/migrations/20260821230000_add_safe_mock_question_management.sql"),
+    read("app/admin/mock-tests/actions.ts"),
+    read("app/admin/mock-tests/[id]/edit/page.tsx"),
+    read("app/admin/questions/import-actions.ts"),
+    read("app/admin/mock-tests/[id]/edit/QuestionAssignments.tsx"),
+    read("app/admin/questions/deleteAction.ts"),
+  ]);
+
+  assert.match(migration, /target_question_count integer/);
+  assert.match(migration, /mock_tests_target_question_count_positive/);
+  assert.match(migration, /guard_mock_test_question_mutation/);
+  assert.match(migration, /has student attempts and its Questions are locked/);
+  assert.match(migration, /already has its target number of Questions/);
+  assert.match(migration, /fill_mock_test_with_latest_questions/);
+  assert.match(migration, /replace_mock_test_questions_atomic/);
+  assert.match(migration, /must contain exactly % valid Questions/);
+  assert.match(migration, /delete from public\.questions as question/);
+  assert.match(migration, /test_attempt_session_questions where question_id/);
+  assert.match(migration, /attempt_responses where question_id/);
+  assert.match(migration, /actual_question_count <> test_record\.target_question_count/);
+  assert.match(createAction, /paper\.question_count \?\? requestedTarget/);
+  assert.match(editPage, /targetQuestionCount=\{test\.target_question_count\}/);
+  assert.match(importer, /mode === "replace"/);
+  assert.match(importer, /replace_mock_test_questions_atomic/);
+  assert.match(importer, /questionMediaPath/);
+  assert.match(assignments, /Fill remaining with latest/);
+  assert.match(assignments, /moveAssignedQuestion/);
+  assert.match(deleteAction, /delete_question_safely/);
+  assert.match(deleteAction, /makeQuestionUnavailable/);
 });

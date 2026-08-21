@@ -1,83 +1,47 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { questionMediaPath, removeQuestionImage } from "@/lib/questions/media";
 import { createClient } from "@/lib/supabase/server";
 
-export type DeleteQuestionResult = {
-  success: boolean;
-  message: string;
-};
+export type DeleteQuestionResult = { success: boolean; message: string };
 
-export async function deleteQuestion(
-  questionId: string
-): Promise<DeleteQuestionResult> {
+async function authorizedClient() {
   const supabase = await createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return { supabase, error: "You must be logged in." };
+  const { data: profile } = await supabase.from("profiles").select("role").eq("id", user.id).single();
+  if (profile?.role !== "admin") return { supabase, error: "You are not authorized to manage Questions." };
+  return { supabase };
+}
 
-  const {
-    data: { user },
-    error: userError,
-  } = await supabase.auth.getUser();
-
-  if (userError || !user) {
-    return { success: false, message: "You must be logged in." };
+export async function deleteQuestion(questionId: string): Promise<DeleteQuestionResult> {
+  const result = await authorizedClient();
+  if ("error" in result) return { success: false, message: result.error ?? "Unable to delete this Question." };
+  const { data: question } = await result.supabase.from("questions").select("id, question_text").eq("id", questionId).maybeSingle();
+  if (!question) return { success: false, message: "Question not found." };
+  const { data, error } = await result.supabase.rpc("delete_question_safely", { requested_question_id: questionId });
+  if (error) {
+    const message = error.message.includes("assigned to a Mock Test")
+      ? "This Question is assigned to a Mock Test. Remove its assignments first, or make it unavailable instead."
+      : error.message.includes("retained student attempt")
+        ? "This Question is required for a student's retained result or answer review, so permanent deletion is blocked. Make it unavailable instead."
+        : error.message;
+    return { success: false, message };
   }
-
-  const { data: profile, error: profileError } = await supabase
-    .from("profiles")
-    .select("role")
-    .eq("id", user.id)
-    .single();
-
-  if (profileError || profile?.role !== "admin") {
-    return {
-      success: false,
-      message: "You are not authorized to delete Questions.",
-    };
-  }
-
-  const { data: question, error: questionError } = await supabase
-    .from("questions")
-    .select("id, question_text")
-    .eq("id", questionId)
-    .single();
-
-  if (questionError || !question) {
-    return { success: false, message: "Question not found." };
-  }
-
-  const { count, error: assignmentError } = await supabase
-    .from("mock_test_questions")
-    .select("id", { count: "exact", head: true })
-    .eq("question_id", questionId);
-
-  if (assignmentError) {
-    return {
-      success: false,
-      message: "Unable to check this Question's Mock Test assignments.",
-    };
-  }
-
-  if ((count ?? 0) > 0) {
-    return {
-      success: false,
-      message: `Cannot delete this Question because it is assigned to ${count} Mock Test(s). Deactivate it instead.`,
-    };
-  }
-
-  const { error: deleteError } = await supabase
-    .from("questions")
-    .delete()
-    .eq("id", questionId);
-
-  if (deleteError) {
-    return { success: false, message: deleteError.message };
-  }
-
+  const imageUrl = data?.[0]?.deleted_image_url;
+  if (imageUrl) await removeQuestionImage(result.supabase, questionMediaPath(imageUrl));
   revalidatePath("/admin");
   revalidatePath("/admin/questions");
+  return { success: true, message: `"${question.question_text}" was permanently deleted.` };
+}
 
-  return {
-    success: true,
-    message: `"${question.question_text}" was deleted successfully.`,
-  };
+export async function makeQuestionUnavailable(questionId: string): Promise<DeleteQuestionResult> {
+  const result = await authorizedClient();
+  if ("error" in result) return { success: false, message: result.error ?? "Unable to update this Question." };
+  const { error } = await result.supabase.rpc("make_question_unavailable_safely", { requested_question_id: questionId });
+  if (error) return { success: false, message: error.message };
+  revalidatePath("/admin/questions");
+  revalidatePath("/admin/mock-tests");
+  return { success: true, message: "Question is unavailable for future use. Existing attempts and reviews remain safe." };
 }

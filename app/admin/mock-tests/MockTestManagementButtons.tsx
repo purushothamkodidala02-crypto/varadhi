@@ -22,6 +22,7 @@ export function MockTestManagementButtons({ mockTestId, mockTestTitle, status, r
     setPending(true); setMessage("");
     const result = action === "publish" ? await publishMockTest(mockTestId) : action === "hide" ? await archiveMockTest(mockTestId) : action === "restore" ? await restoreMockTestAsDraft(mockTestId) : await deleteDraftMockTest(mockTestId);
     if (!result.success) { setMessage(result.message); setPending(false); return; }
+    setPending(false);
     router.refresh();
   }
 

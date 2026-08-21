@@ -11,7 +11,7 @@ type ExamState = { id: string; name: string; code: string; slug: string };
 type Category = { id: string; stateId: string; name: string };
 type Exam = { id: string; categoryId: string; name: string };
 type Specialization = { id: string; examId: string; name: string };
-type Paper = { id: string; examId: string; specializationId: string | null; name: string; duration: number | null; number: number };
+type Paper = { id: string; examId: string; specializationId: string | null; name: string; duration: number | null; questionCount: number | null; number: number };
 type Subject = { id: string; paperId: string; name: string };
 type ExistingSeries = { paperId: string; subjectId: string | null; scope: "paper" | "subject"; seriesNumber: number };
 
@@ -73,7 +73,8 @@ export function CreateMockTestForm({ states, categories, exams, specializations,
 
       <label className="block text-sm font-bold md:col-span-2">Description <span className="font-normal text-slate-500">(optional)</span><textarea name="description" rows={3} placeholder="Tell students what this mock covers" className="mt-2 w-full rounded-xl border px-4 py-3 font-normal" /></label>
       <label className="block text-sm font-bold">Duration in minutes<input name="duration_minutes" type="number" min="1" required defaultValue={paper?.duration ?? 150} key={paperId || "duration"} className="mt-2 w-full rounded-xl border px-4 py-3 font-normal" /></label>
-      <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-4 text-sm text-emerald-950"><strong>Student access: Free</strong><p className="mt-1 leading-5">Paid tests stay disabled until a verified payment flow is available.</p><input type="hidden" name="access_type" value="free" /></div>
+      <label className="block text-sm font-bold">Target questions<input name="target_question_count" type="number" min="1" max="500" required defaultValue={scope === "paper" ? paper?.questionCount ?? 1 : 25} key={`${paperId}-${scope}`} className="mt-2 w-full rounded-xl border px-4 py-3 font-normal" /><span className="mt-1 block text-xs font-normal text-slate-500">Full-paper mocks inherit the Paper count. Subject mocks can use a custom target.</span></label>
+      <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-4 text-sm text-emerald-950 md:col-span-2"><strong>Student access: Free</strong><p className="mt-1 leading-5">Paid tests stay disabled until a verified payment flow is available.</p><input type="hidden" name="access_type" value="free" /></div>
       <div className="md:col-span-2"><button disabled={pending || !paperId || (scope === "subject" && !subjectId)} aria-busy={pending} className="rounded-xl bg-slate-950 px-5 py-3 text-sm font-black text-white shadow-lg disabled:opacity-50"><PendingButtonContent pending={pending} pendingLabel="Creating draft…">Create {paper ? mockTestLabel(nextSeries) : "mock test"}</PendingButtonContent></button>{result.message && <p aria-live="polite" className={`mt-4 text-sm font-semibold ${result.success ? "text-emerald-700" : "text-red-700"}`}>{result.message}</p>}</div>
     </form>
   </section>;

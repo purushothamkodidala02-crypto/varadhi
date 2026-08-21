@@ -23,7 +23,9 @@ export function NavigationProgress() {
 
     function startForGetForm(event: SubmitEvent) {
       const form = event.target;
-      if (!(form instanceof HTMLFormElement) || (form.method && form.method.toLowerCase() !== "get")) return;
+      if (!(form instanceof HTMLFormElement)) return;
+      const declaredMethod = form.getAttribute("method")?.toLowerCase();
+      if (declaredMethod !== "get") return;
       const next = new URL(form.action || window.location.href, window.location.href);
       const values = new URLSearchParams();
       for (const [name, value] of new FormData(form)) {

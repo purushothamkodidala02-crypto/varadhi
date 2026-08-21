@@ -25,9 +25,9 @@ export default async function MockTestsPage({
   const supabase = await createClient();
   const [statesResult, testsResult, subjectsResult, papersResult, groupsResult, categoriesResult, specializationsResult, assignmentsResult, questionsResult, attemptsResult] = await Promise.all([
     supabase.from("exam_states").select("id, name, code, slug").order("display_order"),
-    supabase.from("mock_tests").select("id, paper_id, subject_id, test_scope, series_number, title, slug, duration_minutes, status, access_type, price_inr, display_order, created_at").order("series_number"),
+    supabase.from("mock_tests").select("id, paper_id, subject_id, test_scope, series_number, title, slug, duration_minutes, target_question_count, status, access_type, price_inr, display_order, created_at").order("series_number"),
     supabase.from("subjects").select("id, paper_id, name"),
-    supabase.from("papers").select("id, exam_group_id, specialization_id, name, slug, duration_minutes, display_order").order("display_order"),
+    supabase.from("papers").select("id, exam_group_id, specialization_id, name, slug, duration_minutes, question_count, display_order").order("display_order"),
     supabase.from("exam_groups").select("id, exam_id, name, slug").order("display_order"),
     supabase.from("exams").select("id, state_id, name, slug").order("display_order"),
     supabase.from("exam_specializations").select("id, exam_group_id, name").order("display_order"),
@@ -52,7 +52,7 @@ export default async function MockTestsPage({
   const categoryOptions = categories.map((item) => ({ id: item.id, stateId: item.state_id, name: item.name }));
   const examOptions = exams.map((item) => ({ id: item.id, categoryId: item.exam_id, name: item.name }));
   const specializationOptions = specializations.map((item) => ({ id: item.id, examId: item.exam_group_id, name: item.name }));
-  const paperOptions = papers.map((item) => ({ id: item.id, examId: item.exam_group_id, specializationId: item.specialization_id, name: item.name, duration: item.duration_minutes, number: paperDisplayById.get(item.id)?.number ?? 1 }));
+  const paperOptions = papers.map((item) => ({ id: item.id, examId: item.exam_group_id, specializationId: item.specialization_id, name: item.name, duration: item.duration_minutes, questionCount: item.question_count, number: paperDisplayById.get(item.id)?.number ?? 1 }));
   const stateId = states.some((item) => item.id === query.state) ? query.state ?? "" : "";
   const categoryId = categoryOptions.some((item) => item.id === query.category && item.stateId === stateId) ? query.category ?? "" : "";
   const examId = examOptions.some((item) => item.id === query.exam && item.categoryId === categoryId) ? query.exam ?? "" : "";
@@ -104,6 +104,7 @@ export default async function MockTestsPage({
       subjectName: subject?.name ?? null,
       status: test.status as "draft" | "published" | "archived",
       questionCount: assignments.length,
+      targetQuestionCount: Number(test.target_question_count),
       usableQuestionCount,
       totalMarks: assignments.reduce((total, assignment) => total + Number(assignment.marks), 0),
       attemptCount: attemptsByTest.get(test.id) ?? 0,

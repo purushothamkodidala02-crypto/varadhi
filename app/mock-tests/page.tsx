@@ -230,7 +230,7 @@ export default async function MockTestsPage({ searchParams, canonicalPath }: Moc
               {selectedExam ? `Choose the correct ${selectedExam.name} paper, take a timed mock test and review every answer.` : "Move through four clear steps. No mixed AP and TG exams, no unrelated papers, and no confusing test names."}
             </p>
           </div>
-          <form action="/mock-tests" className="rounded-2xl border border-white/10 bg-white/5 p-3 backdrop-blur">
+          <form action="/mock-tests" method="get" className="rounded-2xl border border-white/10 bg-white/5 p-3 backdrop-blur">
             {selectedState && <input type="hidden" name="state" value={selectedState.slug} />}
             <label htmlFor="catalog-search" className="px-1 text-xs font-bold uppercase tracking-[0.13em] text-teal-200">Know the exam name?</label>
             <div className="mt-2 flex gap-2">

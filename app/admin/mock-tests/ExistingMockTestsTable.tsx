@@ -39,6 +39,7 @@ type ExistingMockTest = {
   subjectName: string | null;
   status: MockTestStatus;
   questionCount: number;
+  targetQuestionCount: number;
   usableQuestionCount: number;
   totalMarks: number;
   attemptCount: number;
@@ -159,7 +160,7 @@ export function ExistingMockTestsTable({ states, categories, exams, specializati
         <div className="divide-y divide-slate-100">
           {filtered.map((test) => {
             const unavailableCount = test.questionCount - test.usableQuestionCount;
-            const ready = test.questionCount > 0 && unavailableCount === 0;
+            const ready = test.questionCount === test.targetQuestionCount && unavailableCount === 0;
             const statusDetail = statusDetails[test.status];
             return (
               <article key={test.id} className="p-6 transition hover:bg-teal-50/25 sm:p-7">
@@ -180,14 +181,14 @@ export function ExistingMockTestsTable({ states, categories, exams, specializati
                 </div>
 
                 <div className="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
-                  <Metric label="Questions" value={String(test.questionCount)} />
+                  <Metric label="Questions" value={`${test.questionCount} / ${test.targetQuestionCount}`} warning={test.questionCount !== test.targetQuestionCount} />
                   <Metric label="Usable" value={`${test.usableQuestionCount} / ${test.questionCount}`} warning={unavailableCount > 0} />
                   <Metric label="Total marks" value={test.totalMarks.toFixed(2).replace(/\.00$/, "")} />
                   <Metric label="Duration" value={`${test.durationMinutes} min`} />
                   <Metric label="Attempts" value={String(test.attemptCount)} />
                 </div>
 
-                {!ready && <p className="mt-4 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm font-semibold text-amber-900">{test.questionCount === 0 ? "Add at least one question before publishing." : `${unavailableCount} assigned question${unavailableCount === 1 ? " is" : "s are"} unavailable. Fix the questions before publishing.`}</p>}
+                {!ready && <p className="mt-4 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm font-semibold text-amber-900">{unavailableCount > 0 ? `${unavailableCount} assigned question${unavailableCount === 1 ? " is" : "s are"} unavailable. Fix the questions before publishing.` : `${test.questionCount} of ${test.targetQuestionCount} questions are assigned. The exact target is required before publishing.`}</p>}
               </article>
             );
           })}

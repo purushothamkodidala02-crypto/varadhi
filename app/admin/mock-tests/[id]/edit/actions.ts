@@ -16,19 +16,28 @@ export async function updateMockTest(mockTestId: string, _previous: UpdateMockTe
   if (!user) return { success: false, message: "You must be logged in." };
   const { data: profile } = await supabase.from("profiles").select("role").eq("id", user.id).single();
   if (profile?.role !== "admin") return { success: false, message: "You are not authorized to update mock tests." };
-  const { data: current } = await supabase.from("mock_tests").select("status, series_number, slug").eq("id", mockTestId).maybeSingle();
+  const { data: current } = await supabase.from("mock_tests").select("status, series_number, slug, target_question_count, paper_id, subject_id, test_scope").eq("id", mockTestId).maybeSingle();
   if (!current) return { success: false, message: "Mock test not found." };
   if (current.status !== "draft") return { success: false, message: "Only draft Mock Tests can be edited. Archive a published test, then restore it as a draft before changing it." };
+  const { count: attemptCount } = await supabase.from("test_attempts").select("id", { count: "exact", head: true }).eq("mock_test_id", mockTestId);
+  if ((attemptCount ?? 0) > 0) return { success: false, message: "This Mock Test has student attempts and is locked to protect their results." };
 
   const paperId = String(formData.get("paper_id") ?? "").trim();
   const scope = String(formData.get("test_scope") ?? "paper") as MockTestScope;
   const subjectId = String(formData.get("subject_id") ?? "").trim() || null;
   const duration = Number(formData.get("duration_minutes") ?? 0);
+  const targetQuestionCount = Number(formData.get("target_question_count") ?? 0);
   const status = String(formData.get("status") ?? "draft") as MockTestStatus;
   const slug = String(formData.get("slug") ?? current.slug).trim().toLowerCase();
   if (!paperId || !Number.isInteger(duration) || duration <= 0) return { success: false, message: "Choose a paper and enter a valid duration." };
+  if (!Number.isInteger(targetQuestionCount) || targetQuestionCount < 1 || targetQuestionCount > 500) return { success: false, message: "Enter a target between 1 and 500 Questions." };
   if ((scope !== "paper" && scope !== "subject") || (scope === "subject" && !subjectId) || status !== "draft") return { success: false, message: "Check the mock type and draft status." };
   if (!PUBLIC_SLUG_PATTERN.test(slug) || ["attempt", "subject", "specialization", "opengraph-image"].includes(slug)) return { success: false, message: "Enter a URL slug using lowercase letters, numbers and single hyphens." };
+  const structureChanged = paperId !== current.paper_id || scope !== current.test_scope || (scope === "subject" ? subjectId : null) !== current.subject_id;
+  if (structureChanged) {
+    const { count: assignmentCount } = await supabase.from("mock_test_questions").select("id", { count: "exact", head: true }).eq("mock_test_id", mockTestId);
+    if ((assignmentCount ?? 0) > 0) return { success: false, message: "Remove all assigned Questions before changing this Mock Test's Paper or Subject." };
+  }
 
   const paperResult = await supabase.from("papers").select("id, exam_group_id, specialization_id, name, display_order").eq("id", paperId).maybeSingle();
   const paper = paperResult.data;
@@ -56,6 +65,7 @@ export async function updateMockTest(mockTestId: string, _previous: UpdateMockTe
     description: String(formData.get("description") ?? "").trim() || null,
     instructions: String(formData.get("instructions") ?? "").trim() || null,
     duration_minutes: duration,
+    target_question_count: targetQuestionCount,
     display_order: seriesNumber,
     status,
     published_at: null,

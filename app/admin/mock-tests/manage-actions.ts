@@ -75,7 +75,7 @@ export async function publishMockTest(mockTestId: string): Promise<MockTestManag
     const knownMessage = [
       "Add at least one Question before publishing.",
       "Every assigned Question and mark must be active and valid.",
-      "The assigned Question count must match the Paper Question count.",
+      "The assigned Question count must exactly match the Mock Test target.",
       "Paid Mock Tests cannot be published before payment verification is enabled.",
     ].find((message) => error.message.includes(message));
     return {

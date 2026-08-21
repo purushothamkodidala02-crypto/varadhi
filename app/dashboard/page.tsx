@@ -9,12 +9,21 @@ import { createClient } from "@/lib/supabase/server";
 type Attempt = {
   id: string;
   mock_test_id: string;
+  detailed_review_available: boolean;
   submitted_at: string;
   score: number;
   total_marks: number;
   correct_answers: number;
   incorrect_answers: number;
   unanswered_questions: number;
+};
+
+type AttemptHistorySummary = {
+  completed_attempts: number;
+  average_score: number;
+  latest_score: number | null;
+  latest_total_marks: number | null;
+  latest_mock_test_id: string | null;
 };
 
 type AvailableMockTest = {
@@ -33,13 +42,24 @@ type SubjectAnalytics = {
   net_marks: number;
 };
 
-export default async function Dashboard() {
+const attemptsPerPage = 20;
+
+export default async function Dashboard({
+  searchParams,
+}: {
+  searchParams: Promise<{ page?: string }>;
+}) {
+  const query = await searchParams;
+  const requestedPage = Number(query.page ?? "1");
+  const page = Number.isInteger(requestedPage) && requestedPage > 0 ? requestedPage : 1;
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) redirect("/login?next=/dashboard");
 
   const [
     attemptsResult,
+    attemptSummaryResult,
+    latestAttemptsResult,
     subjectAnalyticsResult,
     availableTestsResult,
     allTestsResult,
@@ -49,9 +69,19 @@ export default async function Dashboard() {
     supabase
       .from("test_attempts")
       .select(
-        "id, mock_test_id, submitted_at, score, total_marks, correct_answers, incorrect_answers, unanswered_questions",
+        "id, mock_test_id, detailed_review_available, submitted_at, score, total_marks, correct_answers, incorrect_answers, unanswered_questions",
+        { count: "exact" },
       )
-      .order("submitted_at", { ascending: false }),
+      .order("submitted_at", { ascending: false })
+      .range((page - 1) * attemptsPerPage, page * attemptsPerPage - 1),
+    supabase.rpc("get_student_attempt_history_summary"),
+    supabase
+      .from("test_attempts")
+      .select(
+        "id, mock_test_id, detailed_review_available, submitted_at, score, total_marks, correct_answers, incorrect_answers, unanswered_questions",
+      )
+      .order("submitted_at", { ascending: false })
+      .limit(5),
     supabase.rpc("get_student_subject_analytics"),
     supabase
       .from("mock_tests")
@@ -68,6 +98,17 @@ export default async function Dashboard() {
   ]);
 
   const attempts = (attemptsResult.data ?? []) as Attempt[];
+  const latestAttempts = (latestAttemptsResult.data ?? []) as Attempt[];
+  const attemptSummary = (attemptSummaryResult.data?.[0] ?? {
+    completed_attempts: attemptsResult.count ?? 0,
+    average_score: 0,
+    latest_score: null,
+    latest_total_marks: null,
+    latest_mock_test_id: null,
+  }) as AttemptHistorySummary;
+  const totalAttempts = Number(attemptSummary.completed_attempts ?? attemptsResult.count ?? 0);
+  const totalPages = Math.max(1, Math.ceil(totalAttempts / attemptsPerPage));
+  if (totalAttempts > 0 && page > totalPages) redirect(`/dashboard?page=${totalPages}`);
   const subjectAnalytics = (subjectAnalyticsResult.data ?? []) as SubjectAnalytics[];
   const availableTests = (availableTestsResult.data ?? []) as AvailableMockTest[];
   const paperDisplayById = buildPaperDisplayMap(
@@ -87,39 +128,28 @@ export default async function Dashboard() {
     const state = category ? catalogStateById.get(category.state_id) : undefined;
     return paper && exam && state ? mockTestUrl(state.slug, exam.slug, paper.slug, test.slug) : "/mock-tests";
   };
-  const averageScore =
-    attempts.length === 0
-      ? 0
-      : attempts.reduce(
-          (total, attempt) =>
-            total +
-            (attempt.total_marks === 0
-              ? 0
-              : (attempt.score / attempt.total_marks) * 100),
-          0,
-        ) / attempts.length;
   const metrics = [
     {
       label: "Completed attempts",
-      value: String(attempts.length),
+      value: String(totalAttempts),
       detail: "All submitted tests",
       tone: "teal",
       short: "DONE",
     },
     {
       label: "Average score",
-      value: `${averageScore.toFixed(1)}%`,
+      value: `${Number(attemptSummary.average_score).toFixed(1)}%`,
       detail: "Across all attempts",
       tone: "emerald",
       short: "AVG",
     },
     {
       label: "Latest score",
-      value: attempts[0]
-        ? `${attempts[0].score} / ${attempts[0].total_marks}`
+      value: attemptSummary.latest_score !== null && attemptSummary.latest_total_marks !== null
+        ? `${attemptSummary.latest_score} / ${attemptSummary.latest_total_marks}`
         : "—",
-      detail: attempts[0]
-        ? (testTitles.get(attempts[0].mock_test_id) ?? "Mock test")
+      detail: attemptSummary.latest_mock_test_id
+        ? (testTitles.get(attemptSummary.latest_mock_test_id) ?? "Mock test")
         : "No attempts yet",
       tone: "amber",
       short: "NEW",
@@ -220,7 +250,7 @@ export default async function Dashboard() {
           )}
         </section>
 
-        {attempts.length === 0 ? (
+        {totalAttempts === 0 ? (
           <section className="mt-10 rounded-3xl border border-dashed border-teal-200 bg-gradient-to-br from-white to-teal-50 p-10 text-center shadow-sm">
             <span className="mx-auto grid h-12 w-12 place-items-center rounded-2xl bg-teal-100 text-lg font-black text-teal-800">
               01
@@ -248,7 +278,7 @@ export default async function Dashboard() {
                 detail="Your five latest attempts."
               >
                 <div className="space-y-5">
-                  {attempts.slice(0, 5).map((attempt) => {
+                  {latestAttempts.map((attempt) => {
                     const percentage =
                       attempt.total_marks === 0
                         ? 0
@@ -331,8 +361,9 @@ export default async function Dashboard() {
                   History
                 </p>
                 <h2 className="mt-2 text-2xl font-black text-slate-950">
-                  Recent attempts
+                  Exam history
                 </h2>
+                <p className="mt-2 text-sm text-slate-600">Showing {((page - 1) * attemptsPerPage) + 1} to {Math.min(page * attemptsPerPage, totalAttempts)} of {totalAttempts} completed exams.</p>
               </div>
               <div className="mt-5 grid gap-4">
                 {attempts.map((attempt) => (
@@ -376,17 +407,28 @@ export default async function Dashboard() {
                             {attempt.score} / {attempt.total_marks}
                           </p>
                         </div>
-                        <Link
-                          href={`/dashboard/attempts/${attempt.id}`}
-                          className="rounded-xl bg-slate-950 px-4 py-3 text-sm font-bold text-white hover:bg-teal-700"
-                        >
-                          Review
-                        </Link>
+                        {attempt.detailed_review_available ? (
+                          <Link
+                            href={`/dashboard/attempts/${attempt.id}`}
+                            className="rounded-xl bg-slate-950 px-4 py-3 text-sm font-bold text-white hover:bg-teal-700"
+                          >
+                            Review
+                          </Link>
+                        ) : (
+                          <span title="Detailed answers are retained for 365 days or the latest 100 attempts." className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm font-bold text-slate-500">Summary only</span>
+                        )}
                       </div>
                     </div>
                   </article>
                 ))}
               </div>
+              {totalPages > 1 && (
+                <nav aria-label="Exam history pages" className="mt-6 flex items-center justify-center gap-3">
+                  {page > 1 ? <Link href={page === 2 ? "/dashboard" : `/dashboard?page=${page - 1}`} className="rounded-xl border bg-white px-4 py-2.5 text-sm font-bold text-slate-700 hover:border-teal-300">Previous</Link> : <span className="rounded-xl border bg-slate-100 px-4 py-2.5 text-sm font-bold text-slate-400">Previous</span>}
+                  <span className="text-sm font-semibold text-slate-600">Page {page} of {totalPages}</span>
+                  {page < totalPages ? <Link href={`/dashboard?page=${page + 1}`} className="rounded-xl border bg-white px-4 py-2.5 text-sm font-bold text-slate-700 hover:border-teal-300">Next</Link> : <span className="rounded-xl border bg-slate-100 px-4 py-2.5 text-sm font-bold text-slate-400">Next</span>}
+                </nav>
+              )}
             </section>
           </>
         )}

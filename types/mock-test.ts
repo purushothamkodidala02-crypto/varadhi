@@ -25,6 +25,7 @@ export interface MockTest {
   seo_description: string | null;
   instructions: string | null;
   duration_minutes: number;
+  target_question_count: number;
   difficulty: MockTestDifficulty;
   status: MockTestStatus;
   version: number;
@@ -48,6 +49,7 @@ export interface CreateMockTestInput {
   seo_description?: string;
   instructions?: string;
   duration_minutes?: number;
+  target_question_count?: number;
   difficulty?: MockTestDifficulty;
   status?: MockTestStatus;
   version?: number;

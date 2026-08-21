@@ -4,12 +4,15 @@ import { useActionState } from "react";
 import { LongPendingNotice, PendingButtonContent } from "@/components/feedback/LoadingSpinner";
 import {
   importQuestionsIntoMockTest,
+  replaceQuestionsInMockTest,
   type ImportQuestionsState,
 } from "@/app/admin/questions/import-actions";
 
 type MockTestCsvImportProps = {
   mockTestId: string;
   isDraft: boolean;
+  targetQuestionCount: number;
+  assignedQuestionCount: number;
   paperName: string;
   subjectName: string | null;
 };
@@ -19,11 +22,15 @@ const initialState: ImportQuestionsState = { success: false, message: "" };
 export function MockTestCsvImport({
   mockTestId,
   isDraft,
+  targetQuestionCount,
+  assignedQuestionCount,
   paperName,
   subjectName,
 }: MockTestCsvImportProps) {
   const importForMock = importQuestionsIntoMockTest.bind(null, mockTestId);
   const [state, action, pending] = useActionState(importForMock, initialState);
+  const replaceForMock = replaceQuestionsInMockTest.bind(null, mockTestId);
+  const [replaceState, replaceAction, replacePending] = useActionState(replaceForMock, initialState);
 
   return (
     <section className="mt-8 overflow-hidden rounded-3xl border border-teal-100 bg-white shadow-sm">
@@ -42,7 +49,8 @@ export function MockTestCsvImport({
       </div>
 
       {isDraft ? (
-        <form action={action} className="p-6 sm:p-7">
+        <div className="p-6 sm:p-7">
+          <form action={action}>
           <label className="block rounded-2xl border border-dashed border-teal-300 bg-slate-50 p-5 text-sm font-bold text-slate-800">
             Excel or CSV file
             <input
@@ -101,7 +109,21 @@ export function MockTestCsvImport({
               {state.message}
             </p>
           )}
-        </form>
+          </form>
+
+          <div className="my-7 border-t border-slate-200" />
+          <form action={replaceAction} onSubmit={(event) => { if (!window.confirm(`Replace all ${assignedQuestionCount} assigned Questions?\n\nThe file must contain exactly ${targetQuestionCount} valid Questions. Validation and replacement run as one transaction; if anything fails, the current Questions stay unchanged.`)) event.preventDefault(); }}>
+            <div className="rounded-2xl border border-red-200 bg-red-50 p-5">
+              <p className="text-xs font-black uppercase tracking-[0.13em] text-red-700">Destructive draft action</p>
+              <h3 className="mt-2 text-lg font-black text-slate-950">Replace all Questions from Excel or CSV</h3>
+              <p className="mt-2 text-sm leading-6 text-slate-700">The complete file is checked first. It must contain exactly <strong>{targetQuestionCount}</strong> valid Questions with unique order numbers. Any error rolls back the entire replacement.</p>
+              <label className="mt-4 block text-sm font-bold">Replacement file<input name="questions_file" type="file" accept=".xlsx,.csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,text/csv" required className="mt-2 block w-full text-sm font-normal file:mr-4 file:rounded-lg file:border-0 file:bg-red-700 file:px-4 file:py-2.5 file:text-sm file:font-bold file:text-white" /></label>
+              <button disabled={replacePending} aria-busy={replacePending} className="mt-4 rounded-xl bg-red-700 px-5 py-3 text-sm font-bold text-white disabled:opacity-50"><PendingButtonContent pending={replacePending} pendingLabel="Validating and replacing…">Validate and replace all</PendingButtonContent></button>
+              <LongPendingNotice pending={replacePending} />
+              {replaceState.message && <p aria-live="polite" className={`mt-4 rounded-xl border px-4 py-3 text-sm font-semibold ${replaceState.success ? "border-emerald-200 bg-emerald-50 text-emerald-800" : "border-red-200 bg-white text-red-700"}`}>{replaceState.message}</p>}
+            </div>
+          </form>
+        </div>
       ) : (
         <div className="m-6 rounded-2xl border border-amber-200 bg-amber-50 p-5 text-sm leading-6 text-amber-900">
           This Mock Test is published or archived. Its question list is locked.
