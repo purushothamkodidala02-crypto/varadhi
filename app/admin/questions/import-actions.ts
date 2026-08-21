@@ -4,13 +4,22 @@ import { revalidatePath } from "next/cache";
 import ExcelJS from "exceljs";
 import { createClient } from "@/lib/supabase/server";
 import { QUESTION_IMPORT_REQUIRED_HEADERS } from "@/lib/questions/import-format";
-import { normalizeQuestionImageUrl, questionMediaPath, removeQuestionImage } from "@/lib/questions/media";
+import { normalizeQuestionImageUrl, questionMediaPath, removeQuestionImage, uploadQuestionImage } from "@/lib/questions/media";
 import type { CorrectAnswer, QuestionLifecycle } from "@/types/question";
 import type { SubjectContentLanguageMode } from "@/types/subject";
 
 export type ImportQuestionsState = { success: boolean; message: string };
 
 type CsvRow = Record<string, string>;
+type EmbeddedQuestionImage = {
+  bytes: Buffer;
+  mimeType: "image/jpeg" | "image/png";
+  fileName: string;
+};
+type ParsedQuestionFile = {
+  rows: Array<{ values: CsvRow; rowNumber: number }>;
+  embeddedImages: Map<number, EmbeddedQuestionImage>;
+};
 type QuestionLanguageValues = {
   question: string;
   options: [string, string, string, string];
@@ -85,7 +94,7 @@ function parseCsv(source: string): CsvRow[] {
   return rows.map((values) => Object.fromEntries(headers.map((header, index) => [header, cleanCellValue(values[index] ?? "")])));
 }
 
-async function parseExcel(file: File): Promise<CsvRow[]> {
+async function parseExcel(file: File): Promise<ParsedQuestionFile> {
   const workbook = new ExcelJS.Workbook();
   const fileBuffer = Buffer.from(await file.arrayBuffer()) as unknown as Parameters<typeof workbook.xlsx.load>[0];
   await workbook.xlsx.load(fileBuffer);
@@ -94,19 +103,45 @@ async function parseExcel(file: File): Promise<CsvRow[]> {
 
   const headers = Array.from({ length: worksheet.columnCount }, (_, index) => normalizeHeader(worksheet.getCell(1, index + 1).text));
   validateHeaders(headers);
-  const rows: CsvRow[] = [];
+  const embeddedImages = new Map<number, EmbeddedQuestionImage>();
+  for (const placement of worksheet.getImages()) {
+    const rowNumber = placement.range.tl.nativeRow + 1;
+    if (rowNumber < 2) continue;
+    if (embeddedImages.has(rowNumber)) throw new Error(`Row ${rowNumber}: use only one embedded Question image per row.`);
+
+    const image = workbook.getImage(Number(placement.imageId));
+    if (!image || !["jpeg", "png"].includes(image.extension)) {
+      throw new Error(`Row ${rowNumber}: embedded images must be PNG or JPG. WebP can be supplied as a public HTTPS URL.`);
+    }
+    const base64 = image.base64?.replace(/^data:[^;]+;base64,/, "");
+    const bytes = image.buffer ? Buffer.from(image.buffer) : base64 ? Buffer.from(base64, "base64") : null;
+    if (!bytes?.length) throw new Error(`Row ${rowNumber}: the embedded image could not be read from the Excel file.`);
+    const mimeType = image.extension === "jpeg" ? "image/jpeg" : "image/png";
+    embeddedImages.set(rowNumber, {
+      bytes,
+      mimeType,
+      fileName: `question-row-${rowNumber}.${image.extension === "jpeg" ? "jpg" : "png"}`,
+    });
+  }
+
+  const rows: ParsedQuestionFile["rows"] = [];
   for (let rowNumber = 2; rowNumber <= worksheet.rowCount; rowNumber += 1) {
     const values = headers.map((header, index) => [header, cleanCellValue(worksheet.getCell(rowNumber, index + 1).text)] as const);
-    if (values.some(([, value]) => value)) rows.push(Object.fromEntries(values));
+    if (values.some(([, value]) => value) || embeddedImages.has(rowNumber)) rows.push({ values: Object.fromEntries(values), rowNumber });
   }
   if (!rows.length) throw new Error("The Excel sheet needs headings and at least one Question.");
-  return rows;
+  return { rows, embeddedImages };
 }
 
-async function parseQuestionFile(file: File): Promise<CsvRow[]> {
+async function parseQuestionFile(file: File): Promise<ParsedQuestionFile> {
   const extension = file.name.toLowerCase().split(".").pop();
   if (extension === "xlsx") return parseExcel(file);
-  if (extension === "csv") return parseCsv(await file.text());
+  if (extension === "csv") {
+    return {
+      rows: parseCsv(await file.text()).map((values, index) => ({ values, rowNumber: index + 2 })),
+      embeddedImages: new Map(),
+    };
+  }
   throw new Error("Choose an Excel (.xlsx) or CSV (.csv) file.");
 }
 
@@ -202,14 +237,14 @@ async function importQuestions(
     return { success: false, message: "The selected Exam Category, Exam, and Paper do not belong together." };
   }
 
-  let rows: CsvRow[];
+  let parsedFile: ParsedQuestionFile;
   try {
-    rows = await parseQuestionFile(file);
+    parsedFile = await parseQuestionFile(file);
   } catch (error) {
     return { success: false, message: error instanceof Error ? error.message : "The Question file could not be read." };
   }
-  if (rows.length > 500) return { success: false, message: "Import up to 500 Questions at one time." };
-  if (mockTest && mode === "replace" && rows.length !== mockTest.target_question_count) return { success: false, message: `Nothing was replaced. The file has ${rows.length} row${rows.length === 1 ? "" : "s"}, but this Mock Test requires exactly ${mockTest.target_question_count}.` };
+  if (parsedFile.rows.length > 500) return { success: false, message: "Import up to 500 Questions at one time." };
+  if (mockTest && mode === "replace" && parsedFile.rows.length !== mockTest.target_question_count) return { success: false, message: `Nothing was replaced. The file has ${parsedFile.rows.length} row${parsedFile.rows.length === 1 ? "" : "s"}, but this Mock Test requires exactly ${mockTest.target_question_count}.` };
 
   const { data: subjects, error: subjectsError } = await supabase
     .from("subjects")
@@ -220,10 +255,10 @@ async function importQuestions(
   const importKeys = new Set<string>();
   const errors: string[] = [];
   const importRows: Record<string, unknown>[] = [];
+  const embeddedImageTargets: Array<{ importIndex: number; image: EmbeddedQuestionImage; rowNumber: number }> = [];
   const assignmentPreferences: Array<{ key: string; rowNumber: number; questionOrder: number | null; marks: number | null; negativeMarks: number | null }> = [];
 
-  rows.forEach((row, index) => {
-    const rowNumber = index + 2;
+  parsedFile.rows.forEach(({ values: row, rowNumber }) => {
     const importKey = (row.import_key ?? "").trim().toLocaleLowerCase();
     const subject = subjectByName.get(normalizeLookup(row.subject ?? ""));
     const correctAnswer = (row.correct_answer ?? "").trim().toUpperCase() as CorrectAnswer;
@@ -237,7 +272,8 @@ async function importQuestions(
     const questionOrder = optionalNumber(row.question_order ?? "");
     const marks = optionalNumber(row.marks ?? "");
     const negativeMarks = optionalNumber(row.negative_marks ?? "");
-    const image = normalizeQuestionImageUrl(row.image_url ?? "");
+    const embeddedImage = parsedFile.embeddedImages.get(rowNumber);
+    const image = embeddedImage ? { url: null, error: null } : normalizeQuestionImageUrl(row.image_url ?? "");
 
     if (!importKey) errors.push(`Row ${rowNumber}: import_key is required.`);
     if (!subject) errors.push(`Row ${rowNumber}: Subject "${row.subject || "(blank)"}" does not exist in the chosen Paper.`);
@@ -248,6 +284,7 @@ async function importQuestions(
     if (sourceExamDate && !validDate(sourceExamDate)) errors.push(`Row ${rowNumber}: source_exam_date must use YYYY-MM-DD.`);
     if (isActive === null) errors.push(`Row ${rowNumber}: is_active must be true or false.`);
     if (image.error) errors.push(`Row ${rowNumber}: ${image.error}`);
+    if (embeddedImage && (row.image_url ?? "").trim()) errors.push(`Row ${rowNumber}: use either the embedded image or image_url, not both.`);
     if (mockTest && questionOrder !== null && (!Number.isInteger(questionOrder) || questionOrder < 1)) errors.push(`Row ${rowNumber}: question_order must be a whole number greater than zero.`);
     if (mockTest && marks !== null && (!Number.isFinite(marks) || marks <= 0)) errors.push(`Row ${rowNumber}: marks must be a number greater than zero.`);
     if (mockTest && negativeMarks !== null && (!Number.isFinite(negativeMarks) || negativeMarks < 0)) errors.push(`Row ${rowNumber}: negative_marks must be zero or a positive number.`);
@@ -271,6 +308,7 @@ async function importQuestions(
     }
     if (!subject || !importKey || !answers.includes(correctAnswer) || !lifecycles.includes(lifecycle) || isActive === null || (mockTest?.test_scope === "subject" && subject.id !== mockTest.subject_id)) return;
     const canonical = languageMode === "telugu" ? telugu : english;
+    const importIndex = importRows.length;
     importRows.push({
       subject_id: subject.id,
       import_key: importKey,
@@ -297,12 +335,30 @@ async function importQuestions(
       review_on: lifecycle === "review" ? reviewOn : null,
       expires_on: lifecycle === "expires" ? expiresOn : null,
     });
+    if (embeddedImage) embeddedImageTargets.push({ importIndex, image: embeddedImage, rowNumber });
     assignmentPreferences.push({ key: `${subject.id}:${importKey}`, rowNumber, questionOrder, marks, negativeMarks });
   });
 
   if (errors.length) {
     const shownErrors = errors.slice(0, 6);
     return { success: false, message: `Nothing was imported. ${shownErrors.join(" ")}${errors.length > shownErrors.length ? ` Plus ${errors.length - shownErrors.length} more issue(s).` : ""}` };
+  }
+
+  const uploadedImagePaths: string[] = [];
+  try {
+    for (const target of embeddedImageTargets) {
+      const imageFile = new File([Uint8Array.from(target.image.bytes)], target.image.fileName, { type: target.image.mimeType });
+      const uploaded = await uploadQuestionImage(supabase, user.id, imageFile);
+      if (uploaded.error || !uploaded.url || !uploaded.path) {
+        await Promise.all(uploadedImagePaths.map((path) => removeQuestionImage(supabase, path)));
+        return { success: false, message: `Nothing was imported. Row ${target.rowNumber}: ${uploaded.error ?? "the embedded image could not be uploaded."}` };
+      }
+      importRows[target.importIndex].image_url = uploaded.url;
+      uploadedImagePaths.push(uploaded.path);
+    }
+  } catch (error) {
+    await Promise.all(uploadedImagePaths.map((path) => removeQuestionImage(supabase, path)));
+    return { success: false, message: `Nothing was imported. ${error instanceof Error ? error.message : "An embedded image could not be uploaded."}` };
   }
 
   const atomicAssignments = mockTest
@@ -325,6 +381,7 @@ async function importQuestions(
       requested_assignments: atomicAssignments,
     });
   if (error) {
+    await Promise.all(uploadedImagePaths.map((path) => removeQuestionImage(supabase, path)));
     const orderConflict = error.code === "23505" && error.message.includes("question_order");
     const targetReached = error.message.includes("target number of Questions");
     return {

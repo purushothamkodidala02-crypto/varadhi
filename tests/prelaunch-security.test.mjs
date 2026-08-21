@@ -200,6 +200,11 @@ test("question media imports, uploads, enlargement, and attempt reviews stay con
   assert.match(migration, /image_url = excluded\.image_url/);
   assert.match(migration, /snapshot\.image_url/);
   assert.match(importer, /normalizeQuestionImageUrl/);
+  assert.match(importer, /worksheet\.getImages\(\)/);
+  assert.match(importer, /placement\.range\.tl\.nativeRow \+ 1/);
+  assert.match(importer, /uploadQuestionImage/);
+  assert.match(importer, /use either the embedded image or image_url/);
+  assert.match(importer, /uploadedImagePaths\.map\(\(path\) => removeQuestionImage/);
   assert.match(importer, /image_url: image\.url/);
   assert.match(runner, /<QuestionMedia src=\{current\.image_url\}/);
   assert.match(review, /<QuestionMedia src=\{row\.image_url\}/);
