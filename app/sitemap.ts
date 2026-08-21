@@ -1,60 +1,35 @@
 import type { MetadataRoute } from "next";
-import { unstable_cache } from "next/cache";
+import { getMockTestCatalogData } from "@/lib/catalog-data";
 import { absoluteUrl } from "@/lib/site";
-import { createPublicClient } from "@/lib/supabase/public";
-import { getMockTestCatalogData, PUBLIC_CATALOG_TAG } from "@/lib/catalog-data";
-import { examCollectionPath } from "@/lib/exam-catalog";
+import { categoryUrl, examUrl, mockTestUrl, paperUrl, specializationUrl, stateUrl, subjectUrl } from "@/lib/public-urls";
 
-const getPublishedTests = unstable_cache(async () => {
-  const supabase = createPublicClient();
-  const { data } = await supabase
-    .from("mock_tests")
-    .select("id, updated_at")
-    .eq("status", "published")
-    .eq("access_type", "free")
-    .order("display_order");
-  return data ?? [];
-}, ["published-test-sitemap-v1"], { tags: [PUBLIC_CATALOG_TAG], revalidate: 3600 });
+export const dynamic = "force-dynamic";
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
-  const [tests, catalog] = await Promise.all([getPublishedTests(), getMockTestCatalogData()]);
-
-  const publicPages: MetadataRoute.Sitemap = [
-    {
-      url: absoluteUrl("/"),
-      changeFrequency: "weekly",
-      priority: 1,
-    },
-    {
-      url: absoluteUrl("/mock-tests"),
-      changeFrequency: "daily",
-      priority: 0.9,
-    },
-    {
-      url: absoluteUrl("/support"),
-      changeFrequency: "yearly",
-      priority: 0.5,
-    },
-  ];
-
-  const testPages: MetadataRoute.Sitemap = tests.map((test) => ({
-    url: absoluteUrl(`/mock-tests/${test.id}`),
-    lastModified: test.updated_at ? new Date(test.updated_at) : undefined,
-    changeFrequency: "weekly",
-    priority: 0.8,
-  }));
-
-  const paperById = new Map(catalog.papers.map((paper) => [paper.id, paper]));
-  const examById = new Map(catalog.exams.map((exam) => [exam.id, exam]));
-  const categoryById = new Map(catalog.categories.map((category) => [category.id, category]));
-  const stateById = new Map(catalog.states.map((state) => [state.id, state]));
-  const publishedExamIds = new Set(catalog.tests.map((test) => paperById.get(test.paper_id)?.exam_group_id).filter((id): id is string => Boolean(id)));
-  const collectionPages: MetadataRoute.Sitemap = [...publishedExamIds].flatMap((examId) => {
-    const exam = examById.get(examId);
+  const catalog = await getMockTestCatalogData();
+  const paperById = new Map(catalog.papers.map((item) => [item.id, item]));
+  const examById = new Map(catalog.exams.map((item) => [item.id, item]));
+  const categoryById = new Map(catalog.categories.map((item) => [item.id, item]));
+  const stateById = new Map(catalog.states.map((item) => [item.id, item]));
+  const contexts = catalog.tests.flatMap((test) => {
+    const paper = paperById.get(test.paper_id);
+    const exam = paper ? examById.get(paper.exam_group_id) : undefined;
     const category = exam ? categoryById.get(exam.exam_id) : undefined;
     const state = category ? stateById.get(category.state_id) : undefined;
-    return exam && state ? [{ url: absoluteUrl(examCollectionPath(state.slug, exam.name)), changeFrequency: "daily" as const, priority: 0.85 }] : [];
+    return paper && exam && category && state ? [{ test, paper, exam, category, state }] : [];
   });
-
-  return [...publicPages, ...collectionPages, ...testPages];
+  const entries = new Map<string, MetadataRoute.Sitemap[number]>();
+  const add = (path: string, priority: number, changeFrequency: "daily" | "weekly", lastModified?: string | null) => entries.set(path, { url: absoluteUrl(path), priority, changeFrequency, lastModified: lastModified ? new Date(lastModified) : undefined });
+  add("/", 1, "weekly"); add("/mock-tests", 0.9, "daily");
+  entries.set("/support", { url: absoluteUrl("/support"), priority: 0.5, changeFrequency: "yearly" });
+  for (const { test, paper, exam, category, state } of contexts) {
+    add(stateUrl(state.slug), 0.85, "daily");
+    add(categoryUrl(state.slug, category.slug), 0.75, "weekly");
+    add(examUrl(state.slug, exam.slug), 0.9, "daily");
+    if (paper.specialization_id) { const specialization = catalog.specializations.find((item) => item.id === paper.specialization_id); if (specialization) add(specializationUrl(state.slug, exam.slug, specialization.slug), 0.72, "weekly"); }
+    add(paperUrl(state.slug, exam.slug, paper.slug), 0.85, "daily");
+    for (const subject of catalog.subjects.filter((item) => item.paper_id === paper.id)) add(subjectUrl(state.slug, exam.slug, paper.slug, subject.slug), 0.7, "weekly");
+    add(mockTestUrl(state.slug, exam.slug, paper.slug, test.slug), 0.8, "weekly", test.updated_at);
+  }
+  return [...entries.values()];
 }

@@ -1,7 +1,9 @@
 "use server";
 
-import { revalidatePath } from "next/cache";
-import { buildMockTestTitle, toCatalogSlug } from "@/lib/exam-catalog";
+import { revalidatePath, revalidateTag } from "next/cache";
+import { PUBLIC_CATALOG_TAG } from "@/lib/catalog-data";
+import { buildMockTestTitle } from "@/lib/exam-catalog";
+import { mockTestSlug } from "@/lib/public-urls";
 import { buildPaperDisplayMap, type OrderedPaper } from "@/lib/papers";
 import { createClient } from "@/lib/supabase/server";
 import type { MockTestScope } from "@/types/mock-test";
@@ -33,7 +35,7 @@ export async function createMockTest(_previous: CreateMockTestState, formData: F
     supabase.from("exam_groups").select("id, exam_id, name, slug").eq("id", examId).maybeSingle(),
     supabase.from("papers").select("id, exam_group_id, specialization_id, name, display_order").eq("id", paperId).maybeSingle(),
     supabase.from("papers").select("id, exam_group_id, specialization_id, name, display_order").eq("exam_group_id", examId),
-    subjectId ? supabase.from("subjects").select("id, paper_id, name").eq("id", subjectId).maybeSingle() : Promise.resolve({ data: null, error: null }),
+    subjectId ? supabase.from("subjects").select("id, paper_id, name, slug").eq("id", subjectId).maybeSingle() : Promise.resolve({ data: null, error: null }),
   ]);
   const state = stateResult.data;
   const category = categoryResult.data;
@@ -50,7 +52,7 @@ export async function createMockTest(_previous: CreateMockTestState, formData: F
   if (seriesError) return { success: false, message: seriesError.message };
   const seriesNumber = Number(existingSeries?.[0]?.series_number ?? 0) + 1;
   const title = buildMockTestTitle({ stateCode: state.code, examName: group.name, paperNumber, subjectName: subject?.name, seriesNumber });
-  const slug = toCatalogSlug(title);
+  const slug = mockTestSlug(seriesNumber, subject?.slug);
   const { error } = await supabase.from("mock_tests").insert({
     paper_id: paperId,
     subject_id: scope === "subject" ? subjectId : null,
@@ -74,5 +76,6 @@ export async function createMockTest(_previous: CreateMockTestState, formData: F
   revalidatePath("/admin/mock-tests");
   revalidatePath("/mock-tests");
   revalidatePath("/");
+  revalidateTag(PUBLIC_CATALOG_TAG, "max");
   return { success: true, message: `${title} was created as a draft.` };
 }

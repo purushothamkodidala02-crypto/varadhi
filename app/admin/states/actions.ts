@@ -1,6 +1,7 @@
 "use server";
 
-import { revalidatePath } from "next/cache";
+import { revalidatePath, revalidateTag } from "next/cache";
+import { PUBLIC_CATALOG_TAG } from "@/lib/catalog-data";
 import { toCatalogSlug } from "@/lib/exam-catalog";
 import { createClient } from "@/lib/supabase/server";
 
@@ -31,7 +32,22 @@ export async function createExamState(_previous: StateActionResult, formData: Fo
   revalidatePath("/admin/exams");
   revalidatePath("/");
   revalidatePath("/mock-tests");
+  revalidateTag(PUBLIC_CATALOG_TAG, "max");
   return { success: true, message: `${name} was added to the catalogue.` };
+}
+
+export async function updateExamStateSlug(formData: FormData) {
+  const { supabase, authorized } = await getAdminClient();
+  if (!authorized) return;
+  const id = String(formData.get("id") ?? "").trim();
+  const slug = String(formData.get("slug") ?? "").trim().toLowerCase();
+  if (!id || !/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(slug)) return;
+  const { error } = await supabase.from("exam_states").update({ slug }).eq("id", id);
+  if (error) return;
+  revalidatePath("/admin/exams");
+  revalidatePath("/");
+  revalidatePath("/mock-tests");
+  revalidateTag(PUBLIC_CATALOG_TAG, "max");
 }
 
 export async function toggleExamState(formData: FormData) {
@@ -44,6 +60,7 @@ export async function toggleExamState(formData: FormData) {
   revalidatePath("/admin/exams");
   revalidatePath("/");
   revalidatePath("/mock-tests");
+  revalidateTag(PUBLIC_CATALOG_TAG, "max");
 }
 
 export async function deleteExamState(formData: FormData) {

@@ -16,7 +16,7 @@ type TestQuestion = {
   question_text_te: string | null; option_a_te: string | null; option_b_te: string | null;
   option_c_te: string | null; option_d_te: string | null;
 };
-type Props = { mockTestId: string; title: string; sessionId: string; expiresAt: string; questions: TestQuestion[] };
+type Props = { mockTestId: string; publicTestPath: string; title: string; sessionId: string; expiresAt: string; questions: TestQuestion[] };
 
 function secondsLeft(expiresAt: string) { return Math.max(0, Math.ceil((new Date(expiresAt).getTime() - Date.now()) / 1000)); }
 function displayTime(total: number) {
@@ -26,7 +26,7 @@ function displayTime(total: number) {
   return hours ? `${String(hours).padStart(2, "0")}:${minutes}:${seconds}` : `${minutes}:${seconds}`;
 }
 
-export function StudentTestRunner({ mockTestId, title, sessionId, expiresAt, questions }: Props) {
+export function StudentTestRunner({ mockTestId, publicTestPath, title, sessionId, expiresAt, questions }: Props) {
   const [deadline, setDeadline] = useState(expiresAt);
   const [index, setIndex] = useState(() => {
     const lastAnsweredIndex = questions.reduce((last, question, questionIndex) => question.selected_answer ? questionIndex : last, -1);
@@ -128,7 +128,7 @@ export function StudentTestRunner({ mockTestId, title, sessionId, expiresAt, que
     return () => window.removeEventListener("keydown", navigateWithKeyboard);
   }, [confirming, locked, questions.length]);
 
-  if (submission) return <SubmissionResult mockTestId={mockTestId} title={title} result={submission} onRetry={() => setSubmission(null)} />;
+  if (submission) return <SubmissionResult publicTestPath={publicTestPath} title={title} result={submission} onRetry={() => setSubmission(null)} />;
 
   const bilingual = current.content_language_mode === "bilingual" && Boolean(current.question_text_te);
   const telugu = bilingual && language === "te";
@@ -276,8 +276,8 @@ function SubmissionDialog({ answered, review, unanswered, submitting, onCancel, 
   return <div className="fixed inset-0 z-50 grid place-items-center bg-slate-950/70 px-5" role="dialog" aria-modal="true" aria-busy={submitting}><section className="w-full max-w-lg rounded-3xl bg-white p-7 shadow-2xl"><p className="text-xs font-bold uppercase tracking-[0.14em] text-teal-700">Final submission</p><h2 className="mt-2 text-2xl font-black">Finish this mock test?</h2><p className="mt-3 text-sm text-slate-600">You cannot change your answers after submission.</p><div className="mt-6 grid grid-cols-3 gap-3"><Metric value={answered} label="Answered" tone="text-emerald-800" /><Metric value={review} label="Review" tone="text-amber-800" /><Metric value={unanswered} label="Unanswered" tone="text-slate-700" /></div>{unanswered > 0 && <p className="mt-5 rounded-xl bg-amber-50 p-4 text-sm font-semibold text-amber-900">You still have {unanswered} unanswered question{unanswered === 1 ? "" : "s"}.</p>}<div className="mt-7 flex justify-end gap-3"><button type="button" onClick={onCancel} disabled={submitting} className="rounded-xl border px-4 py-3 text-sm font-bold disabled:opacity-50">Continue test</button><button type="button" onClick={onSubmit} disabled={submitting} aria-busy={submitting} className="min-w-36 rounded-xl bg-teal-700 px-4 py-3 text-sm font-bold text-white disabled:cursor-wait disabled:opacity-70"><PendingButtonContent pending={submitting} pendingLabel="Submitting…">Submit test</PendingButtonContent></button></div><LongPendingNotice pending={submitting} /></section></div>;
 }
 
-function SubmissionResult({ mockTestId, title, result, onRetry }: { mockTestId: string; title: string; result: SubmitAttemptResult; onRetry: () => void }) {
-  return <main className="grid min-h-screen place-items-center bg-slate-50 px-5 py-10"><section className="w-full max-w-2xl rounded-3xl border bg-white p-8 text-center shadow-xl sm:p-10"><p className={`text-xs font-bold uppercase tracking-[0.16em] ${result.success ? "text-emerald-700" : "text-red-700"}`}>{result.success ? "Test submitted" : "Submission needs attention"}</p><h1 className="mt-3 text-3xl font-black">{title}</h1>{result.success ? <><p className="mt-7 text-5xl font-black">{result.score} <span className="text-2xl text-slate-400">/ {result.totalMarks}</span></p><div className="mt-7 grid grid-cols-3 gap-3"><Metric value={result.correctAnswers ?? 0} label="Correct" tone="text-emerald-800" /><Metric value={result.incorrectAnswers ?? 0} label="Incorrect" tone="text-red-800" /><Metric value={result.unansweredQuestions ?? 0} label="Unanswered" tone="text-slate-700" /></div><div className="mt-8 flex flex-wrap justify-center gap-3">{result.attemptId && <Link href={`/dashboard/attempts/${result.attemptId}`} className="rounded-xl bg-slate-950 px-5 py-3 text-sm font-bold text-white">Review answers</Link>}<Link href={`/mock-tests/${mockTestId}`} className="rounded-xl bg-teal-700 px-5 py-3 text-sm font-bold text-white">Retake test</Link><Link href="/dashboard" className="rounded-xl border px-5 py-3 text-sm font-bold">Go to dashboard</Link></div></> : <><p className="mt-5 text-slate-600">{result.message}</p><button type="button" onClick={onRetry} className="mt-7 rounded-xl bg-slate-950 px-5 py-3 text-sm font-bold text-white">Try submission again</button></>}</section></main>;
+function SubmissionResult({ publicTestPath, title, result, onRetry }: { publicTestPath: string; title: string; result: SubmitAttemptResult; onRetry: () => void }) {
+  return <main className="grid min-h-screen place-items-center bg-slate-50 px-5 py-10"><section className="w-full max-w-2xl rounded-3xl border bg-white p-8 text-center shadow-xl sm:p-10"><p className={`text-xs font-bold uppercase tracking-[0.16em] ${result.success ? "text-emerald-700" : "text-red-700"}`}>{result.success ? "Test submitted" : "Submission needs attention"}</p><h1 className="mt-3 text-3xl font-black">{title}</h1>{result.success ? <><p className="mt-7 text-5xl font-black">{result.score} <span className="text-2xl text-slate-400">/ {result.totalMarks}</span></p><div className="mt-7 grid grid-cols-3 gap-3"><Metric value={result.correctAnswers ?? 0} label="Correct" tone="text-emerald-800" /><Metric value={result.incorrectAnswers ?? 0} label="Incorrect" tone="text-red-800" /><Metric value={result.unansweredQuestions ?? 0} label="Unanswered" tone="text-slate-700" /></div><div className="mt-8 flex flex-wrap justify-center gap-3">{result.attemptId && <Link href={`/dashboard/attempts/${result.attemptId}`} className="rounded-xl bg-slate-950 px-5 py-3 text-sm font-bold text-white">Review answers</Link>}<Link href={publicTestPath} className="rounded-xl bg-teal-700 px-5 py-3 text-sm font-bold text-white">Retake test</Link><Link href="/dashboard" className="rounded-xl border px-5 py-3 text-sm font-bold">Go to dashboard</Link></div></> : <><p className="mt-5 text-slate-600">{result.message}</p><button type="button" onClick={onRetry} className="mt-7 rounded-xl bg-slate-950 px-5 py-3 text-sm font-bold text-white">Try submission again</button></>}</section></main>;
 }
 
 function Metric({ value, label, tone }: { value: number; label: string; tone: string }) { return <div className="rounded-xl border bg-white px-3 py-3 text-center"><strong className={`block text-lg font-black ${tone}`}>{value}</strong><span className="text-xs font-semibold text-slate-500">{label}</span></div>; }

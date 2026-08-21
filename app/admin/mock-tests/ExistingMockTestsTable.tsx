@@ -13,6 +13,7 @@ import {
 import type { MockTestStatus } from "@/types/mock-test";
 import { MockSymbol, StateSymbol } from "@/components/exams/CatalogSymbols";
 import { mockTestLabel } from "@/lib/exam-catalog";
+import { mockTestUrl } from "@/lib/public-urls";
 import { MockTestManagementButtons } from "./MockTestManagementButtons";
 import { DownloadQuestionsButton } from "./DownloadQuestionsButton";
 
@@ -21,11 +22,14 @@ type ExistingMockTest = {
   stateId: string;
   stateName: string;
   stateCode: string;
+  stateSlug: string;
   categoryId: string;
   examId: string;
   specializationId: string;
   paperId: string;
   examName: string;
+  examSlug: string;
+  paperSlug: string;
   paperName: string;
   seriesNumber: number;
   title: string;
@@ -147,7 +151,7 @@ export function ExistingMockTestsTable({ states, categories, exams, specializati
                     <div className="mt-3 flex items-start gap-3"><span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-slate-950 text-teal-200"><MockSymbol className="h-5 w-5" /></span><div><h3 className="font-display text-xl text-slate-950">{mockTestLabel(test.seriesNumber)}</h3><p className="mt-1 text-sm font-semibold text-slate-700">{test.stateCode} · {test.examName} · {test.paperName}{test.subjectName ? ` · ${test.subjectName}` : ""}</p><p className="mt-1 text-xs text-slate-400">Stored title: {test.title}</p></div></div>
                   </div>
                   <div className="flex flex-wrap items-center justify-end gap-2">
-                    {test.status === "published" && <Link href={`/mock-tests/${test.id}`} target="_blank" className="rounded-lg border px-3 py-2 text-sm font-bold text-slate-700 hover:bg-slate-50">View live</Link>}
+                    {test.status === "published" && <Link href={mockTestUrl(test.stateSlug, test.examSlug, test.paperSlug, test.slug)} target="_blank" className="rounded-lg border px-3 py-2 text-sm font-bold text-slate-700 hover:bg-slate-50">View live</Link>}
                     {test.questionCount > 0 ? <DownloadQuestionsButton mockTestId={test.id} /> : <span title="Add Questions before downloading" className="cursor-not-allowed rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm font-bold text-slate-400">No questions to download</span>}
                     <Link href={`/admin/mock-tests/${test.id}/edit`} className="rounded-lg bg-teal-700 px-3 py-2 text-sm font-bold text-white shadow-sm hover:bg-teal-800">Manage test</Link>
                     <MockTestManagementButtons mockTestId={test.id} mockTestTitle={test.title} status={test.status} ready={ready} />

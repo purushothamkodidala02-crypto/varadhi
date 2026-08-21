@@ -1,6 +1,7 @@
 "use server";
 
-import { revalidatePath } from "next/cache";
+import { revalidatePath, revalidateTag } from "next/cache";
+import { PUBLIC_CATALOG_TAG } from "@/lib/catalog-data";
 import { createClient } from "@/lib/supabase/server";
 import { readPaperInputs, toPaperRows } from "./paper-inputs";
 import { readSpecializationInputs } from "./specialization-inputs";
@@ -202,6 +203,7 @@ export async function createGroup(
   revalidatePath("/admin/mock-tests");
   revalidatePath("/admin/questions");
   revalidatePath("/mock-tests");
+  revalidateTag(PUBLIC_CATALOG_TAG, "max");
 
   return {
     success: true,

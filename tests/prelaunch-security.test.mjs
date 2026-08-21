@@ -81,7 +81,7 @@ test("password recovery works across devices without consuming tokens on email p
 });
 
 test("first-time mock-test screen does not claim progress is already saved", async () => {
-  const testPage = await read("app/mock-tests/[id]/page.tsx");
+  const testPage = await read("components/mock-tests/MockTestDetailPage.tsx");
 
   assert.doesNotMatch(testPage, /Saved during the attempt/);
   assert.match(testPage, /hasResumableSession[\s\S]*Saved — ready to resume/);
@@ -117,26 +117,37 @@ test("public pages expose route-specific SEO metadata and crawl targets", async 
   assert.match(robots, /host:\s*absoluteUrl\("\/"\)/);
 });
 
-test("exam collections use readable indexable URLs while legacy IDs redirect", async () => {
-  const [home, catalog, collectionRoute, helpers, sitemap] = await Promise.all([
+test("permanent public slugs cover every catalogue level and legacy URLs redirect", async () => {
+  const [home, catalog, examRoute, testRoute, helpers, resolver, sitemap, migration] = await Promise.all([
     read("app/page.tsx"),
     read("app/mock-tests/page.tsx"),
     read("app/mock-tests/[id]/[exam]/page.tsx"),
-    read("lib/exam-catalog.ts"),
+    read("app/mock-tests/[id]/[exam]/[paper]/[test]/page.tsx"),
+    read("lib/public-urls.ts"),
+    read("lib/public-route-data.ts"),
     read("app/sitemap.ts"),
+    read("supabase/migrations/20260821193000_add_permanent_public_slug_history.sql"),
   ]);
 
-  assert.match(helpers, /examCollectionSlug/);
-  assert.match(helpers, /replace\(\/\\s\*\\\(\[\^\)\]\*\\\)\\s\*\$\//);
-  assert.match(helpers, /`\$\{slug\}-mock-tests`/);
-  assert.match(home, /href=\{examCollectionPath\(state\?\.slug/);
+  assert.match(helpers, /stateUrl/);
+  assert.match(helpers, /categoryUrl/);
+  assert.match(helpers, /specializationUrl/);
+  assert.match(helpers, /subjectUrl/);
+  assert.match(helpers, /mockTestUrl/);
+  assert.match(home, /href=\{examUrl\(state\.slug, exam\.slug\)\}/);
   assert.doesNotMatch(home, /exam=\$\{exam\.id\}/);
-  assert.match(catalog, /examCollectionSlug\(exam\.name\) === filters\.exam/);
-  assert.match(catalog, /redirect\(examCollectionHref/);
-  assert.match(collectionRoute, /alternates:\s*\{ canonical \}/);
-  assert.match(collectionRoute, /Mock Tests in/);
-  assert.match(sitemap, /collectionPages/);
-  assert.match(sitemap, /examCollectionPath\(state\.slug, exam\.name\)/);
+  assert.match(catalog, /permanentRedirect\(withQuery\(destination, filters\)\)/);
+  assert.match(examRoute, /permanentRedirect\(canonical\)/);
+  assert.match(testRoute, /generateMockTestMetadata/);
+  assert.match(resolver, /public_slug_aliases/);
+  assert.match(resolver, /getMockTestPublicContextById/);
+  assert.match(sitemap, /categoryUrl/);
+  assert.match(sitemap, /subjectUrl/);
+  assert.match(sitemap, /mockTestUrl/);
+  assert.match(migration, /create table if not exists public\.public_slug_aliases/);
+  assert.match(migration, /remember_previous_public_slug/);
+  assert.match(migration, /unique index if not exists public_slug_aliases_scope_unique/);
+  assert.match(migration, /mock_tests_slug_format/);
 });
 
 test("navigation and question-management links remain accessible", async () => {

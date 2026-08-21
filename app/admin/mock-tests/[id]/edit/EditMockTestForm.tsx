@@ -36,7 +36,8 @@ export function EditMockTestForm({
   return (
     <section className="mt-8 rounded-2xl border bg-white p-6 shadow-sm">
       <form action={action} className="grid gap-5 md:grid-cols-2">
-        <div className="rounded-2xl border border-teal-200 bg-teal-50 p-5 md:col-span-2"><p className="text-xs font-black uppercase tracking-[0.13em] text-teal-700">Series identity</p><h2 className="font-display mt-1 text-2xl">{mockTestLabel(mockTest.series_number)}</h2><p className="mt-1 text-sm text-slate-600">The full title and URL are regenerated from the selected exam and paper when you save.</p></div>
+        <div className="rounded-2xl border border-teal-200 bg-teal-50 p-5 md:col-span-2"><p className="text-xs font-black uppercase tracking-[0.13em] text-teal-700">Series identity</p><h2 className="font-display mt-1 text-2xl">{mockTestLabel(mockTest.series_number)}</h2><p className="mt-1 text-sm text-slate-600">The title follows the selected exam and paper. The permanent URL slug changes only when you edit it below.</p></div>
+        <label className="block text-sm font-bold md:col-span-2">Permanent URL slug<input name="slug" required pattern="[a-z0-9]+(?:-[a-z0-9]+)*" defaultValue={mockTest.slug} className="mt-2 w-full rounded-xl border px-4 py-3 font-normal" /><span className="mt-1 block text-xs font-normal text-slate-500">Changing this keeps the previous URL as a permanent redirect.</span></label>
         <label className="block text-sm font-bold md:col-span-2">
           Paper
           <SearchableSelect

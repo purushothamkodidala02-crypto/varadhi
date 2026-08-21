@@ -1,6 +1,7 @@
 "use server";
 
-import { revalidatePath } from "next/cache";
+import { revalidatePath, revalidateTag } from "next/cache";
+import { PUBLIC_CATALOG_TAG } from "@/lib/catalog-data";
 import { createClient } from "@/lib/supabase/server";
 
 export type CreateExamState = {
@@ -125,6 +126,7 @@ export async function createExam(
 
   revalidatePath("/admin");
   revalidatePath("/admin/exams");
+  revalidateTag(PUBLIC_CATALOG_TAG, "max");
 
   return {
     success: true,

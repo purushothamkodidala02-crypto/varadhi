@@ -1,6 +1,7 @@
 "use server";
 
-import { revalidatePath } from "next/cache";
+import { revalidatePath, revalidateTag } from "next/cache";
+import { PUBLIC_CATALOG_TAG } from "@/lib/catalog-data";
 import { createClient } from "@/lib/supabase/server";
 
 export type UpdateGroupState = {
@@ -160,6 +161,7 @@ export async function updateGroup(
   revalidatePath("/admin/mock-tests");
   revalidatePath("/admin/questions");
   revalidatePath("/mock-tests");
+  revalidateTag(PUBLIC_CATALOG_TAG, "max");
   revalidatePath(`/admin/groups/${groupId}/edit`);
 
   return {

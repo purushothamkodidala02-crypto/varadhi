@@ -8,6 +8,7 @@ const UUID_PATTERN =
 
 export async function beginMockTest(
   mockTestId: string,
+  publicPath: string,
   mode: "resume" | "restart",
 ) {
   if (!UUID_PATTERN.test(mockTestId)) redirect("/mock-tests");
@@ -18,7 +19,7 @@ export async function beginMockTest(
   } = await supabase.auth.getUser();
 
   if (!user) {
-    redirect(`/login?next=${encodeURIComponent(`/mock-tests/${mockTestId}`)}`);
+    redirect(`/login?next=${encodeURIComponent(publicPath)}`);
   }
 
   const functionName =
@@ -31,7 +32,7 @@ export async function beginMockTest(
   const session = data?.[0] as { session_id?: string } | undefined;
 
   if (error || !session?.session_id) {
-    redirect(`/mock-tests/${mockTestId}?start_error=1`);
+    redirect(`${publicPath}?start_error=1`);
   }
 
   redirect(

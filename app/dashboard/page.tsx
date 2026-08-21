@@ -1,7 +1,9 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { PublicHeader } from "@/components/site/PublicHeader";
+import { getMockTestCatalogData } from "@/lib/catalog-data";
 import { buildPaperDisplayMap, type OrderedPaper } from "@/lib/papers";
+import { mockTestUrl } from "@/lib/public-urls";
 import { createClient } from "@/lib/supabase/server";
 
 type Attempt = {
@@ -20,6 +22,7 @@ type AvailableMockTest = {
   paper_id: string;
   title: string;
   duration_minutes: number;
+  slug: string;
 };
 
 type SubjectAnalytics = {
@@ -41,6 +44,7 @@ export default async function Dashboard() {
     availableTestsResult,
     allTestsResult,
     papersResult,
+    catalog,
   ] = await Promise.all([
     supabase
       .from("test_attempts")
@@ -51,7 +55,7 @@ export default async function Dashboard() {
     supabase.rpc("get_student_subject_analytics"),
     supabase
       .from("mock_tests")
-      .select("id, paper_id, title, duration_minutes")
+      .select("id, paper_id, title, duration_minutes, slug")
       .eq("status", "published")
       .eq("access_type", "free")
       .order("display_order", { ascending: true }),
@@ -60,6 +64,7 @@ export default async function Dashboard() {
       .from("papers")
       .select("id, exam_group_id, specialization_id, name, display_order")
       .eq("is_active", true),
+    getMockTestCatalogData(),
   ]);
 
   const attempts = (attemptsResult.data ?? []) as Attempt[];
@@ -71,6 +76,17 @@ export default async function Dashboard() {
   const testTitles = new Map(
     (allTestsResult.data ?? []).map((test) => [test.id, test.title]),
   );
+  const catalogPaperById = new Map(catalog.papers.map((item) => [item.id, item]));
+  const catalogExamById = new Map(catalog.exams.map((item) => [item.id, item]));
+  const catalogCategoryById = new Map(catalog.categories.map((item) => [item.id, item]));
+  const catalogStateById = new Map(catalog.states.map((item) => [item.id, item]));
+  const publicTestPath = (test: AvailableMockTest) => {
+    const paper = catalogPaperById.get(test.paper_id);
+    const exam = paper ? catalogExamById.get(paper.exam_group_id) : undefined;
+    const category = exam ? catalogCategoryById.get(exam.exam_id) : undefined;
+    const state = category ? catalogStateById.get(category.state_id) : undefined;
+    return paper && exam && state ? mockTestUrl(state.slug, exam.slug, paper.slug, test.slug) : "/mock-tests";
+  };
   const averageScore =
     attempts.length === 0
       ? 0
@@ -192,7 +208,7 @@ export default async function Dashboard() {
                       {test.duration_minutes} minutes
                     </span>
                     <Link
-                      href={`/mock-tests/${test.id}`}
+                      href={publicTestPath(test)}
                       className="rounded-lg bg-slate-950 px-4 py-2.5 text-sm font-bold text-white group-hover:bg-teal-700"
                     >
                       View test

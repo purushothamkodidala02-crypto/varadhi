@@ -9,7 +9,7 @@ export const getHomeCatalogData = unstable_cache(
     const [statesResult, categoriesResult, examsResult, papersResult, testsResult] =
       await Promise.all([
         supabase.from("exam_states").select("id, name, code, slug, description, display_order").eq("is_active", true).order("display_order"),
-        supabase.from("exams").select("id, state_id, name").eq("is_active", true).order("display_order"),
+        supabase.from("exams").select("id, state_id, name, slug").eq("is_active", true).order("display_order"),
         supabase.from("exam_groups").select("id, exam_id, name, slug").eq("is_active", true).order("display_order"),
         supabase.from("papers").select("id, exam_group_id").eq("is_active", true),
         supabase.from("mock_tests").select("id, paper_id").eq("status", "published").eq("access_type", "free"),
@@ -35,10 +35,10 @@ export const getMockTestCatalogData = unstable_cache(
       supabase.from("exam_states").select("id, name, code, slug, description, display_order").eq("is_active", true).order("display_order"),
       supabase.from("exams").select("id, state_id, name, slug").eq("is_active", true).order("display_order"),
       supabase.from("exam_groups").select("id, exam_id, name, slug").eq("is_active", true).order("display_order"),
-      supabase.from("exam_specializations").select("id, exam_group_id, name").eq("is_active", true).order("display_order"),
-      supabase.from("papers").select("id, exam_group_id, specialization_id, name, display_order, question_count, default_correct_marks").eq("is_active", true).order("display_order"),
-      supabase.from("subjects").select("id, paper_id, name").eq("is_active", true).order("display_order"),
-      supabase.from("mock_tests").select("id, paper_id, subject_id, test_scope, series_number, title, description, duration_minutes, access_type, price_inr").eq("status", "published").eq("access_type", "free").order("series_number"),
+      supabase.from("exam_specializations").select("id, exam_group_id, name, slug, description").eq("is_active", true).order("display_order"),
+      supabase.from("papers").select("id, exam_group_id, specialization_id, name, slug, description, display_order, question_count, default_correct_marks").eq("is_active", true).order("display_order"),
+      supabase.from("subjects").select("id, paper_id, name, slug, description").eq("is_active", true).order("display_order"),
+      supabase.from("mock_tests").select("id, paper_id, subject_id, test_scope, series_number, title, slug, description, duration_minutes, access_type, price_inr, updated_at").eq("status", "published").eq("access_type", "free").order("series_number"),
       supabase.rpc("get_published_mock_test_stats"),
     ]);
 
