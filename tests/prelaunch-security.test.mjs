@@ -186,12 +186,13 @@ test("navigation and question-management links remain accessible", async () => {
   assert.match(packageJson, /"nanoid":\s*"3\.3\.18"/);
 });
 
-test("question media imports, uploads, and attempt reviews stay connected", async () => {
-  const [migration, importer, runner, review] = await Promise.all([
+test("question media imports, uploads, enlargement, and attempt reviews stay connected", async () => {
+  const [migration, importer, runner, review, media] = await Promise.all([
     read("supabase/migrations/20260814160000_add_question_media_workflow.sql"),
     read("app/admin/questions/import-actions.ts"),
     read("app/mock-tests/[id]/StudentTestRunner.tsx"),
     read("app/dashboard/attempts/[id]/AttemptReviewNavigator.tsx"),
+    read("components/questions/QuestionMedia.tsx"),
   ]);
 
   assert.match(migration, /question-media/);
@@ -202,6 +203,12 @@ test("question media imports, uploads, and attempt reviews stay connected", asyn
   assert.match(importer, /image_url: image\.url/);
   assert.match(runner, /<QuestionMedia src=\{current\.image_url\}/);
   assert.match(review, /<QuestionMedia src=\{row\.image_url\}/);
+  assert.match(media, /aria-label="Open a larger view of the Question image"/);
+  assert.match(media, /aria-modal="true"/);
+  assert.match(media, /Zoom in/);
+  assert.match(media, /Zoom out/);
+  assert.match(media, /max-h-\[42rem\]/);
+  assert.match(media, /motion-reduce:transition-none/);
 });
 
 test("assertion-reason questions accept short labels and render standard labels", async () => {
