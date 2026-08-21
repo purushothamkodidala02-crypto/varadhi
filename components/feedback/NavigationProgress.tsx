@@ -5,9 +5,9 @@ import { usePathname } from "next/navigation";
 
 export function NavigationProgress() {
   const pathname = usePathname();
-  const [navigation, setNavigation] = useState<{ path: string; id: number } | null>(null);
+  const [navigation, setNavigation] = useState<{ sourceHref: string; id: number } | null>(null);
   const navigationId = useRef(0);
-  const pending = navigation?.path === pathname;
+  const pending = navigation !== null;
 
   useEffect(() => {
     function startForLink(event: MouseEvent) {
@@ -18,14 +18,24 @@ export function NavigationProgress() {
       if (next.origin !== window.location.origin || next.href === window.location.href || next.hash && next.pathname === window.location.pathname && next.search === window.location.search) return;
       if (next.pathname.endsWith("/questions-export")) return;
       navigationId.current += 1;
-      setNavigation({ path: pathname, id: navigationId.current });
+      setNavigation({ sourceHref: window.location.href, id: navigationId.current });
     }
 
     function startForGetForm(event: SubmitEvent) {
       const form = event.target;
       if (!(form instanceof HTMLFormElement) || (form.method && form.method.toLowerCase() !== "get")) return;
+      const next = new URL(form.action || window.location.href, window.location.href);
+      const values = new URLSearchParams();
+      for (const [name, value] of new FormData(form)) {
+        if (typeof value === "string") values.append(name, value);
+      }
+      if (event.submitter instanceof HTMLButtonElement && event.submitter.name) {
+        values.append(event.submitter.name, event.submitter.value);
+      }
+      next.search = values.toString();
+      if (next.href === window.location.href) return;
       navigationId.current += 1;
-      setNavigation({ path: pathname, id: navigationId.current });
+      setNavigation({ sourceHref: window.location.href, id: navigationId.current });
     }
 
     document.addEventListener("click", startForLink, true);
@@ -38,13 +48,21 @@ export function NavigationProgress() {
 
   useEffect(() => {
     if (!pending) return;
+    const activeNavigation = navigation;
+    const clearIfUrlChanged = () => {
+      if (window.location.href === activeNavigation.sourceHref) return;
+      setNavigation((current) => current?.id === activeNavigation.id ? null : current);
+    };
+    clearIfUrlChanged();
+    const urlTimer = window.setInterval(clearIfUrlChanged, 100);
     const safetyTimer = window.setTimeout(() => {
-      setNavigation(null);
+      setNavigation((current) => current?.id === activeNavigation.id ? null : current);
     }, 30000);
     return () => {
+      window.clearInterval(urlTimer);
       window.clearTimeout(safetyTimer);
     };
-  }, [navigation, pending]);
+  }, [navigation, pathname, pending]);
 
   return (
     <div className={`pointer-events-none fixed inset-x-0 top-0 z-[200] transition-opacity ${pending ? "opacity-100" : "opacity-0"}`} aria-hidden={!pending}>

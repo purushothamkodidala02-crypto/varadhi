@@ -205,6 +205,10 @@ test("loading feedback is accessible and prevents duplicate operations", async (
   assert.match(navigationProgress, /aria-live="polite"/);
   assert.match(navigationProgress, /motion-reduce:animate-none/);
   assert.match(navigationProgress, /This is taking longer than expected/);
+  assert.match(navigationProgress, /sourceHref: window\.location\.href/);
+  assert.match(navigationProgress, /window\.location\.href === activeNavigation\.sourceHref/);
+  assert.match(navigationProgress, /window\.setInterval\(clearIfUrlChanged, 100\)/);
+  assert.match(navigationProgress, /new FormData\(form\)/);
   assert.match(pendingSubmitButton, /useFormStatus/);
   assert.match(pendingSubmitButton, /disabled=\{disabled \|\| pending\}/);
   assert.match(pendingSubmitButton, /aria-busy=\{pending\}/);
