@@ -2,6 +2,7 @@
 
 import { revalidatePath, revalidateTag } from "next/cache";
 import { PUBLIC_CATALOG_TAG } from "@/lib/catalog-data";
+import { readSeoFields } from "@/lib/seo-fields";
 import { createClient } from "@/lib/supabase/server";
 
 export type SpecializationActionState = { success: boolean; message: string };
@@ -19,10 +20,12 @@ function readSpecialization(formData: FormData) {
   const name = String(formData.get("name") ?? "").trim();
   const slug = String(formData.get("slug") ?? "").trim().toLowerCase();
   const displayOrder = Number(formData.get("display_order") ?? 0);
+  const seo = readSeoFields(formData);
   if (!examGroupId || !name) return { error: "Choose an Exam and enter the Specialisation name." };
   if (!slug || !/^[a-z0-9-]+$/.test(slug)) return { error: "Slug can contain only lowercase letters, numbers and hyphens." };
   if (!Number.isInteger(displayOrder) || displayOrder < 0) return { error: "Display order must be zero or a positive number." };
-  return { value: { exam_group_id: examGroupId, name, slug, description: String(formData.get("description") ?? "").trim() || null, display_order: displayOrder, is_active: formData.get("is_active") === "on" } };
+  if (seo.error) return { error: seo.error };
+  return { value: { exam_group_id: examGroupId, name, slug, description: String(formData.get("description") ?? "").trim() || null, ...seo.value, display_order: displayOrder, is_active: formData.get("is_active") === "on" } };
 }
 
 export async function createSpecialization(_previous: SpecializationActionState, formData: FormData): Promise<SpecializationActionState> {

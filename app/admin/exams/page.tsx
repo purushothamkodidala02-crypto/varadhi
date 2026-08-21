@@ -13,7 +13,7 @@ export default async function AdminExamStructurePage() {
   ] = await Promise.all([
     supabase
       .from("exam_states")
-      .select("id, name, code, slug, description, is_active, display_order")
+      .select("id, name, code, slug, description, seo_title, seo_description, is_active, display_order")
       .order("display_order")
       .order("name"),
     supabase
@@ -96,6 +96,8 @@ export default async function AdminExamStructurePage() {
           code: state.code,
           slug: state.slug,
           description: state.description,
+          seoTitle: state.seo_title,
+          seoDescription: state.seo_description,
           isActive: state.is_active,
           displayOrder: state.display_order,
         }))}

@@ -21,7 +21,7 @@ export default async function EditGroupPage({
     supabase
       .from("exam_groups")
       .select(
-        "id, exam_id, name, slug, description, is_active, display_order, created_at, updated_at"
+        "id, exam_id, name, slug, description, seo_title, seo_description, is_active, display_order, created_at, updated_at"
       )
       .eq("id", id)
       .single(),
@@ -39,7 +39,7 @@ export default async function EditGroupPage({
 
     supabase
       .from("exam_specializations")
-      .select("id, exam_group_id, name, slug, is_active, display_order")
+      .select("id, exam_group_id, name, slug, description, seo_title, seo_description, is_active, display_order")
       .eq("exam_group_id", id)
       .order("display_order", { ascending: true }),
   ]);
@@ -75,7 +75,7 @@ export default async function EditGroupPage({
       <ExamPaperManager
         examId={group.id}
         examName={group.name}
-        specializations={(specializationsResult.data ?? []).map((item) => ({ id: item.id, name: item.name, slug: item.slug, isActive: item.is_active, displayOrder: item.display_order }))}
+        specializations={(specializationsResult.data ?? []).map((item) => ({ id: item.id, name: item.name, slug: item.slug, description: item.description, seoTitle: item.seo_title, seoDescription: item.seo_description, isActive: item.is_active, displayOrder: item.display_order }))}
         papers={(papersResult.data ?? []).map((paper) => ({
           id: paper.id,
           specializationId: paper.specialization_id,

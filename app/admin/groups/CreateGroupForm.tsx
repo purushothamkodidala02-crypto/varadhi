@@ -3,6 +3,7 @@
 import { useActionState, useEffect, useMemo, useRef, useState } from "react";
 import { PendingButtonContent } from "@/components/feedback/LoadingSpinner";
 import { SearchableSelect } from "@/components/admin/SearchableSelect";
+import { SeoFields } from "@/components/admin/SeoFields";
 import { createGroup, type CreateGroupState } from "./actions";
 import { PaperListInput } from "./PaperListInput";
 import { SpecializationPapersInput } from "./SpecializationPapersInput";
@@ -79,6 +80,7 @@ export function CreateGroupForm({ categories, existingExams, initialCategoryId =
         </div>
 
         <label className="block text-sm font-bold">Description <span className="font-normal text-slate-500">optional</span><textarea id="description" name="description" rows={3} placeholder="Short introduction for students" className="mt-2 w-full rounded-lg border px-4 py-3 font-normal" /></label>
+        <SeoFields titlePlaceholder="Exam name Mock Test – Free Online Tests" descriptionPlaceholder="Take free online mock tests for this exam with timed practice and answer review." />
         <div className="max-w-xs"><label className="block text-sm font-bold">Display order<input id="display_order" name="display_order" type="number" min="0" step="1" required placeholder="For example: 1" className="mt-2 w-full rounded-lg border px-4 py-3 font-normal" /></label></div>
         <SpecializationPapersInput />
         <PaperListInput inputName="papers_json" initialRows={0} title="Direct / common Papers" description="Add Papers that belong directly to this Exam. Use this for Group 1, Group 2, and Group 4, or for a Paper shared by every Specialisation." />

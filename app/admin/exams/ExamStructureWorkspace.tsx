@@ -18,6 +18,8 @@ type ExamState = {
   code: string;
   slug: string;
   description: string | null;
+  seoTitle: string | null;
+  seoDescription: string | null;
   isActive: boolean;
   displayOrder: number;
 };

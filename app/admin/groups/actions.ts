@@ -2,6 +2,7 @@
 
 import { revalidatePath, revalidateTag } from "next/cache";
 import { PUBLIC_CATALOG_TAG } from "@/lib/catalog-data";
+import { readSeoFields } from "@/lib/seo-fields";
 import { createClient } from "@/lib/supabase/server";
 import { readPaperInputs, toPaperRows } from "./paper-inputs";
 import { readSpecializationInputs } from "./specialization-inputs";
@@ -59,6 +60,9 @@ export async function createGroup(
   );
 
   const isActive = formData.get("is_active") === "on";
+  const seo = readSeoFields(formData);
+
+  if (seo.error) return { success: false, message: seo.error };
 
   if (!examId) {
     return {
@@ -192,6 +196,18 @@ export async function createGroup(
     return {
       success: false,
       message: insertError?.message ?? "The Exam could not be created.",
+    };
+  }
+
+  const { error: seoUpdateError } = await supabase
+    .from("exam_groups")
+    .update(seo.value)
+    .eq("id", groupId);
+
+  if (seoUpdateError) {
+    return {
+      success: false,
+      message: `The Exam was created, but its search appearance could not be saved: ${seoUpdateError.message}`,
     };
   }
 

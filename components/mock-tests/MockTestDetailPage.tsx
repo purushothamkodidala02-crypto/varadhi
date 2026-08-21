@@ -6,6 +6,7 @@ import { PublicHeader } from "@/components/site/PublicHeader";
 import { mockTestLabel } from "@/lib/exam-catalog";
 import { buildPaperDisplayMap, type OrderedPaper } from "@/lib/papers";
 import { absoluteUrl } from "@/lib/site";
+import { resolveSeoFields } from "@/lib/seo-fields";
 import { createPublicClient } from "@/lib/supabase/public";
 import { createClient } from "@/lib/supabase/server";
 import { TestStartActions } from "@/app/mock-tests/[id]/TestStartActions";
@@ -28,7 +29,7 @@ export async function generateMockTestMetadata({ id, canonicalPath }: MockTestDe
   const { data: test } = await supabase
     .from("mock_tests")
     .select(
-      "id, paper_id, series_number, title, description, duration_minutes, subject_id",
+      "id, paper_id, series_number, title, description, seo_title, seo_description, duration_minutes, subject_id",
     )
     .eq("id", id)
     .eq("status", "published")
@@ -54,27 +55,27 @@ export async function generateMockTestMetadata({ id, canonicalPath }: MockTestDe
     .maybeSingle();
 
   if (!paper) {
-    const fallbackDescription =
-      test.description ??
-      "Take this free competitive exam mock test on Varadhi Prep.";
+    const seo = resolveSeoFields(test, {
+      title: test.title,
+      description: test.description ?? "Take this free competitive exam mock test on Varadhi Prep.",
+    });
 
     return {
-      title: test.title,
-      description: fallbackDescription,
+      ...seo,
       alternates: {
         canonical: canonicalPath,
       },
       openGraph: {
         type: "website",
         url: canonicalPath,
-        title: test.title,
-        description: fallbackDescription,
+        title: seo.title,
+        description: seo.description,
         siteName: "Varadhi Prep",
       },
       twitter: {
         card: "summary_large_image",
-        title: test.title,
-        description: fallbackDescription,
+        title: seo.title,
+        description: seo.description,
       },
     };
   }
@@ -158,19 +159,20 @@ export async function generateMockTestMetadata({ id, canonicalPath }: MockTestDe
       ? `${state.code} `
       : "";
 
-  const seoTitle = `${statePrefix}${examName} ${paperLabel} ${testLabel}`;
+  const automaticTitle = `${statePrefix}${examName} ${paperLabel} ${testLabel}`;
 
   const subjectText = subjectResult.data?.name
     ? ` ${subjectResult.data.name} practice included.`
     : "";
 
-  const seoDescription =
-    test.description ??
-    `Take the free ${seoTitle} on Varadhi Prep.${subjectText} Practice for ${test.duration_minutes} minutes with exam-focused questions and detailed result review.`;
+  const seo = resolveSeoFields(test, {
+    title: automaticTitle,
+    description: test.description ?? `Take the free ${automaticTitle} on Varadhi Prep.${subjectText} Practice for ${test.duration_minutes} minutes with exam-focused questions and detailed result review.`,
+  });
 
   return {
-    title: seoTitle,
-    description: seoDescription,
+    title: seo.title,
+    description: seo.description,
 
     alternates: {
       canonical: canonicalPath,
@@ -179,23 +181,23 @@ export async function generateMockTestMetadata({ id, canonicalPath }: MockTestDe
     openGraph: {
       type: "website",
       url: canonicalPath,
-      title: seoTitle,
-      description: seoDescription,
+      title: seo.title,
+      description: seo.description,
       siteName: "Varadhi Prep",
       images: [
         {
           url: "/opengraph-image",
           width: 1200,
           height: 630,
-          alt: `${seoTitle} on Varadhi Prep`,
+          alt: `${seo.title} on Varadhi Prep`,
         },
       ],
     },
 
     twitter: {
       card: "summary_large_image",
-      title: seoTitle,
-      description: seoDescription,
+      title: seo.title,
+      description: seo.description,
       images: ["/opengraph-image"],
     },
 

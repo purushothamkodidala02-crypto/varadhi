@@ -2,6 +2,7 @@
 
 import { useActionState } from "react";
 import { PendingButtonContent } from "@/components/feedback/LoadingSpinner";
+import { SeoFields } from "@/components/admin/SeoFields";
 import type { Exam } from "@/types/exam";
 import {
   updateExam,
@@ -55,6 +56,13 @@ export function EditExamForm({
             className="w-full rounded-lg border px-4 py-3"
           />
         </div>
+
+        <SeoFields
+          title={exam.seo_title}
+          description={exam.seo_description}
+          titlePlaceholder={`${exam.name} Mock Tests`}
+          descriptionPlaceholder={`Browse ${exam.name} exams and free mock tests.`}
+        />
 
         <div>
           <label

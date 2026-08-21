@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useActionState, useEffect, useMemo, useRef, useState } from "react";
 import { PendingButtonContent } from "@/components/feedback/LoadingSpinner";
+import { SeoFields } from "@/components/admin/SeoFields";
 import { createExam, type CreateExamState } from "./actions";
 
 type ExistingCategory = { id: string; stateId: string; name: string };
@@ -117,6 +118,11 @@ export function CreateExamForm({
             </p>
           )}
         </div>
+
+        <SeoFields
+          titlePlaceholder="State service commission mock tests"
+          descriptionPlaceholder="Browse this exam category and its free online mock tests."
+        />
 
         <div>
           <label htmlFor="slug" className="mb-2 block text-sm font-medium">

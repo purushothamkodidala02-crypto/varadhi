@@ -19,7 +19,7 @@ export default async function EditExamPage({
   const [{ data, error }, statesResult] = await Promise.all([
     supabase
       .from("exams")
-      .select("id, state_id, name, slug, description, is_active, display_order, created_at, updated_at")
+      .select("id, state_id, name, slug, description, seo_title, seo_description, is_active, display_order, created_at, updated_at")
       .eq("id", id)
       .single(),
     supabase.from("exam_states").select("id, name, code").order("display_order"),
