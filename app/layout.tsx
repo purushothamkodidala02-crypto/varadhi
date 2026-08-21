@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { connection } from "next/server";
 import { SITE_DESCRIPTION, SITE_NAME, SITE_URL } from "@/lib/site";
 import "./globals.css";
 
@@ -56,11 +57,15 @@ export const metadata: Metadata = {
   },
 };
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  // A nonce-based CSP requires request-time rendering so Next.js can attach
+  // the request nonce to its framework and hydration scripts.
+  await connection();
+
   return (
     <html lang="en" className="h-full antialiased">
       <body className="min-h-full bg-white text-gray-900">

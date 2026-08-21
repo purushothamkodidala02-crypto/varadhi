@@ -35,11 +35,12 @@ test("database migration locks sessions and makes submission idempotent", async 
 });
 
 test("production CSP uses per-request nonces and no production unsafe-inline scripts", async () => {
-  const [proxy, config] = await Promise.all([read("proxy.ts"), read("next.config.ts")]);
+  const [proxy, config, layout] = await Promise.all([read("proxy.ts"), read("next.config.ts"), read("app/layout.tsx")]);
 
   assert.match(proxy, /'nonce-\$\{nonce\}'/);
   assert.match(proxy, /'strict-dynamic'/);
   assert.match(proxy, /requestHeaders\.set\("x-nonce", nonce\)/);
+  assert.match(layout, /await connection\(\)/);
   assert.doesNotMatch(config, /Content-Security-Policy/);
   assert.doesNotMatch(proxy, /script-src[^\n]*unsafe-inline/);
 });
