@@ -32,6 +32,9 @@ function buildContentSecurityPolicy(nonce: string) {
 
 export async function proxy(request: NextRequest) {
   const permanentDestination = await resolvePublicPermanentRedirect(request);
+  if (permanentDestination === "not-found") {
+    return NextResponse.rewrite(new URL("/_not-found", request.url), { status: 404 });
+  }
   if (permanentDestination && permanentDestination.href !== request.nextUrl.href) {
     return NextResponse.redirect(permanentDestination, 308);
   }

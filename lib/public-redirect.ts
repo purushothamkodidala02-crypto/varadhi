@@ -60,14 +60,14 @@ export async function resolvePublicPermanentRedirect(request: NextRequest) {
 
   if (segments.length === 1 && UUID_PATTERN.test(segments[0])) {
     const context = await contextFromTest(supabase, segments[0]);
-    if (!context) return null;
+    if (!context) return "not-found" as const;
     return keepNonStructuralQuery(request, mockTestUrl(context.state.slug, context.exam.slug, context.paper.slug, context.test.slug));
   }
 
   const stateToken = segments[0] ?? request.nextUrl.searchParams.get("state");
   if (!stateToken) return null;
   const state = await entity(supabase, "exam_states", "state", stateToken, "id, slug");
-  if (!state) return null;
+  if (!state) return "not-found" as const;
 
   const categoryIdsResult = await supabase.from("exams").select("id").eq("state_id", state.id);
   const categoryIds = ((categoryIdsResult.data as Array<{ id: string }> | null) ?? []).map((item) => item.id);
@@ -75,9 +75,9 @@ export async function resolvePublicPermanentRedirect(request: NextRequest) {
 
   if (segments[1] === "category") {
     const token = segments[2];
-    if (!token) return null;
+    if (!token) return "not-found" as const;
     const category = await entity(supabase, "exams", "category", token, "id, slug, state_id", (query) => query.eq("state_id", state.id));
-    return category ? keepNonStructuralQuery(request, categoryUrl(state.slug, category.slug)) : null;
+    return category ? keepNonStructuralQuery(request, categoryUrl(state.slug, category.slug)) : "not-found" as const;
   }
 
   const categoryToken = request.nextUrl.searchParams.get("category");
@@ -87,13 +87,13 @@ export async function resolvePublicPermanentRedirect(request: NextRequest) {
   const examToken = segments[1] ?? request.nextUrl.searchParams.get("exam");
   if (!examToken) return keepNonStructuralQuery(request, category ? categoryUrl(state.slug, category.slug) : stateUrl(state.slug));
   const exam = await entity(supabase, "exam_groups", "exam", examToken, "id, slug, exam_id", (query) => category ? query.eq("exam_id", category.id) : query.in("exam_id", categoryIds));
-  if (!exam) return null;
+  if (!exam) return "not-found" as const;
 
   if (segments[2] === "specialization") {
     const token = segments[3];
-    if (!token) return null;
+    if (!token) return "not-found" as const;
     const specialization = await entity(supabase, "exam_specializations", "specialization", token, "id, slug, exam_group_id", (query) => query.eq("exam_group_id", exam.id));
-    return specialization ? keepNonStructuralQuery(request, specializationUrl(state.slug, exam.slug, specialization.slug)) : null;
+    return specialization ? keepNonStructuralQuery(request, specializationUrl(state.slug, exam.slug, specialization.slug)) : "not-found" as const;
   }
 
   const specializationToken = request.nextUrl.searchParams.get("specialization");
@@ -103,13 +103,13 @@ export async function resolvePublicPermanentRedirect(request: NextRequest) {
   const paperToken = segments[2] ?? request.nextUrl.searchParams.get("paper");
   if (!paperToken) return keepNonStructuralQuery(request, specialization ? specializationUrl(state.slug, exam.slug, specialization.slug) : examUrl(state.slug, exam.slug));
   const paper = await entity(supabase, "papers", "paper", paperToken, "id, slug, exam_group_id", (query) => query.eq("exam_group_id", exam.id));
-  if (!paper) return null;
+  if (!paper) return "not-found" as const;
 
   if (segments[3] === "subject") {
     const token = segments[4];
-    if (!token) return null;
+    if (!token) return "not-found" as const;
     const subject = await entity(supabase, "subjects", "subject", token, "id, slug, paper_id", (query) => query.eq("paper_id", paper.id));
-    return subject ? keepNonStructuralQuery(request, subjectUrl(state.slug, exam.slug, paper.slug, subject.slug)) : null;
+    return subject ? keepNonStructuralQuery(request, subjectUrl(state.slug, exam.slug, paper.slug, subject.slug)) : "not-found" as const;
   }
 
   const subjectToken = request.nextUrl.searchParams.get("subject");
@@ -121,6 +121,7 @@ export async function resolvePublicPermanentRedirect(request: NextRequest) {
   if (testToken) {
     const test = await entity(supabase, "mock_tests", "mock_test", testToken, "id, slug, paper_id", (query) => query.eq("paper_id", paper.id));
     if (test) return keepNonStructuralQuery(request, mockTestUrl(state.slug, exam.slug, paper.slug, test.slug));
+    return "not-found" as const;
   }
   return keepNonStructuralQuery(request, paperUrl(state.slug, exam.slug, paper.slug));
 }

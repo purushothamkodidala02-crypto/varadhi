@@ -146,6 +146,7 @@ test("permanent public slugs cover every catalogue level and legacy URLs redirec
   assert.match(requestRedirect, /public_slug_aliases/);
   assert.match(requestRedirect, /UUID_PATTERN/);
   assert.match(proxy, /NextResponse\.redirect\(permanentDestination, 308\)/);
+  assert.match(proxy, /NextResponse\.rewrite[\s\S]*status:\s*404/);
   assert.match(sitemap, /categoryUrl/);
   assert.match(sitemap, /subjectUrl/);
   assert.match(sitemap, /mockTestUrl/);
