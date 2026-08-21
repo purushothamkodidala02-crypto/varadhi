@@ -207,6 +207,9 @@ test("question media imports, uploads, enlargement, and attempt reviews stay con
   assert.match(importer, /uploadedImagePaths\.map\(\(path\) => removeQuestionImage/);
   assert.match(importer, /image_url: image\.url/);
   assert.match(runner, /<QuestionMedia src=\{current\.image_url\}/);
+  assert.match(runner, /Question \{index \+ 1\}[^]*of \{questions\.length\}/);
+  assert.match(runner, /Questions <span[^]*\{index \+ 1\}\/\{questions\.length\}/);
+  assert.match(runner, /\{questions\.length\} total/);
   assert.match(review, /<QuestionMedia src=\{row\.image_url\}/);
   assert.match(media, /aria-label="Open a larger view of the Question image"/);
   assert.match(media, /aria-modal="true"/);

@@ -191,9 +191,9 @@ export function StudentTestRunner({ mockTestId, publicTestPath, title, sessionId
   return <main className="min-h-screen bg-slate-100 pb-8">
     <header className="sticky top-0 z-20 border-b border-slate-700 bg-slate-950 px-4 py-2.5 text-white shadow-lg sm:px-8">
       <div className="mx-auto max-w-6xl">
-        <div className="flex items-center justify-between gap-4">
-          <div className="min-w-0"><p className="truncate text-xs font-semibold text-slate-400 sm:text-sm">{title}</p><h1 className="mt-0.5 text-base font-black sm:text-lg">Question {index + 1} <span className="text-slate-400">of {questions.length}</span></h1></div>
-          <div className="flex items-center gap-2"><button type="button" onClick={() => setNavigatorOpen(true)} className="rounded-xl border border-slate-700 px-3 py-2.5 text-xs font-bold lg:hidden">Questions</button><PracticeTimerControl remaining={remaining} paused={paused} busy={pausing} disabled={pauseControlDisabled} onToggle={() => void togglePause()} /></div>
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
+          <div className="min-w-0"><p className="truncate text-xs font-semibold text-slate-400 sm:text-sm">{title}</p><h1 className="mt-0.5 whitespace-nowrap text-base font-black sm:text-lg">Question {index + 1} <span className="text-slate-400">of {questions.length}</span></h1></div>
+          <div className="flex w-full items-center justify-between gap-2 sm:w-auto sm:justify-end"><button type="button" onClick={() => setNavigatorOpen(true)} aria-label={`Open Question navigator, Question ${index + 1} of ${questions.length}`} className="whitespace-nowrap rounded-xl border border-slate-700 px-3 py-2.5 text-xs font-bold lg:hidden">Questions <span className="text-teal-200">{index + 1}/{questions.length}</span></button><PracticeTimerControl remaining={remaining} paused={paused} busy={pausing} disabled={pauseControlDisabled} onToggle={() => void togglePause()} /></div>
         </div>
         <div className="mt-2 flex items-center gap-3"><div className="h-1.5 flex-1 overflow-hidden rounded-full bg-slate-700"><div className="h-full rounded-full bg-teal-300 transition-all" style={{ width: `${Math.round((answered / questions.length) * 100)}%` }} /></div><span className={`text-[11px] font-bold ${saveState === "error" ? "text-red-300" : "text-teal-100"}`}>{saveState === "saving" ? "Saving…" : saveState === "error" ? "Save failed" : "Answers saved"}</span></div>
       </div>
@@ -228,9 +228,10 @@ function QuestionNavigator({ questions, currentIndex, answers, reviewIds, locked
   return (
     <div className="flex min-h-0 flex-col lg:h-full">
       <div className="shrink-0 bg-white">
-        <p className="text-xs font-bold uppercase tracking-[0.14em] text-slate-500">
-          Question navigator
-        </p>
+        <div className="flex items-center justify-between gap-3">
+          <p className="text-xs font-bold uppercase tracking-[0.14em] text-slate-500">Question navigator</p>
+          <p className="whitespace-nowrap text-xs font-black text-slate-700">{questions.length} total</p>
+        </div>
         <div className="mt-3 grid grid-cols-3 gap-2">
           <NavigatorMetric value={answeredCount} label="Answered" tone="text-emerald-800" />
           <NavigatorMetric value={reviewIds.size} label="Review" tone="text-amber-800" />
