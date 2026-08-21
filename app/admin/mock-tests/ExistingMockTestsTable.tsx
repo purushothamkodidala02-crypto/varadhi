@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   LocationFilters,
   type LocationCategory,
@@ -71,18 +71,22 @@ const filterStyles = {
   },
 };
 
-export function ExistingMockTestsTable({ states, categories, exams, specializations, papers, tests }: {
+export function ExistingMockTestsTable({ states, categories, exams, specializations, papers, tests, initialStateId, initialLocation, initialSearch, initialStatus }: {
   states: Array<{ id: string; name: string; code: string; slug: string }>;
   categories: Array<LocationCategory & { stateId: string }>;
   exams: LocationExam[];
   specializations: LocationSpecialization[];
   papers: LocationPaper[];
   tests: ExistingMockTest[];
+  initialStateId: string;
+  initialLocation: LocationFilterValue;
+  initialSearch: string;
+  initialStatus: MockTestStatus | "all";
 }) {
-  const [stateId, setStateId] = useState("");
-  const [location, setLocation] = useState(emptyLocation);
-  const [search, setSearch] = useState("");
-  const [status, setStatus] = useState<MockTestStatus | "all">("all");
+  const [stateId, setStateId] = useState(initialStateId);
+  const [location, setLocation] = useState(initialLocation);
+  const [search, setSearch] = useState(initialSearch);
+  const [status, setStatus] = useState<MockTestStatus | "all">(initialStatus);
   const filtered = useMemo(() => {
     const query = search.trim().toLowerCase();
     return tests.filter((test) =>
@@ -102,6 +106,23 @@ export function ExistingMockTestsTable({ states, categories, exams, specializati
     published: tests.filter((test) => test.status === "published").length,
     archived: tests.filter((test) => test.status === "archived").length,
   };
+
+  const mockTestAdminUrl = useMemo(() => {
+    const params = new URLSearchParams();
+    if (stateId) params.set("state", stateId);
+    if (location.categoryId) params.set("category", location.categoryId);
+    if (location.examId) params.set("exam", location.examId);
+    if (location.specializationId) params.set("specialization", location.specializationId);
+    if (location.paperId) params.set("paper", location.paperId);
+    if (status !== "all") params.set("status", status);
+    if (search.trim()) params.set("q", search.trim().slice(0, 100));
+    const query = params.toString();
+    return query ? `/admin/mock-tests?${query}` : "/admin/mock-tests";
+  }, [location, search, stateId, status]);
+
+  useEffect(() => {
+    window.history.replaceState(window.history.state, "", mockTestAdminUrl);
+  }, [mockTestAdminUrl]);
 
   return (
     <section className="mt-8 overflow-hidden rounded-3xl border border-teal-100 bg-white shadow-lg shadow-slate-950/[0.04]">
@@ -153,7 +174,7 @@ export function ExistingMockTestsTable({ states, categories, exams, specializati
                   <div className="flex flex-wrap items-center justify-end gap-2">
                     {test.status === "published" && <Link href={mockTestUrl(test.stateSlug, test.examSlug, test.paperSlug, test.slug)} target="_blank" className="rounded-lg border px-3 py-2 text-sm font-bold text-slate-700 hover:bg-slate-50">View live</Link>}
                     {test.questionCount > 0 ? <DownloadQuestionsButton mockTestId={test.id} /> : <span title="Add Questions before downloading" className="cursor-not-allowed rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm font-bold text-slate-400">No questions to download</span>}
-                    <Link href={`/admin/mock-tests/${test.id}/edit`} className="rounded-lg bg-teal-700 px-3 py-2 text-sm font-bold text-white shadow-sm hover:bg-teal-800">Manage test</Link>
+                    <Link href={`/admin/mock-tests/${test.id}/edit?returnTo=${encodeURIComponent(mockTestAdminUrl)}`} className="rounded-lg bg-teal-700 px-3 py-2 text-sm font-bold text-white shadow-sm hover:bg-teal-800">Manage test</Link>
                     <MockTestManagementButtons mockTestId={test.id} mockTestTitle={test.title} status={test.status} ready={ready} />
                   </div>
                 </div>

@@ -4,8 +4,24 @@ import { createClient } from "@/lib/supabase/server";
 import { indiaDateKey } from "@/lib/date";
 import { CreateMockTestForm } from "./CreateMockTestForm";
 import { ExistingMockTestsTable } from "./ExistingMockTestsTable";
+import type { MockTestStatus } from "@/types/mock-test";
 
-export default async function MockTestsPage() {
+type MockTestSearchParams = {
+  state?: string;
+  category?: string;
+  exam?: string;
+  specialization?: string;
+  paper?: string;
+  status?: string;
+  q?: string;
+};
+
+export default async function MockTestsPage({
+  searchParams,
+}: {
+  searchParams: Promise<MockTestSearchParams>;
+}) {
+  const query = await searchParams;
   const supabase = await createClient();
   const [statesResult, testsResult, subjectsResult, papersResult, groupsResult, categoriesResult, specializationsResult, assignmentsResult, questionsResult, attemptsResult] = await Promise.all([
     supabase.from("exam_states").select("id, name, code, slug").order("display_order"),
@@ -37,6 +53,14 @@ export default async function MockTestsPage() {
   const examOptions = exams.map((item) => ({ id: item.id, categoryId: item.exam_id, name: item.name }));
   const specializationOptions = specializations.map((item) => ({ id: item.id, examId: item.exam_group_id, name: item.name }));
   const paperOptions = papers.map((item) => ({ id: item.id, examId: item.exam_group_id, specializationId: item.specialization_id, name: item.name, duration: item.duration_minutes, number: paperDisplayById.get(item.id)?.number ?? 1 }));
+  const stateId = states.some((item) => item.id === query.state) ? query.state ?? "" : "";
+  const categoryId = categoryOptions.some((item) => item.id === query.category && item.stateId === stateId) ? query.category ?? "" : "";
+  const examId = examOptions.some((item) => item.id === query.exam && item.categoryId === categoryId) ? query.exam ?? "" : "";
+  const specializationId = specializationOptions.some((item) => item.id === query.specialization && item.examId === examId) ? query.specialization ?? "" : "";
+  const paperId = paperOptions.some((item) => item.id === query.paper && item.examId === examId && item.specializationId === (specializationId || null)) ? query.paper ?? "" : "";
+  const initialStatus: MockTestStatus | "all" = query.status === "draft" || query.status === "published" || query.status === "archived" ? query.status : "all";
+  const initialSearch = String(query.q ?? "").trim().slice(0, 100);
+  const initialLocation = { categoryId, examId, specializationId, paperId, subjectId: "" };
   const today = indiaDateKey();
   const questionById = new Map((questionsResult.data ?? []).map((item) => [item.id, item]));
   const assignmentsByTest = new Map<string, NonNullable<typeof assignmentsResult.data>>();
@@ -88,7 +112,7 @@ export default async function MockTestsPage() {
 
   return <main>
     <section className="relative overflow-hidden rounded-[2rem] bg-gradient-to-br from-teal-900 via-teal-950 to-slate-950 p-7 text-white shadow-xl shadow-teal-950/15 sm:p-9"><div className="absolute -right-16 -top-20 h-64 w-64 rounded-full bg-teal-300/15 blur-3xl" /><div className="relative flex flex-wrap items-end justify-between gap-6"><div><p className="inline-flex items-center gap-2 text-xs font-black uppercase tracking-[0.15em] text-teal-200"><MockSymbol className="h-4 w-4" /> Publishing workspace</p><h1 className="font-display mt-3 text-4xl">Mock-test control centre</h1><p className="mt-3 max-w-2xl leading-7 text-slate-300">Manage every TG, AP and Central test in one place. Names and series numbers stay consistent automatically.</p></div><div className="grid grid-cols-3 gap-2 text-center text-xs"><Summary value={states.length} label="States" /><Summary value={tests.length} label="Tests" /><Summary value={mappedTests.filter((test) => test.status === "published").length} label="Live" /></div></div></section>
-    {testsResult.error || statesResult.error ? <p className="mt-6 rounded-xl bg-red-50 p-4 text-red-700">{testsResult.error?.message ?? statesResult.error?.message}</p> : <ExistingMockTestsTable states={states} categories={categoryOptions} exams={examOptions} specializations={specializationOptions} papers={paperOptions} tests={mappedTests} />}
+    {testsResult.error || statesResult.error ? <p className="mt-6 rounded-xl bg-red-50 p-4 text-red-700">{testsResult.error?.message ?? statesResult.error?.message}</p> : <ExistingMockTestsTable states={states} categories={categoryOptions} exams={examOptions} specializations={specializationOptions} papers={paperOptions} tests={mappedTests} initialStateId={stateId} initialLocation={initialLocation} initialSearch={initialSearch} initialStatus={initialStatus} />}
     <details className="mt-8 overflow-hidden rounded-3xl border border-teal-200 bg-gradient-to-br from-white to-teal-50 shadow-sm"><summary className="cursor-pointer list-none px-7 py-6"><p className="text-xs font-black uppercase tracking-[0.14em] text-teal-800">Create</p><h2 className="font-display mt-2 text-xl">+ Create the next mock test</h2><p className="mt-1 text-sm text-slate-600">A guided workflow keeps the state, exam, paper and test series correct.</p></summary><div className="border-t border-teal-100 px-4 pb-7 sm:px-7"><CreateMockTestForm states={states} categories={categoryOptions} exams={examOptions} specializations={specializationOptions} papers={paperOptions} subjects={subjects.map((item) => ({ id: item.id, paperId: item.paper_id, name: item.name }))} existingSeries={tests.map((test) => ({ paperId: test.paper_id, subjectId: test.subject_id, scope: test.test_scope as "paper" | "subject", seriesNumber: Number(test.series_number ?? 1) }))} /></div></details>
   </main>;
 }

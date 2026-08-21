@@ -100,6 +100,21 @@ test("question bank preserves filters while editing an existing question", async
   assert.match(editPage, /href=\{backHref\}/);
 });
 
+test("mock-test management preserves filters while editing a test", async () => {
+  const [mockTestTable, mockTestPage, editPage] = await Promise.all([
+    read("app/admin/mock-tests/ExistingMockTestsTable.tsx"),
+    read("app/admin/mock-tests/page.tsx"),
+    read("app/admin/mock-tests/[id]/edit/page.tsx"),
+  ]);
+
+  assert.match(mockTestTable, /window\.history\.replaceState/);
+  assert.match(mockTestTable, /returnTo=\$\{encodeURIComponent\(mockTestAdminUrl\)\}/);
+  assert.match(mockTestPage, /initialStateId=\{stateId\}/);
+  assert.match(mockTestPage, /initialStatus=\{initialStatus\}/);
+  assert.match(editPage, /returnTo\.startsWith\("\/admin\/mock-tests\?"\)/);
+  assert.match(editPage, /href=\{backHref\}/);
+});
+
 test("public pages expose route-specific SEO metadata and crawl targets", async () => {
   const [layout, catalog, support, sitemap, robots] = await Promise.all([
     read("app/layout.tsx"),
@@ -196,6 +211,16 @@ test("assertion-reason questions accept short labels and render standard labels"
   assert.match(formatter, /Reason\(\?:\\s\*\\\(\[R\]\\\)\)\?/);
   assert.match(formatter, /return "Assertion \(A\)"/);
   assert.match(formatter, /return "Reason \(R\)"/);
+});
+
+test("match questions clean imported markdown and support A-D with I-IV lists", async () => {
+  const formatter = await read("components/questions/FormattedQuestionText.tsx");
+
+  assert.match(formatter, /replace\(\/\\u00a0\/g, " "\)/);
+  assert.match(formatter, /replace\(\/\\\*\\\*\/g, ""\)/);
+  assert.match(formatter, /romanListItem/);
+  assert.match(formatter, /\{ left: alphabeticListItem, right: romanListItem \}/);
+  assert.match(formatter, /replace\(\/;\\s\*\$\/, ""\)/);
 });
 
 test("admins can export mock-test questions in the accepted import format", async () => {

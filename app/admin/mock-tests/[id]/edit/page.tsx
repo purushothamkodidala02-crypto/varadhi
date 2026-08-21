@@ -9,8 +9,10 @@ import { EditMockTestForm } from "./EditMockTestForm";
 import { MockTestCsvImport } from "./MockTestCsvImport";
 import { QuestionAssignments } from "./QuestionAssignments";
 
-export default async function EditMockTestPage({ params }: { params: Promise<{ id: string }> }) {
+export default async function EditMockTestPage({ params, searchParams }: { params: Promise<{ id: string }>; searchParams: Promise<{ returnTo?: string | string[] }> }) {
   const { id } = await params;
+  const { returnTo } = await searchParams;
+  const backHref = typeof returnTo === "string" && (returnTo === "/admin/mock-tests" || returnTo.startsWith("/admin/mock-tests?")) ? returnTo : "/admin/mock-tests";
   const supabase = await createClient();
   const [testResult, subjectsResult, papersResult, groupsResult, categoriesResult, specializationsResult, questionsResult, assignmentsResult] = await Promise.all([
     supabase.from("mock_tests").select("id, paper_id, subject_id, test_scope, series_number, title, slug, description, seo_title, seo_description, instructions, duration_minutes, difficulty, status, version, display_order, published_at, access_type, price_inr, created_at, updated_at").eq("id", id).maybeSingle(),
@@ -38,7 +40,7 @@ export default async function EditMockTestPage({ params }: { params: Promise<{ i
   const testPaper = papers.find((paper) => paper.id === test.paper_id);
   return (
     <main>
-      <div className="flex flex-wrap items-center justify-between gap-3"><Link href="/admin/mock-tests" className="text-sm font-semibold text-teal-700 hover:underline">← Back to Mock Tests</Link>{assignments.length > 0 && <DownloadQuestionsButton mockTestId={test.id} />}</div>
+      <div className="flex flex-wrap items-center justify-between gap-3"><Link href={backHref} className="text-sm font-semibold text-teal-700 hover:underline">← Back to Mock Tests</Link>{assignments.length > 0 && <DownloadQuestionsButton mockTestId={test.id} />}</div>
       <h1 className="mt-5 text-3xl font-black">Build Mock Test</h1>
       <p className="mt-2 text-slate-600">Upload a CSV to build this draft quickly, or choose individual Questions from the Question Bank.</p>
       <EditMockTestForm mockTest={test} papers={papers.map((paper) => { const group = groups.get(paper.exam_group_id); return { id: paper.id, label: `${categories.get(group?.exam_id ?? "")?.name ?? "Unknown category"} → ${group?.name ?? "Unknown Exam"}${paper.specialization_id ? ` → ${specializations.get(paper.specialization_id) ?? "Unknown Specialisation"}` : ""} → ${paper.name}`, duration: paper.duration_minutes }; })} subjects={subjects.map((subject) => ({ id: subject.id, paperId: subject.paper_id, name: subject.name }))} />

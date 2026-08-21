@@ -23,6 +23,8 @@ export function containsTeluguText(text: string) {
 
 function questionLines(text: string) {
   const lines = text
+    .replace(/\u00a0/g, " ")
+    .replace(/\*\*/g, "")
     .replace(/\r\n?/g, "\n")
     .replace(
       /((?:Statements?|ప్రకటనలు?)\s*:)[ \t]*(.*?)(?=[ \t]+(?:Conclusions?|తీర్మానాలు?)\s*:|$)/gim,
@@ -79,7 +81,7 @@ function questionLines(text: string) {
     .replace(/([^\s—–-])\s*[—–-]\s*(?=(?:[A-H]|ఎ|బి|సి|డి)\.\s)/g, "$1 — ")
     .replace(/([^\s—–-])\s*[—–-]\s*(?=[\d౦-౯])/g, "$1 — ")
     .split(/\n+/)
-    .map((line) => line.trim())
+    .map((line) => line.trim().replace(/;\s*$/, ""))
     .filter(Boolean);
 
   return lines.reduce<string[]>((merged, line) => {
@@ -108,6 +110,22 @@ function normalizedSectionLabel(label: string) {
 const matchQuestion = /^(?:Match\b|.*\bmatch\b|జతపరచండి|.*జతపరచండి)/i;
 const numericListItem = /^(?:[1-9]|[౧-౯])[.)]\s+/;
 const alphabeticListItem = /^[a-h][.)]\s+/i;
+const romanListItem = /^(?:I|II|III|IV|V)[.)]\s+/i;
+
+function matchingListLayout(lines: string[]) {
+  const schemes = [
+    { left: numericListItem, right: alphabeticListItem },
+    { left: alphabeticListItem, right: romanListItem },
+  ];
+
+  for (const scheme of schemes) {
+    const leftStart = lines.findIndex((line) => scheme.left.test(line));
+    const rightStart = lines.findIndex((line, index) => index > leftStart && scheme.right.test(line));
+    if (leftStart > 0 && rightStart > leftStart) return { ...scheme, leftStart, rightStart };
+  }
+
+  return null;
+}
 
 export function FormattedQuestionText({
   text,
@@ -115,15 +133,14 @@ export function FormattedQuestionText({
 }: FormattedQuestionTextProps) {
   const lines = questionLines(text);
   const isTelugu = containsTeluguText(text);
-  const firstNumeric = lines.findIndex((line) => numericListItem.test(line));
-  const firstAlphabetic = lines.findIndex((line) => alphabeticListItem.test(line));
-  const isMatching = matchQuestion.test(lines[0] ?? "") && firstNumeric > 0 && firstAlphabetic > firstNumeric;
+  const matchingLayout = matchQuestion.test(lines[0] ?? "") ? matchingListLayout(lines) : null;
 
-  if (isMatching) {
-    const heading = lines.slice(0, firstNumeric);
-    const leftItems = lines.slice(firstNumeric, firstAlphabetic).filter((line) => numericListItem.test(line));
-    const rightEnd = lines.findIndex((line, index) => index > firstAlphabetic && !alphabeticListItem.test(line));
-    const rightItems = lines.slice(firstAlphabetic, rightEnd === -1 ? undefined : rightEnd).filter((line) => alphabeticListItem.test(line));
+  if (matchingLayout) {
+    const { left, right, leftStart, rightStart } = matchingLayout;
+    const heading = lines.slice(0, leftStart);
+    const leftItems = lines.slice(leftStart, rightStart).filter((line) => left.test(line));
+    const rightEnd = lines.findIndex((line, index) => index > rightStart && !right.test(line));
+    const rightItems = lines.slice(rightStart, rightEnd === -1 ? undefined : rightEnd).filter((line) => right.test(line));
     const instruction = rightEnd === -1 ? [] : lines.slice(rightEnd);
 
     return (
