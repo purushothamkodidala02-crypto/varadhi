@@ -24,7 +24,7 @@ export const getHomeCatalogData = unstable_cache(
       hasStateError: Boolean(statesResult.error),
     };
   },
-  ["home-catalog-v1"],
+  ["home-catalog-v2"],
   { tags: [PUBLIC_CATALOG_TAG], revalidate: 300 },
 );
 
@@ -63,6 +63,6 @@ export const getMockTestCatalogData = unstable_cache(
       ),
     };
   },
-  ["mock-test-catalog-v1"],
+  ["mock-test-catalog-v2"],
   { tags: [PUBLIC_CATALOG_TAG], revalidate: 300 },
 );
